@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from lightning import LightningDataModule
 from lightning.pytorch.trainer.states import TrainerFn
-from torch.utils.data import DataLoader
+from omegaconf import DictConfig
 
 from src.data.loading.components.custom_dataloader import DataloaderWithIterationRetry
 from src.data.loading.components.interfaces import BaseDataloaderConfig
@@ -15,17 +15,18 @@ from src.utils.file_utils import list_files
 
 
 class SequenceDataModule(LightningDataModule):
-    """A LightningDataModule that encapsulates data splitting, preprocessing,
+    """
+    A LightningDataModule that encapsulates data splitting, preprocessing,
     parallelization and batching.
     """
 
     def __init__(
         self,
-        train_dataloader_config: Optional[BaseDataloaderConfig] = None,
-        val_dataloader_config: Optional[BaseDataloaderConfig] = None,
-        test_dataloader_config: Optional[BaseDataloaderConfig] = None,
-        predict_dataloader_config: Optional[BaseDataloaderConfig] = None,
-    ) -> None:
+        train_dataloader_config: Optional[DictConfig] = None,
+        val_dataloader_config: Optional[DictConfig] = None,
+        test_dataloader_config: Optional[DictConfig] = None,
+        predict_dataloader_config: Optional[DictConfig] = None,
+    ):
         """Construct a SequenceDataModule using the provided config files.
 
         The attributes `map_train_files_per_device`,
@@ -56,12 +57,10 @@ class SequenceDataModule(LightningDataModule):
 
         self.stage_to_file_map: Dict[TrainerFn, Dict[int, List[str]]] = dict()
 
-    def _get_partial_collate_fn(
-        self, dataloader_config: BaseDataloaderConfig
-    ) -> callable:
+    def _get_partial_collate_fn(self, dataloader_config: DictConfig) -> callable:
         """Prepare the collate function for the dataloader.
 
-        :param config: The dataloader configuration.
+        :param dataloader_config: The dataloader configuration.
         """
         # We need to set the collate function here because we can't pickle
         # lambda functions but the collate fn needs to receive just the batch.
@@ -77,11 +76,7 @@ class SequenceDataModule(LightningDataModule):
         return partial_collate_fn
 
     def get_file_suffix_from_config(self, config) -> str:
-        return (
-            config.dataset_config.file_format
-            if getattr(config.dataset_config, "file_format", None)
-            else config.dataset_config.data_iterator.get_file_suffix()
-        )
+        return config.dataset_config.file_format if getattr(config.dataset_config, "file_format", None) else config.dataset_config.data_iterator.get_file_suffix()
 
     def setup(self, stage: Optional[str] = None) -> None:
         """Assign data files to GPUs.
@@ -107,9 +102,7 @@ class SequenceDataModule(LightningDataModule):
             )
 
         for stage, config in self.stage_to_config.items():
-            if (
-                config is None
-            ):  # config is None when we don't want to set up the stages. ie. For inference, we only initialize the predict stage.
+            if config is None:  # config is None when we don't want to set up the stages. ie. For inference, we only initialize the predict stage.
                 self.stage_to_file_map[stage] = {}
             else:
                 # If the stage has not been initialized yet, we assign files to workers based on the suffix passed by the config.
@@ -125,15 +118,11 @@ class SequenceDataModule(LightningDataModule):
                         list_of_files=list_of_files,
                         total_workers=self.trainer.world_size,
                         assign_by_size=config.assign_files_by_size,
-                        should_shuffle_rows=config.should_shuffle_rows
-                        if hasattr(config, "should_shuffle_rows")
-                        else False,
-                        assign_all_files_per_worker=config.assign_all_files_per_worker
-                        if hasattr(config, "assign_all_files_per_worker")
-                        else False,
+                        should_shuffle_rows=config.should_shuffle_rows if hasattr(config, "should_shuffle_rows") else False,
+                        assign_all_files_per_worker=config.assign_all_files_per_worker if hasattr(config, "assign_all_files_per_worker") else False,
                     )
 
-    def get_dataloader(self, stage: TrainerFn) -> DataLoader[Any]:
+    def get_dataloader(self, stage: TrainerFn):
         """Construct a DataLoader on a single GPU using config `curr_config`.
 
         The single GPU is managed by Lightning and corresponds to
@@ -148,19 +137,13 @@ class SequenceDataModule(LightningDataModule):
         :raise AttributeError: If `self.trainer` is not initialized or if setup was not called.
         """
         if not hasattr(self, "trainer"):
-            raise AttributeError(
-                f"self.trainer must be initialized before call to get_dataloader()."
-            )
+            raise AttributeError(f"self.trainer must be initialized before call to get_dataloader().")
 
         if not self.stage_to_file_map[stage]:
             raise AttributeError(f"Stage {stage} must initialize file map.")
         curr_config = self.stage_to_config[stage]
 
-        assign_all_files_per_worker = (
-            curr_config.assign_all_files_per_worker
-            if hasattr(curr_config, "assign_all_files_per_worker")
-            else False
-        )
+        assign_all_files_per_worker = curr_config.get("assign_all_files_per_worker", False)
 
         # We initialize the dataset with the parameters passed on the config.
         dataset = curr_config.dataset_class(
@@ -170,11 +153,9 @@ class SequenceDataModule(LightningDataModule):
             batch_size=curr_config.batch_size_per_device,
             is_for_training=stage == TrainerFn.FITTING,
             assign_all_files_per_worker=assign_all_files_per_worker,
-        )  # type: ignore
-
-        device_file_list = self.stage_to_file_map[stage].get(
-            self.trainer.global_rank, []
         )
+
+        device_file_list = self.stage_to_file_map[stage].get(self.trainer.global_rank, [])
 
         dataset.set_list_of_files(list_of_files=device_file_list)
         # set the number of total GPUs and GPU index
@@ -197,45 +178,39 @@ class SequenceDataModule(LightningDataModule):
         else:
             persistent_workers = curr_config.persistent_workers
 
-        return (
-            DataloaderWithIterationRetry(
-                dataset=dataset,
-                batch_size=curr_config.batch_size_per_device
-                if curr_config.dataset_config.iterate_per_row
-                else None,
-                num_workers=curr_config.num_workers,  # num workers per GPU
-                pin_memory=curr_config.pin_memory,
-                persistent_workers=persistent_workers,
-                drop_last=curr_config.drop_last
-                if curr_config.dataset_config.iterate_per_row
-                else False,
-                collate_fn=collate_fn_partial,
-                timeout=curr_config.timeout,
-            ),
-        )  # type: ignore
+        return DataloaderWithIterationRetry(
+            dataset=dataset,
+            batch_size=curr_config.batch_size_per_device if curr_config.dataset_config.iterate_per_row else None,
+            num_workers=curr_config.num_workers,  # num workers per GPU
+            pin_memory=curr_config.pin_memory,
+            persistent_workers=persistent_workers,
+            drop_last=curr_config.drop_last if curr_config.dataset_config.iterate_per_row else False,
+            collate_fn=collate_fn_partial,
+            timeout=curr_config.timeout,
+        )
 
-    def train_dataloader(self) -> DataLoader[Any]:
+    def train_dataloader(self):
         """Create and return the train dataloader.
 
         :return: The train dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.FITTING)
 
-    def val_dataloader(self) -> DataLoader[Any]:
+    def val_dataloader(self):
         """Create and return the validation dataloader.
 
         :return: The validation dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.VALIDATING)
 
-    def test_dataloader(self) -> DataLoader[Any]:
+    def test_dataloader(self):
         """Create and return the test dataloader.
 
         :return: The test dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.TESTING)
 
-    def predict_dataloader(self) -> DataLoader[Any]:
+    def predict_dataloader(self):
         """Create and return the predict dataloader.
 
         :return: The predict dataloader.
@@ -279,7 +254,7 @@ class ItemDataModule(SequenceDataModule):
         val_dataloader_config: Optional[BaseDataloaderConfig] = None,
         test_dataloader_config: Optional[BaseDataloaderConfig] = None,
         predict_dataloader_config: Optional[BaseDataloaderConfig] = None,
-    ) -> None:
+    ):
         """Construct a SequenceDataModule using the provided config files.
 
         The attributes `map_train_files_per_device`,
@@ -304,7 +279,7 @@ class ItemDataModule(SequenceDataModule):
             predict_dataloader_config=predict_dataloader_config,
         )
 
-    def get_dataloader(self, stage: TrainerFn) -> DataLoader[Any]:
+    def get_dataloader(self, stage: TrainerFn):
         """Construct a DataLoader on a single GPU using config `curr_config`.
 
         The single GPU is managed by Lightning and corresponds to
@@ -319,23 +294,15 @@ class ItemDataModule(SequenceDataModule):
         :raise AttributeError: If `self.trainer` is not initialized or if setup was not called.
         """
         if not hasattr(self, "trainer"):
-            raise AttributeError(
-                f"self.trainer must be initialized before call to get_dataloader()."
-            )
+            raise AttributeError(f"self.trainer must be initialized before call to get_dataloader().")
 
         if not self.stage_to_file_map[stage]:
             raise AttributeError(f"Stage {stage} must initialize file map.")
         curr_config = self.stage_to_config[stage]
 
-        assign_all_files_per_worker = (
-            curr_config.assign_all_files_per_worker
-            if hasattr(curr_config, "assign_all_files_per_worker")
-            else False
-        )
+        assign_all_files_per_worker = curr_config.get("assign_all_files_per_worker", False)
 
-        assert (
-            stage == TrainerFn.FITTING or not assign_all_files_per_worker
-        ), "Automatic file assignment should only be disabled for training."
+        assert (stage == TrainerFn.FITTING or not assign_all_files_per_worker), "Automatic file assignment should only be disabled for training."
 
         # We initialize the dataset with the parameters passed on the config.
         dataset = curr_config.dataset_class(
@@ -345,11 +312,9 @@ class ItemDataModule(SequenceDataModule):
             batch_size=curr_config.batch_size_per_device,
             is_for_training=stage == TrainerFn.FITTING,
             assign_all_files_per_worker=assign_all_files_per_worker,
-        )  # type: ignore
-
-        device_file_list = self.stage_to_file_map[stage].get(
-            self.trainer.global_rank, []
         )
+
+        device_file_list = self.stage_to_file_map[stage].get(self.trainer.global_rank, [])
 
         dataset.set_list_of_files(list_of_files=device_file_list)
         # set the number of total GPUs and GPU index
@@ -367,19 +332,13 @@ class ItemDataModule(SequenceDataModule):
         else:
             persistent_workers = curr_config.persistent_workers
 
-        return (
-            DataloaderWithIterationRetry(
-                dataset=dataset,
-                batch_size=curr_config.batch_size_per_device
-                if curr_config.dataset_config.iterate_per_row
-                else None,
-                num_workers=curr_config.num_workers,  # num workers per GPU
-                pin_memory=curr_config.pin_memory,
-                persistent_workers=persistent_workers,
-                drop_last=curr_config.drop_last
-                if curr_config.dataset_config.iterate_per_row
-                else False,
-                collate_fn=curr_config.collate_fn,
-                timeout=curr_config.timeout,
-            ),
-        )  # type: ignore
+        return DataloaderWithIterationRetry(
+            dataset=dataset,
+            batch_size=curr_config.batch_size_per_device if curr_config.dataset_config.iterate_per_row else None,
+            num_workers=curr_config.num_workers,  # num workers per GPU
+            pin_memory=curr_config.pin_memory,
+            persistent_workers=persistent_workers,
+            drop_last=curr_config.drop_last if curr_config.dataset_config.iterate_per_row else False,
+            collate_fn=curr_config.collate_fn,
+            timeout=curr_config.timeout,
+        )

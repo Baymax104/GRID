@@ -12,6 +12,7 @@ from src.data.loading.utils import combine_list_of_tensor_dicts, pad_or_trim_seq
 from src.utils.tensor_utils import extract_locations
 from src.data.loading.components.interfaces import ItemData
 
+
 def identity_collate_fn(batch: Any) -> Any:
     """The default collate function that does nothing."""
     return batch
@@ -67,22 +68,18 @@ def collate_with_sid_causal_duplicate(
     # calculating the total number of contiguous sub-sequences in the batch
     total_num_seqs = torch.sum(
         (
-            (
-                k := torch.tensor([s.shape[0] for s in batch[sequence_field_name]])
-                // sid_hierarchy
-            )
-            - 1
+                (
+                    k := torch.tensor([s.shape[0] for s in batch[sequence_field_name]])
+                         // sid_hierarchy
+                )
+                - 1
         )
         * k
         // 2
     )
 
     if total_num_seqs > max_batch_size:
-        select_seqs = torch.randint(
-            low=0,
-            high=total_num_seqs,
-            size=(max_batch_size,),
-        )
+        select_seqs = torch.randint(low=0, high=total_num_seqs, size=(max_batch_size,))
     else:
         select_seqs = torch.arange(total_num_seqs)
 
@@ -298,7 +295,7 @@ def collate_fn_items(
     feature_to_input_name : Dict[str, str]
         The mapping from raw feature name to input feature name in ItemData.
 
-    Returns:
+    Returns
     --------
     model_input_data : ItemData
         An ItemData object, which stores a batch of item features via a list of item IDs
@@ -306,22 +303,19 @@ def collate_fn_items(
         stacked along the batch dimension.
     """
     if isinstance(batch, list):
-        batch = combine_list_of_tensor_dicts(batch)  # type: ignore
+        batch = combine_list_of_tensor_dicts(batch)
         # does not change shape of text tokens
 
     model_input_data = ItemData()
-
-    for field_name, field_value in batch.items():  # type: ignore
+    batch: dict[str, list[torch.Tensor]]
+    for field_name, field_value in batch.items():
         if field_name == item_id_field:
-            model_input_data.item_ids = list(field_value)
-
+            model_input_data.item_ids = field_value
         else:
             # In this case, field_value is a list of tensors, each representing the
             # features of a single item. We stack these tensors along the batch
             # dimension to create a single tensor for the batch of items.
             field_value = torch.stack(field_value, dim=0)
-            model_input_data.transformed_features[
-                feature_to_input_name[field_name]
-            ] = field_value
+            model_input_data.transformed_features[feature_to_input_name[field_name]] = field_value
 
     return model_input_data

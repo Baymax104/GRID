@@ -1,8 +1,6 @@
-from typing import Any, Dict
-
 import hydra
 import rootutils
-from omegaconf import DictConfig
+
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
@@ -13,7 +11,7 @@ from src.utils.launcher_utils import pipeline_launcher
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-def inference(cfg: DictConfig) -> Dict[str, Any]:
+def inference(cfg: DictConfig):
     """Runs inference using a pre-trained model.
 
     :param cfg: A DictConfig configuration composed by Hydra.

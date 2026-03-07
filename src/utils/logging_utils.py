@@ -42,12 +42,12 @@ def finalize_loggers(trainer: Any, status=END_RUN) -> None:
     Finalize loggers after training is done.
 
     :param trainer: The Lightning trainer.
+    :param status: The status of the trainer.
+
     """
-    [
-        logger.finalize(status)
-        for logger in trainer.loggers
-        if hasattr(logger, "finalize")
-    ]
+    for logger in trainer.loggers:
+        if hasattr(logger, "finalize"):
+            logger.finalize(status)
 
     if find_spec(
         "wandb"

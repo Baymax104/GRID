@@ -1,10 +1,10 @@
-import copy
-from typing import Any, List, Optional
+from typing import List
 
 from torch.utils.data import IterableDataset, get_worker_info
 
 from src.data.loading.components.interfaces import BaseDatasetConfig
 from src.utils.pylogger import RankedLogger
+
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -32,6 +32,9 @@ class BaseDataset:
                 This would be useful for small datasets. In smaller datasets, if each worker only observes a subset of the files,
                 it may not be able to learn the distribution of the data.
         """
+        self.global_worker_id = None
+        self.total_workers = None
+        self.global_dataloader_worker_id = None
         self.dataset_config = dataset_config
         self.should_shuffle_rows = should_shuffle_rows
         self.data_folder = data_folder
@@ -60,9 +63,7 @@ class BaseDataset:
             worker_id = worker_info.id
             num_workers = worker_info.num_workers
 
-        self.global_dataloader_worker_id = (
-            self.global_worker_id * num_workers + worker_id
-        )
+        self.global_dataloader_worker_id = self.global_worker_id * num_workers + worker_id
 
         return worker_id, num_workers
 
@@ -141,14 +142,9 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         # On a streaming dataset, we will always be on Epoch 0.
         finished_iteration = False
         while not finished_iteration:
-
             for row_or_batch in self.dataset_to_iterate:
-                for (
-                    preprocessing_function
-                ) in self.dataset_config.preprocessing_functions:
-                    row_or_batch = preprocessing_function(
-                        row_or_batch, dataset_config=self.dataset_config
-                    )
+                for preprocessing_function in self.dataset_config.preprocessing_functions:
+                    row_or_batch = preprocessing_function(row_or_batch, dataset_config=self.dataset_config)
                     if row_or_batch is None:
                         break
                 if row_or_batch:

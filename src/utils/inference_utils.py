@@ -2,19 +2,17 @@ import datetime
 import logging
 import os
 import pickle
-from typing import Any, Dict, List, Optional, Union
-
 import pyarrow as pa
-import pyarrow.parquet as pq
 import torch
 from google.cloud import bigquery
-
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
+from typing import Any, Dict, List, Optional, Union
 
 from src.models.components.interfaces import ModelOutput
-from src.utils.decorators import RetriesFailedException, retry
+from src.utils.decorators import retry
 from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
+
 
 log = logging.getLogger(__name__)
 
@@ -63,15 +61,15 @@ class BaseBufferedWriter(BasePredictionWriter):
         # TODO (lneves) Deprecate the way folks do and have all inference pipelines to use this.
 
         if (
-            hasattr(pl_module, "prediction_key_name")
-            and pl_module.prediction_key_name is None
-            and self.prediction_key_name is not None
+                hasattr(pl_module, "prediction_key_name")
+                and pl_module.prediction_key_name is None
+                and self.prediction_key_name is not None
         ):
             pl_module.prediction_key_name = self.prediction_key_name
         if (
-            hasattr(pl_module, "prediction_name")
-            and pl_module.prediction_name is None
-            and self.prediction_name is not None
+                hasattr(pl_module, "prediction_name")
+                and pl_module.prediction_name is None
+                and self.prediction_name is not None
         ):
             pl_module.prediction_name = self.prediction_name
 
@@ -90,7 +88,7 @@ class BaseBufferedWriter(BasePredictionWriter):
             "You need to implement the `_flush_buffer` method in your subclass."
         )
 
-    def handle_batch(self, model_output: ModelOutput) -> None:
+    def handle_batch(self, model_output: ModelOutput):
         """
         Handles a batch of predictions by appending them to the rows buffer and flushing the buffer if it is full.
         Args:
@@ -98,9 +96,8 @@ class BaseBufferedWriter(BasePredictionWriter):
         """
         if model_output is None:
             log.warning(
-                f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch."
-            )
-            return None
+                f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch.")
+            return
         rows = model_output.list_of_row_format
 
         if len(rows) + len(self.rows_buffer) < self.flush_frequency:
@@ -164,6 +161,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         # this is an indicator of something not working fully as expected
         # i'll investigate this issue later
 
+
 class LocalPickleWriter(BaseBufferedWriter):
     """
     Callback to write predictions to local pickle files during inference.
@@ -189,15 +187,11 @@ class LocalPickleWriter(BaseBufferedWriter):
             should_merge_list_of_keyed_tensors_to_single_tensor: If True, merge list of keyed tensors to a single tensor.
             post_processing_functions: List of ordered post-processing functions to apply to the files.
         """
-        super().__init__(
-            write_interval=write_interval, flush_frequency=flush_frequency, **kwargs
-        )
+        super().__init__(write_interval=write_interval, flush_frequency=flush_frequency, **kwargs)
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
         self.should_merge_files_on_main = should_merge_files_on_main
-        self.should_merge_list_of_keyed_tensors_to_single_tensor = (
-            should_merge_list_of_keyed_tensors_to_single_tensor
-        )
+        self.should_merge_list_of_keyed_tensors_to_single_tensor = should_merge_list_of_keyed_tensors_to_single_tensor
         self.post_processing_functions = post_processing_functions
 
     def _create_file_path(self) -> str:
@@ -218,9 +212,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         with open(self._local_file_path(file_path=file_path), "wb") as f:
             pickle.dump(self.rows_buffer, f)
 
-        log.info(
-            f"Global Rank: {self.global_rank} wrote {len(self.rows_buffer)} rows to {self._local_file_path(file_path=file_path)}."
-        )
+        log.info(f"Global Rank: {self.global_rank} wrote {len(self.rows_buffer)} rows to {self._local_file_path(file_path=file_path)}.")
 
     @retry()
     def on_predict_end(
@@ -233,14 +225,14 @@ class LocalPickleWriter(BaseBufferedWriter):
         if self.should_merge_files_on_main:
             # if we use multiple workers, we need to wait for all of them to finish writing
             # before merging the files
-            if trainer.global_rank != None:
+            if trainer.global_rank is not None:
                 torch.distributed.barrier()
             if self.global_rank == 0:
                 log.info("Merging pickle files on main process.")
                 self._merge_files()
 
             # other processes can continue after merging
-            if trainer.global_rank != None:
+            if trainer.global_rank is not None:
                 torch.distributed.barrier()
 
         # conducting post-processing functions on the files
@@ -253,7 +245,7 @@ class LocalPickleWriter(BaseBufferedWriter):
                         process_func["function"](file_path)
                 else:
                     process_func["function"](file_path)
-                if trainer.global_rank != None:
+                if trainer.global_rank is not None:
                     torch.distributed.barrier()
 
     def _merge_files(self):
@@ -274,10 +266,5 @@ class LocalPickleWriter(BaseBufferedWriter):
                 index_key=self.prediction_key_name,
                 value_key=self.prediction_name,
             )
-            torch.save(
-                merged_data_tensor.cpu(),
-                os.path.join(self.output_dir, "merged_predictions_tensor.pt"),
-            )
-        log.info(
-            f"Merged {len(merged_data_tensor)} rows into merged_predictions_tensor.pt. as pytorch tensor"
-        )
+            torch.save(merged_data_tensor.cpu(), os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
+            log.info(f"Merged {len(merged_data_tensor)} rows into merged_predictions_tensor.pt. as pytorch tensor")

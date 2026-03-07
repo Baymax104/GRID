@@ -3,16 +3,20 @@ import random
 from abc import ABC, abstractmethod
 from typing import Callable, Dict, List
 
-
 from src.utils.decorators import retry
 from src.utils.file_utils import open_pyarrow_file
+from pyarrow import parquet as pq
 
-# We suppress the tensorflow warnings. Needs to happend before the tf import
+
+# We suppress the tensorflow warnings. Needs to happened before the tf import
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import tensorflow as tf
 
+
 tf.config.set_visible_devices([], "GPU")  # Disable all for tensorflow
+
+
 # if GPU version of TF installed,
 # it will automatically occupy the full GPU memory
 
@@ -30,7 +34,7 @@ class RawDataIterator(ABC):
         self,
         **kwargs,
     ):
-        self.list_of_file_paths = None
+        self.list_of_file_paths = []
         self.should_shuffle_rows = None
 
     def update_list_of_file_paths(self, list_of_file_paths: List[str]):
@@ -59,6 +63,7 @@ class RawDataIterator(ABC):
         except StopIteration:
             return None
 
+
 class ParquetDataIterator(RawDataIterator):
     """Data iterator class for parquet files
 
@@ -68,8 +73,8 @@ class ParquetDataIterator(RawDataIterator):
         the list of file paths to read from
     """
 
-    def __init__(self, buffer_size=1000, features_to_consider=[], *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, buffer_size=1000, features_to_consider=None, **kwargs):
+        super().__init__(**kwargs)
         self.buffer_size = buffer_size
         self.features_to_consider = features_to_consider
 
@@ -87,10 +92,8 @@ class ParquetDataIterator(RawDataIterator):
                 parquet_file = pq.ParquetFile(f)
 
                 for batch in parquet_file.iter_batches(
-                    columns=self.features_to_consider
-                    if len(self.features_to_consider)
-                    else None,
-                    batch_size=batch_size,
+                        columns=self.features_to_consider if self.features_to_consider else None,
+                        batch_size=batch_size,
                 ):
                     yield batch
 
@@ -101,6 +104,7 @@ class ParquetDataIterator(RawDataIterator):
 
     def get_file_suffix(self) -> str:
         return "parquet"
+
 
 class TFRecordIterator(RawDataIterator):
     """Data iterator class for tfrecord files
@@ -117,14 +121,14 @@ class TFRecordIterator(RawDataIterator):
     def __init__(
         self,
         use_ragged_tensor: bool = False,
-        batch_tf_processing_functions: List[Callable] = [],
+        batch_tf_processing_functions: List[Callable] = None,
         should_drop_last_batch: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.feature_description = None
         self.use_ragged_tensor = use_ragged_tensor
-        self.batch_tf_processing_functions = batch_tf_processing_functions
+        self.batch_tf_processing_functions = batch_tf_processing_functions if batch_tf_processing_functions else []
         self.should_drop_last_batch = should_drop_last_batch
 
     def initialize_feature_description(self, raw_dataset: tf.data.TFRecordDataset):

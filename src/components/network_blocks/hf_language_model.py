@@ -37,13 +37,15 @@ class HFLanguageModel(nn.Module):
         self.return_last_hidden_states = return_last_hidden_states
 
     def forward(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass of the HuggingFace language model.
 
         Args:
-            text_ids: Tensor of token ids.
-            text_attention_masks: Tensor of attention masks.
+            input_ids: Tensor of token ids.
+            attention_mask: Tensor of attention masks.
 
         Returns:
             postprocessed_embeddings: Postprocessed embeddings.

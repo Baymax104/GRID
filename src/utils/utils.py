@@ -1,15 +1,17 @@
 import warnings
+from functools import partial
 from time import sleep
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import torch
+import torch.nn.functional as F
 from omegaconf import DictConfig
+from tokenizers.processors import TemplateProcessing
 from transformers.cache_utils import DynamicCache
 
-from src.utils import pylogger, rich_utils
-from functools import partial
-from tokenizers.processors import TemplateProcessing
 from src.data.loading.components.interfaces import TokenizerConfig
+from src.utils import pylogger, rich_utils
+
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -18,9 +20,9 @@ def print_warnings_for_missing_configs(cfg: DictConfig) -> None:
     _DEFAULT_CONFIGS = [
         "data_loading",
         "model",
-        "loss",
-        "optim",
-        "eval",
+        # "loss",
+        # "optim",
+        # "eval",
     ]
     has_warnings = False
     for config in _DEFAULT_CONFIGS:
@@ -220,6 +222,7 @@ def lightning_precision_to_dtype(precision: str) -> torch.dtype:
             "Supported precision types are: '32', '32-true', '64', '16', '16-mixed', 'bf16', 'half'."
         )
 
+
 def load_tokenize(config: TokenizerConfig) -> Any:
     """Load tokenizer and return a partial function for tokenization."""
     tokenizer = config.tokenizer
@@ -231,7 +234,7 @@ def load_tokenize(config: TokenizerConfig) -> Any:
             special_tokens=[(tokenizer.eos_token, tokenizer.eos_token_id)],
         )
     tokenize = partial(
-        tokenizer.encode_plus,
+        tokenizer,
         max_length=config.max_length,
         padding=config.padding,
         truncation=config.truncation,
@@ -239,6 +242,7 @@ def load_tokenize(config: TokenizerConfig) -> Any:
         return_tensors="pt",
     )
     return tokenize
+
 
 def sample_gumbel(shape: Tuple, device: torch.device, eps=1e-20) -> torch.Tensor:
     """Sample from Gumbel(0, 1)"""

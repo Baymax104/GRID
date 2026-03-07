@@ -1,8 +1,9 @@
+import os
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import List
 
 import hydra
+import torch
 import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, ModelSummary
@@ -24,6 +25,7 @@ from src.utils.logging_utils import finalize_loggers
 from src.utils.restart_job_utils import get_attribute_from_metadata_file
 from src.utils.utils import has_class_object_inside_list
 
+
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 
 
@@ -33,12 +35,12 @@ class PipelineModules:
     datamodule: LightningDataModule
     model: LightningModule
     # We use the plural form to match the names used by lightning
-    callbacks: List[Callback]
-    loggers: List[Logger]
+    callbacks: list[Callback]
+    loggers: list[Logger]
     trainer: Trainer
 
 
-def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> str:
+def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
     """
     Updates the configuration with the most recent checkpoint path if the job is a retry, a checkpoint callback exists,
     and a checkpoint file is found.
@@ -57,9 +59,9 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> str:
     ckpt_path = cfg.get("ckpt_path", None)
 
     if (
-        ckpt_path is not None
-        and has_no_extension(ckpt_path)
-        and cfg.get("should_retrieve_latest_ckpt_path", False)
+            ckpt_path is not None
+            and has_no_extension(ckpt_path)
+            and cfg.get("should_retrieve_latest_ckpt_path", False)
     ):
         # If a path to a folder is passed, we assume it contains folders with versions of checkpoints.
         # We expect those folders to be named using a timestamp.
@@ -81,14 +83,11 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> str:
     # If there is a checkpoint callback running, and the restart_metadata file shows we are not on the first run,
     # we check if there are checkpoints in the checkpoint folder and restart from there instead of the initial checkpoint.
     if (
-        cfg.get("callbacks")  # has callbacks
-        and cfg.callbacks.get("model_checkpoint")  # has checkpoint callback
-        and cfg.callbacks.get("restart_job")  # has retry callback
+        cfg.get("callbacks", {}).get("model_checkpoint", {}).get("restart_job", {})
         and get_attribute_from_metadata_file(
             f"{cfg.callbacks.restart_job.metadata_dir}/restart_metadata.json",
-            "current_run",
-        )
-        > 0  # current run is part of a retry
+            "current_run"
+        ) > 0  # current run is part of a retry
     ):
         checkpoint_folder = cfg.callbacks.model_checkpoint.dirpath
         # We check if there are files with the extension .ckpt in the checkpoint folder. If so, we get the latest one.
@@ -105,9 +104,7 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> str:
     return cfg
 
 
-def initialize_pipeline_modules(
-    cfg: DictConfig,
-) -> PipelineModules:
+def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     """
     Initialize and instantiate various objects required for running pipelines.
 
@@ -121,21 +118,17 @@ def initialize_pipeline_modules(
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
-    command_line_logger.info(
-        f"Instantiating datamodule <{cfg.data_loading.datamodule._target_}>"
-    )
-    datamodule: LightningDataModule = hydra.utils.instantiate(
-        cfg.data_loading.datamodule
-    )
+    command_line_logger.info(f"Instantiating datamodule <{cfg.data_loading.datamodule._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data_loading.datamodule)
 
     command_line_logger.info(f"Instantiating model <{cfg.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(cfg.model)
 
     command_line_logger.info("Instantiating callbacks...")
-    callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
+    callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     command_line_logger.info("Instantiating loggers...")
-    loggers: List[Logger] = instantiate_loggers(cfg.get("logger"))
+    loggers: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
     command_line_logger.info(f"Instantiating trainer <{cfg.trainer._target_}>")
 
@@ -188,7 +181,13 @@ def pipeline_launcher(cfg: DictConfig):
         - Ensures that loggers are finalized and profiler output is saved even if the task fails.
     """
 
+    pipeline_modules: PipelineModules | None = None
     try:
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "29500"
+        os.environ["RANK"] = "0"
+        os.environ["WORLD_SIZE"] = "1"
+        torch.distributed.init_process_group(backend="nccl", init_method="env://")
         pipeline_modules: PipelineModules = initialize_pipeline_modules(cfg)
         # Log hyperparameters if loggers are present
         if len(pipeline_modules.loggers) > 0:
@@ -198,5 +197,7 @@ def pipeline_launcher(cfg: DictConfig):
     except Exception as ex:
         raise ex
     finally:
+        torch.distributed.destroy_process_group()
         # We add the try catch to make sure the loggers are finalized even if the task fails.
-        finalize_loggers(pipeline_modules.trainer)
+        if pipeline_modules:
+            finalize_loggers(pipeline_modules.trainer)

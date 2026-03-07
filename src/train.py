@@ -1,10 +1,7 @@
-import os
-from typing import Any, Dict, Optional, Tuple
-
 import hydra
 import rootutils
 import torch
-from omegaconf import DictConfig
+
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
@@ -34,7 +31,7 @@ command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 torch.set_float32_matmul_precision("medium")
 
 
-def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def train(cfg: DictConfig):
     """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
     training.
 

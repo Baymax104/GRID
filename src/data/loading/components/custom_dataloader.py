@@ -26,18 +26,17 @@ class _MultiProcessingDataLoaderIterWithRetry(_MultiProcessingDataLoaderIter):
             start_time = time.monotonic()
             status, data = super()._try_get_data(timeout)
             if status:
-                return (True, data)
+                return True, data
             end_time = time.monotonic()
             # If it took less than the timeout time, it means the issue was an empty queue.
             # If that happens or if we have reached our last retry, we return False. Else, we retry.
             # We need this because original _try_get_data will return False if the queue is empty or
             # if the timeout is reached. We need a way to differentiate and only retry if there is a timeout.
             if end_time - start_time < timeout or retries + 1 == self._max_retries:
-                return (False, None)
-            command_line_logger.warning(
-                f"Retrying after timeout... Retry {retries + 1}/{self._max_retries}"
-            )
+                return False, None
+            command_line_logger.warning(f"Retrying after timeout... Retry {retries + 1}/{self._max_retries}")
             retries += 1
+        return False, None
 
 
 class DataloaderWithIterationRetry(DataLoader):
@@ -50,6 +49,4 @@ class DataloaderWithIterationRetry(DataLoader):
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIterWithRetry(
-                self, max_retries=self._max_retries
-            )
+            return _MultiProcessingDataLoaderIterWithRetry(self, max_retries=self._max_retries)

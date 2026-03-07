@@ -13,6 +13,7 @@ train: true
 test: false
 ckpt_path: null
 seed: 42
+
 data_loading:
   features_config:
     features:
@@ -134,6 +135,7 @@ data_loading:
           embedding: input_embedding
       dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
+
 model:
   _target_: src.modules.clustering.residual_quantization.ResidualQuantization
   track_residuals: true
