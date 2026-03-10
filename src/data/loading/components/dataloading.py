@@ -47,9 +47,8 @@ class BaseDataset:
         self.list_of_file_paths = list_of_files
 
     def set_distributed_params(self, total_workers: int, global_worker_id: int):
-        # TODO (lneves): figure out how to do this in LightningDataModule
-        self.total_workers = total_workers
-        self.global_worker_id = global_worker_id
+        self.total_workers = total_workers  # world_size, worker number in process level
+        self.global_worker_id = global_worker_id  # global_rank, worker id in process level
 
     def get_worker_id_and_num_workers(self):
         worker_info = get_worker_info()
@@ -63,6 +62,14 @@ class BaseDataset:
             worker_id = worker_info.id
             num_workers = worker_info.num_workers
 
+        # set global dataloader worker id in process level
+        # eg. world_size = 2, num_workers = 2
+        # Process 0 (global_rank = 0)
+        # - Thread 0 (worker_id = 0, global_id = 0 * 2 + 0 = 0)
+        # - Thread 1 (worker_id = 1, global_id = 0 * 2 + 1 = 1)
+        # Process 1 (global_rank = 1)
+        # - Thread 0 (worker_id = 0, global_id = 1 * 2 + 0 = 2)
+        # - Thread 1 (worker_id = 1, global_id = 1 * 2 + 1 = 3)
         self.global_dataloader_worker_id = self.global_worker_id * num_workers + worker_id
 
         return worker_id, num_workers
@@ -74,9 +81,7 @@ class BaseDataset:
             worker_files = self.list_of_file_paths
         else:
             worker_files = self.list_of_file_paths[worker_id::num_workers]
-        command_line_logger.debug(
-            f"GPU Worker: {self.global_worker_id}/{self.total_workers} CPU Worker {worker_id} has {len(worker_files)} files"
-        )
+        command_line_logger.debug(f"GPU Worker: {self.global_worker_id}/{self.total_workers} CPU Worker {worker_id} has {len(worker_files)} files")
         return worker_files
 
     def setup(self):
@@ -84,8 +89,10 @@ class BaseDataset:
 
 
 class UnboundedSequenceIterable(BaseDataset, IterableDataset):
-    """An unbounded dataset is a dataset that we don't know the size of beforehand.
-    For training, we will iterate over the dataset infinitely. For evaluation, we will iterate over the dataset once.
+    """
+    An unbounded dataset is a dataset that we don't know the size of beforehand.
+    For training, we will iterate over the dataset infinitely.
+    For evaluation, we will iterate over the dataset once.
     """
 
     def __init__(
@@ -109,25 +116,32 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         self.dataset_to_iterate = None
 
     def setup(self):
-        # We update each worker's data iterator with the files just for that worker.
-        self.data_iterator.update_list_of_file_paths(self.get_list_of_worker_files())
-        self.data_iterator = (
-            # here we use global_dataloader_worker_id as the seed for shuffling
-            # this doesn't matter for the case where workers have non-overlapping files
-            # but it does matter for the case where workers have all files
-            # (e.g. when using assign_all_files_per_worker)
-            # the same seed is used for all workers would cause duplicated examples returned by different workers
-            self.data_iterator.shuffle(seed=self.global_dataloader_worker_id)
-            if self.should_shuffle_rows
-            else self.data_iterator
-        )
+        """
+        Set up the dataset iterator, it is called lazily when this dataset is iterated.
+
+        - get data files for current worker thread
+        - read data files and set real dataset iterator
+        """
+        # set files that are processed on current worker thread
+        current_worker_files = self.get_list_of_worker_files()
+        self.data_iterator.update_list_of_file_paths(current_worker_files)
+
+        # here we use global_dataloader_worker_id as the seed for shuffling
+        # this doesn't matter for the case where workers have non-overlapping files
+        # but it does matter for the case where workers have all files
+        # (e.g. when using assign_all_files_per_worker)
+        # the same seed is used for all workers would cause duplicated examples returned by different workers
+        if self.should_shuffle_rows:
+            self.data_iterator = self.data_iterator.shuffle(seed=self.global_dataloader_worker_id)
+
         self.data_iterator.should_shuffle_rows = self.should_shuffle_rows
+
+        # get real data and dataset real iterator
         # We provide the flexibility to iterate per row, if per row preprocessing is needed, or per batch.
-        self.dataset_to_iterate = (
-            self.data_iterator.iterrows()
-            if self.dataset_config.iterate_per_row
-            else self.data_iterator.iter_batches(self.batch_size)
-        )
+        if self.dataset_config.iterate_per_row:
+            self.dataset_to_iterate = self.data_iterator.iterrows()
+        else:
+            self.dataset_to_iterate = self.data_iterator.iter_batches(self.batch_size)
 
         command_line_logger.debug(
             f"GLOBAL ID {self.global_dataloader_worker_id} GPU Worker: {self.global_worker_id}/{self.total_workers} with {len(self.data_iterator.list_of_file_paths)} files\
@@ -135,6 +149,12 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         )
 
     def __iter__(self):
+        """
+        For IterableDataset, iteration is activated by this function.
+
+        Returns:
+            iterator from data_iterator
+        """
         if self.dataset_to_iterate is None:
             # If it has not been set up, it means it is a forkserver worker. We need to set it up.
             self.setup()
@@ -154,6 +174,6 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
             if not finished_iteration:
                 self.setup()
         # We reset the dataset to iterate to None, so that it is set up again in the next iteration.
-        # This is required for validation when persitent_workers = True.
+        # This is required for validation when persistent_workers = True.
         self.dataset_to_iterate = None
         return None

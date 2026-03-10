@@ -79,7 +79,8 @@ class SequenceDataModule(LightningDataModule):
         return config.dataset_config.file_format if getattr(config.dataset_config, "file_format", None) else config.dataset_config.data_iterator.get_file_suffix()
 
     def setup(self, stage: Optional[str] = None) -> None:
-        """Assign data files to GPUs.
+        """
+        Assign data files to GPUs.
 
         Note that `self.trainer.world_size` is the total number of GPUs, and is
         equal to (# nodes) x (# GPUs per node).
@@ -90,16 +91,16 @@ class SequenceDataModule(LightningDataModule):
         which ensures that all the processes proceed to `self.setup()` once the
         data is prepared and available for use.
 
-        :param stage: Unused parameter. Lightning implementation of setup() uses
-            stage to determine which dataset splits (train, val, test) to set
-            up, but we choose to set up all splits on each call to setup() here.
+        Args:
+            stage: Unused parameter. Lightning implementation of setup() uses
+                stage to determine which dataset splits (train, val, test) to set
+                up, but we choose to set up all splits on each call to setup() here.
 
-        :raise AttributeError: If `self.trainer` is not initialized.
+        Raises:
+            AttributeError: If `self.trainer` is not initialized.
         """
         if not hasattr(self, "trainer") or self.trainer is None:
-            raise AttributeError(
-                f"self.trainer must be initialized before call to setup()."
-            )
+            raise AttributeError(f"self.trainer must be initialized before call to setup().")
 
         for stage, config in self.stage_to_config.items():
             if config is None:  # config is None when we don't want to set up the stages. ie. For inference, we only initialize the predict stage.
@@ -107,6 +108,7 @@ class SequenceDataModule(LightningDataModule):
             else:
                 # If the stage has not been initialized yet, we assign files to workers based on the suffix passed by the config.
                 if stage not in self.stage_to_file_map:
+                    # get all data files
                     list_of_files = list_files(
                         folder_path=config.data_folder,
                         suffix=f"*{self.get_file_suffix_from_config(config)}",
@@ -118,23 +120,25 @@ class SequenceDataModule(LightningDataModule):
                         list_of_files=list_of_files,
                         total_workers=self.trainer.world_size,
                         assign_by_size=config.assign_files_by_size,
-                        should_shuffle_rows=config.should_shuffle_rows if hasattr(config, "should_shuffle_rows") else False,
-                        assign_all_files_per_worker=config.assign_all_files_per_worker if hasattr(config, "assign_all_files_per_worker") else False,
+                        should_shuffle_rows=config.get("should_shuffle_rows", False),
+                        assign_all_files_per_worker=config.get("assign_all_files_per_worker", False)
                     )
 
     def get_dataloader(self, stage: TrainerFn):
-        """Construct a DataLoader on a single GPU using config `curr_config`.
+        """
+        Construct a DataLoader on a single GPU using config `curr_config`.
 
         The single GPU is managed by Lightning and corresponds to
         `self.trainer.global_rank`.
 
-        :param curr_config: Config that determines dataloader properties.
-        :param map_files_idx_per_device: Map from GPUs to file indices.
+        Args:
+            stage: enum value of trainer stage
 
-        :return: DataLoader running on one GPU that processes the files
-            assigned to that GPU, according to `map_files_per_device`.
+        Returns:
+            DataLoader running on one GPU that processes the files assigned to that GPU.
 
-        :raise AttributeError: If `self.trainer` is not initialized or if setup was not called.
+        Raises:
+            AttributeError: If `self.trainer` is not initialized or if setup was not called.
         """
         if not hasattr(self, "trainer"):
             raise AttributeError(f"self.trainer must be initialized before call to get_dataloader().")
@@ -157,7 +161,10 @@ class SequenceDataModule(LightningDataModule):
 
         device_file_list = self.stage_to_file_map[stage].get(self.trainer.global_rank, [])
 
+        # In practice, one worker process corresponds to one GPU
+        # set files that are processed on current process
         dataset.set_list_of_files(list_of_files=device_file_list)
+
         # set the number of total GPUs and GPU index
         dataset.set_distributed_params(
             total_workers=self.trainer.world_size,
@@ -171,10 +178,7 @@ class SequenceDataModule(LightningDataModule):
 
         if curr_config.num_workers == 0:
             persistent_workers = False
-            logging.warning(
-                "num_workers is set to 0, persistent_workers will be set to"
-                " False as persistent workers require num_workers > 0"
-            )
+            logging.warning("num_workers is set to 0, persistent_workers will be set to False as persistent workers require num_workers > 0")
         else:
             persistent_workers = curr_config.persistent_workers
 
@@ -190,61 +194,73 @@ class SequenceDataModule(LightningDataModule):
         )
 
     def train_dataloader(self):
-        """Create and return the train dataloader.
+        """
+        Create and return the train dataloader.
 
-        :return: The train dataloader.
+        Returns:
+            The train dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.FITTING)
 
     def val_dataloader(self):
-        """Create and return the validation dataloader.
+        """
+        Create and return the validation dataloader.
 
-        :return: The validation dataloader.
+        Returns:
+            The validation dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.VALIDATING)
 
     def test_dataloader(self):
-        """Create and return the test dataloader.
+        """
+        Create and return the test dataloader.
 
-        :return: The test dataloader.
+        Returns:
+            The test dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.TESTING)
 
     def predict_dataloader(self):
-        """Create and return the predict dataloader.
+        """
+        Create and return the predict dataloader.
 
-        :return: The predict dataloader.
+        Returns:
+            The predict dataloader.
         """
         return self.get_dataloader(stage=TrainerFn.PREDICTING)
 
     def teardown(self, stage: Optional[str] = None) -> None:
-        """Lightning hook for cleaning up after `trainer.fit()`,
+        """
+        Lightning hook for cleaning up after `trainer.fit()`,
         `trainer.validate()`, `trainer.test()`, and `trainer.predict()`.
 
-        :param stage: The stage being torn down. Defaults to ``None``.
+        Args:
+            stage: The stage being torn down. Defaults to ``None``.
         """
         pass
 
     def state_dict(self) -> Dict[Any, Any]:
-        """Called when saving a checkpoint. Implement to generate and save the
-        datamodule state.
+        """
+        Called when saving a checkpoint. Implement to generate and save the datamodule state.
 
-        :return: A dictionary containing the datamodule state that you want to
-            save.
+        Returns:
+            A dictionary containing the datamodule state that you want to save.
         """
         return {}
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
-        """Called when loading a checkpoint. Implement to reload datamodule
-        state given datamodule `state_dict()`.
+        """
+        Called when loading a checkpoint. Implement to reload datamodule state given datamodule `state_dict()`.
 
-        :param state_dict: The datamodule state returned by `self.state_dict()`.
+        Returns:
+            state_dict: The datamodule state returned by `self.state_dict()`.
         """
         pass
 
 
 class ItemDataModule(SequenceDataModule):
-    """A LightningDataModule that encapsulates data splitting, preprocessing,
+    """
+    A LightningDataModule that encapsulates data splitting, preprocessing,
     parallelization and batching individual (non-sequential) item features.
     """
 
@@ -255,22 +271,19 @@ class ItemDataModule(SequenceDataModule):
         test_dataloader_config: Optional[BaseDataloaderConfig] = None,
         predict_dataloader_config: Optional[BaseDataloaderConfig] = None,
     ):
-        """Construct a SequenceDataModule using the provided config files.
+        """
+        Construct a SequenceDataModule using the provided config files.
 
         The attributes `map_train_files_per_device`,
         `map_val_files_per_device`, and `map_test_files_per_device` are
         initialized as None, and are later modified by `setup()` to contain
-        mappings from device indices to lists of data files assigned to that
-        device.
+        mappings from device indices to lists of data files assigned to that device.
 
-        :param train_dataloader_config: Training dataloader configuration passed
-            by Hydra.
-        :param val_dataloader_config: Validation dataloader configuration passed
-            by Hydra.
-        :param test_dataloader_config: Test dataloader configuration passed
-            by Hydra.
-        :param predict_dataloader_config: Prediction dataloader configuration
-            passed by Hydra.
+        Args:
+            train_dataloader_config: Training dataloader configuration passed by Hydra.
+            val_dataloader_config: Validation dataloader configuration passed by Hydra.
+            test_dataloader_config: Test dataloader configuration passed by Hydra.
+            predict_dataloader_config: Prediction dataloader configuration passed by Hydra.
         """
         super().__init__(
             train_dataloader_config=train_dataloader_config,
@@ -280,26 +293,29 @@ class ItemDataModule(SequenceDataModule):
         )
 
     def get_dataloader(self, stage: TrainerFn):
-        """Construct a DataLoader on a single GPU using config `curr_config`.
+        """
+        Construct a DataLoader on a single GPU using config `curr_config`.
 
         The single GPU is managed by Lightning and corresponds to
         `self.trainer.global_rank`.
 
-        :param curr_config: Config that determines dataloader properties.
-        :param map_files_idx_per_device: Map from GPUs to file indices.
+        Args:
+            stage: enum value of trainer stage
 
-        :return: DataLoader running on one GPU that processes the files
-            assigned to that GPU, according to `map_files_per_device`.
+        Returns:
+            DataLoader running on one GPU that processes the files assigned to that GPU.
 
-        :raise AttributeError: If `self.trainer` is not initialized or if setup was not called.
+        Raises:
+            AttributeError: If `self.trainer` is not initialized or if setup was not called.
         """
+
         if not hasattr(self, "trainer"):
             raise AttributeError(f"self.trainer must be initialized before call to get_dataloader().")
 
         if not self.stage_to_file_map[stage]:
             raise AttributeError(f"Stage {stage} must initialize file map.")
-        curr_config = self.stage_to_config[stage]
 
+        curr_config = self.stage_to_config[stage]
         assign_all_files_per_worker = curr_config.get("assign_all_files_per_worker", False)
 
         assert (stage == TrainerFn.FITTING or not assign_all_files_per_worker), "Automatic file assignment should only be disabled for training."
@@ -316,7 +332,10 @@ class ItemDataModule(SequenceDataModule):
 
         device_file_list = self.stage_to_file_map[stage].get(self.trainer.global_rank, [])
 
+        # In practice, one worker process corresponds to one GPU
+        # set files that are processed on current process
         dataset.set_list_of_files(list_of_files=device_file_list)
+
         # set the number of total GPUs and GPU index
         dataset.set_distributed_params(
             total_workers=self.trainer.world_size,

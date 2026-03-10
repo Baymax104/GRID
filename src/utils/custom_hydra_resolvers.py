@@ -7,7 +7,6 @@ from omegaconf import DictConfig, ListConfig, OmegaConf
 """"
 Hydra allows for custom resolvers, which are functions that can be used to resolve values in the config.
 For example, one can manipulate strings or apply simple python functions to the config values.
-
 """
 
 
@@ -23,7 +22,10 @@ def remove_chars_from_string(s: str, chars: str) -> str:
 
 
 def conditional_expression(
-    condition_expression, value_if_true, value_if_false, **kwargs
+    condition_expression,
+    value_if_true,
+    value_if_false,
+    **kwargs
 ):
     """
     A generic resolver that evaluates a condition expression based on config values.
@@ -85,7 +87,9 @@ def extract_fields_from_list_of_dicts(
 
 
 def create_map_from_list_of_dicts(
-    list_of_dicts: ListConfig, key: str, value: Optional[str] = None
+    list_of_dicts: ListConfig,
+    key: str,
+    value: Optional[str] = None
 ) -> DictConfig:
     """
     Creates a dictionary from a list of dictionaries based on the key and value.
@@ -99,9 +103,7 @@ def create_map_from_list_of_dicts(
     if value is None:
         return DictConfig({d[key]: d for d in list_of_dicts if key in d})
 
-    return DictConfig(
-        {d[key]: d[value] for d in list_of_dicts if key in d and value in d}
-    )
+    return DictConfig({d[key]: d[value] for d in list_of_dicts if key in d and value in d})
 
 
 def math_eval(expression: str) -> float:
@@ -135,9 +137,9 @@ def math_eval(expression: str) -> float:
             case ast.Constant(value) if isinstance(value, int):
                 return value  # integer
             case ast.BinOp(left, op, right):
-                return operators[type(op)](eval_(left), eval_(right))
+                return operators[type(op)](eval_(left), eval_(right))  # type: ignore
             case ast.UnaryOp(op, operand):  # e.g., -1
-                return operators[type(op)](eval_(operand))
+                return operators[type(op)](eval_(operand))  # type: ignore
             case _:
                 raise TypeError(node)
 
@@ -158,11 +160,7 @@ def remove_item_from_list(input_list: ListConfig, item_to_remove: str) -> ListCo
 # The resolver name is the function name without the type annotations.
 OmegaConf.register_new_resolver("remove_chars_from_string", remove_chars_from_string)
 OmegaConf.register_new_resolver("conditional_expression", conditional_expression)
-OmegaConf.register_new_resolver(
-    "extract_fields_from_list_of_dicts", extract_fields_from_list_of_dicts
-)
-OmegaConf.register_new_resolver(
-    "create_map_from_list_of_dicts", create_map_from_list_of_dicts
-)
+OmegaConf.register_new_resolver("extract_fields_from_list_of_dicts", extract_fields_from_list_of_dicts)
+OmegaConf.register_new_resolver("create_map_from_list_of_dicts", create_map_from_list_of_dicts)
 OmegaConf.register_new_resolver("math_eval", math_eval)
 OmegaConf.register_new_resolver("remove_item_from_list", remove_item_from_list)

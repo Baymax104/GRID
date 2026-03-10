@@ -21,7 +21,7 @@ def assign_files_to_workers(
 
     - If `total_workers == 0`, then the function returns a single-key dict
       mapping 0 to `list_of_files` as well as a boolean indicating that the
-      files are shared among "workers". This is for debuggging.
+      files are shared among "workers". This is for debugging.
     - Otherwise, if the list of files is shorter than `total_workers`, all files
       are assigned to each worker, and the returned boolean indicates that the
       files are shared among workers.
@@ -39,6 +39,7 @@ def assign_files_to_workers(
         or to assign randomly.
     :param assign_all_files_per_worker: Whether to assign all files to each
         worker.
+    :param should_shuffle_rows: Whether to shuffle rows when assigning files.
 
     :return: A dictionary mapping worker indices to file paths and a boolean
         indicating whether files have been assigned to all workers (i.e. each

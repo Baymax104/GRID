@@ -12,10 +12,14 @@ command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 def inference(cfg: DictConfig):
-    """Runs inference using a pre-trained model.
+    """
+    Runs inference using a pre-trained model.
 
-    :param cfg: A DictConfig configuration composed by Hydra.
-    :return: A dict with all instantiated objects.
+    Args:
+        cfg: A DictConfig configuration composed by Hydra.
+
+    Returns:
+        A dict with all instantiated objects.
     """
 
     with pipeline_launcher(cfg) as pipeline_modules:
@@ -36,9 +40,11 @@ def inference(cfg: DictConfig):
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="inference.yaml")
 def main(cfg: DictConfig) -> None:
-    """Main entry point for inference.
+    """
+    Main entry point for inference.
 
-    :param cfg: DictConfig configuration composed by Hydra.
+    Args:
+        cfg: DictConfig configuration composed by Hydra.
     """
     # apply extra utilities
     extras(cfg)

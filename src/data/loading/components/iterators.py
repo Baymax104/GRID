@@ -1,11 +1,12 @@
 import os
 import random
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List
+from typing import Callable
+
+from pyarrow import parquet as pq
 
 from src.utils.decorators import retry
 from src.utils.file_utils import open_pyarrow_file
-from pyarrow import parquet as pq
 
 
 # We suppress the tensorflow warnings. Needs to happened before the tf import
@@ -26,18 +27,15 @@ class RawDataIterator(ABC):
 
     Parameters
     ----------
-    list_of_file_paths : List[str]
+    list_of_file_paths : list[str]
         the list of file paths to read from
     """
 
-    def __init__(
-        self,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs):
         self.list_of_file_paths = []
         self.should_shuffle_rows = None
 
-    def update_list_of_file_paths(self, list_of_file_paths: List[str]):
+    def update_list_of_file_paths(self, list_of_file_paths: list[str]):
         self.list_of_file_paths = list_of_file_paths
 
     @abstractmethod
@@ -69,7 +67,7 @@ class ParquetDataIterator(RawDataIterator):
 
     Parameters
     ----------
-    list_of_file_paths : List[str]
+    list_of_file_paths : list[str]
         the list of file paths to read from
     """
 
@@ -85,7 +83,7 @@ class ParquetDataIterator(RawDataIterator):
             for row in batch.to_pylist():
                 yield row
 
-    def iter_batches(self, batch_size: int) -> Dict[str, tf.Tensor]:  # type: ignore
+    def iter_batches(self, batch_size: int):
         assert self.list_of_file_paths is not None, "list_of_file_paths is not set"
         for file_path in self.list_of_file_paths:
             with open_pyarrow_file(file_path) as f:
@@ -99,7 +97,7 @@ class ParquetDataIterator(RawDataIterator):
 
     def shuffle(self, seed=42) -> RawDataIterator:
         random.seed(seed)
-        random.shuffle(self.list_of_file_paths)  # type: ignore
+        random.shuffle(self.list_of_file_paths)
         return self
 
     def get_file_suffix(self) -> str:
@@ -107,21 +105,19 @@ class ParquetDataIterator(RawDataIterator):
 
 
 class TFRecordIterator(RawDataIterator):
-    """Data iterator class for tfrecord files
-    Parameters
-    ----------
-    use_ragged_tensor: bool
-        Whether to use ragged tensors.
-    batch_tf_processing_functions: List[Callable]
-        A list of tensorflow functions to apply to the batches.
-    should_drop_last_batch: bool
-        Whether to drop the last batch if it is not a multiple of the batch size.
+    """
+    Data iterator class for tfrecord files
+
+    Args:
+        use_ragged_tensor: bool, Whether to use ragged tensors.
+        batch_tf_processing_functions: list[Callable], A list of tensorflow functions to apply to the batches.
+        should_drop_last_batch: bool, Whether to drop the last batch if it is not a multiple of the batch size.
     """
 
     def __init__(
         self,
         use_ragged_tensor: bool = False,
-        batch_tf_processing_functions: List[Callable] = None,
+        batch_tf_processing_functions: list[Callable] = None,
         should_drop_last_batch: bool = True,
         **kwargs,
     ):
@@ -136,17 +132,20 @@ class TFRecordIterator(RawDataIterator):
         If the feature description is not set, infer the feature description from the first record in the dataset.
         """
         if self.feature_description is None:
-            sample_record: tf.Tensor = next(iter(raw_dataset))  # type: ignore
-
-            self.feature_description = self.infer_feature_type(
-                self.parse_tfrecord(sample_record).features.feature  # type: ignore
-            )
+            sample_record: tf.Tensor = next(iter(raw_dataset))
+            self.feature_description = self.infer_feature_type(self.parse_tfrecord(sample_record).features.feature)
 
     def iterrows(self):
+        """
+        Load real data and returns an iterator of dataset.
+        The dataset in this iterator is obtained based on current worker thread.
+
+        Returns:
+            iterator of dataset, considered as list[sample] (aka. list[row])
+            every element in this iterator is a sample.
+        """
         assert self.list_of_file_paths is not None, "list_of_file_paths is not set"
-        raw_dataset = tf.data.TFRecordDataset(
-            [self.list_of_file_paths], compression_type="GZIP"
-        )
+        raw_dataset = tf.data.TFRecordDataset([self.list_of_file_paths], compression_type="GZIP")
         if self.should_shuffle_rows:
             # the buffer here is the number of records to shuffle
             # the larger the buffer, the more memory it will use
@@ -163,11 +162,20 @@ class TFRecordIterator(RawDataIterator):
             yield example
             curr_example = self._get_next_example(dataset_iterator)
 
-    def iter_batches(self, batch_size: int) -> Dict[str, tf.Tensor]:  # type: ignore
+    def iter_batches(self, batch_size: int):
+        """
+        Load real data and returns an iterator of dataset.
+        The dataset in this iterator is obtained based on current worker thread.
+
+        Args:
+            batch_size: batch size
+
+        Returns:
+            iterator of dataset, considered as list[batch].
+            every element in this iterator is a batch of data.
+        """
         assert self.list_of_file_paths is not None, "list_of_file_paths is not set"
-        raw_dataset = tf.data.TFRecordDataset(
-            self.list_of_file_paths, compression_type="GZIP"
-        )
+        raw_dataset = tf.data.TFRecordDataset(self.list_of_file_paths, compression_type="GZIP")
 
         if self.should_shuffle_rows:
             # the buffer here is the number of records to shuffle
@@ -175,23 +183,29 @@ class TFRecordIterator(RawDataIterator):
             # too large might cause OOM
             raw_dataset = raw_dataset.shuffle(buffer_size=128)
 
+        # set feature description which describes key-feature mapping
         self.initialize_feature_description(raw_dataset)
+
+        # divide dataset into batches
         # to avoid the issues with tf record warnings, we drop the last instances
-        batch_function = (
-            raw_dataset.ragged_batch if self.use_ragged_tensor else raw_dataset.batch
-        )
+        if self.use_ragged_tensor:
+            batched_dataset = raw_dataset.ragged_batch(batch_size, drop_remainder=self.should_drop_last_batch)
+        else:
+            batched_dataset = raw_dataset.batch(batch_size, drop_remainder=self.should_drop_last_batch)
+        batched_dataset = batched_dataset.prefetch(tf.data.AUTOTUNE)
 
-        batched_dataset = batch_function(
-            batch_size, drop_remainder=self.should_drop_last_batch
-        ).prefetch(buffer_size=tf.data.AUTOTUNE)
+        # now, dataset can be seen as list[batch_dict]
+        # every batch_dict can be abstracted as a following structure
+        # {"key1": tensor([batch_size, ...]), "key2": tensor([batch_size, ...])}
 
+        # apply dataset processing function
+        # every processing function receives a batch_dict parameter
         for batch_tf_processing_function in self.batch_tf_processing_functions:
             batched_dataset = batched_dataset.map(batch_tf_processing_function)
 
+        # iterate dataset
         dataset_iterator = iter(batched_dataset)
-
         curr_batch = self._get_next_example(dataset_iterator)
-
         while curr_batch is not None:
             example = tf.io.parse_example(curr_batch, self.feature_description)
             yield example
@@ -200,10 +214,10 @@ class TFRecordIterator(RawDataIterator):
     # dynamic inferring the feature description of tfrecord files
     def infer_feature_type(self, example_proto: tf.Tensor) -> dict:
         feature_description = {}
-        tf_feature_type = (
-            tf.io.RaggedFeature if self.use_ragged_tensor else tf.io.VarLenFeature
-        )
-        for key, value in example_proto.items():  # type: ignore
+        # feature has variable length, RaggedFeature in TF 2.x is recommended
+        # VarLenFeature is used for compatibility
+        tf_feature_type = tf.io.RaggedFeature if self.use_ragged_tensor else tf.io.VarLenFeature
+        for key, value in example_proto.items():
             if isinstance(value, tf.train.Feature):
                 if value.HasField("bytes_list"):
                     feature_description[key] = tf_feature_type(tf.string)
@@ -218,14 +232,14 @@ class TFRecordIterator(RawDataIterator):
     # parsing the tfrecord files from bytes
     def parse_tfrecord(self, record: tf.Tensor) -> tf.Tensor:
         example = tf.train.Example()
-        example.ParseFromString(record.numpy())  # type: ignore
+        example.ParseFromString(record.numpy())
         return example
 
     def shuffle(self, seed=42) -> RawDataIterator:
         # TODO(lneves): Unify the shuffle method for all iterators
         # Currently this one shuffles only files, parquet shuffles rows.
         random.seed(seed)
-        random.shuffle(self.list_of_file_paths)  # type: ignore
+        random.shuffle(self.list_of_file_paths)
         return self
 
     def get_file_suffix(self) -> str:

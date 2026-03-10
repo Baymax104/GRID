@@ -109,10 +109,8 @@ data_loading:
       iterate_per_row: true
       data_iterator:
         _target_: src.data.loading.components.iterators.TFRecordIterator
-      features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features},
-        "name", False, "is_text", "True"}
-      num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features},
-        "name", "num_placeholder_tokens"}
+      features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features}, "name", False, "is_text", "True"}
+      num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features}, "name", "num_placeholder_tokens"}
       preprocessing_functions:
       - _target_: src.data.loading.components.pre_processing.filter_features_to_consider
         _partial_: true
@@ -120,6 +118,10 @@ data_loading:
         _partial_: true
         features_to_apply:
         - id
+        - text
+      - _target_: src.data.loading.components.pre_processing.squeeze_tensor_in_place
+        _partial_: true
+        features_to_apply:
         - text
       - _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
         _partial_: true
@@ -139,8 +141,7 @@ data_loading:
         features_to_apply:
         - text
         - text_mask
-      field_type_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features},
-        "name", "type"}
+      field_type_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features}, "name", "type"}
   datamodule:
     _target_: src.data.loading.datamodules.sequence_datamodule.ItemDataModule
     predict_dataloader_config:
