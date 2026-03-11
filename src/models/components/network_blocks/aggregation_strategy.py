@@ -14,6 +14,21 @@ class AggregationStrategy(ABC):
         row_ids: torch.Tensor,
         last_item_index: torch.Tensor,
     ) -> torch.Tensor:
+        """
+        Aggregate the embeddings of token by each row
+        Tensor shape (batch_size, sequence_length, embedding_dim) will be transformed to (batch_size, embedding_dim)
+
+        Args:
+            embeddings (torch.Tensor): Shape (batch_size, sequence_length, embedding_dim).
+                The tensor containing embeddings for each row.
+            row_ids (torch.Tensor): Shape (return_size,).
+                The tensor containing row ids for which the aggregated embedding has to be returned.
+            last_item_index (torch.Tensor): Shape (return_size,).
+                The tensor containing the indices of the last items in embeddings for each row in row_ids.
+
+        Returns:
+            torch.Tensor: The aggregated embeddings of shape (return_size, embedding_dim).
+        """
         pass
 
 
@@ -47,31 +62,24 @@ class MeanAggregation(AggregationStrategy):
             row_ids (torch.Tensor): Shape (return_size,).
                 The tensor containing row ids for which the aggregated embedding has to be returned.
             last_item_index (torch.Tensor): Shape (return_size,).
-                The tensor containing the indices of the last items in emdeddings for each row in row_ids.
+                The tensor containing the indices of the last items in embeddings for each row in row_ids.
 
         Returns:
             torch.Tensor: The aggregated embeddings of shape (return_size, embedding_dim).
         """
         # Select the embeddings for the specified row ids
-        embeddings = embeddings[
-            row_ids
-        ]  # Shape (return_size, sequence_length, embedding_dim)
+        embeddings = embeddings[row_ids]  # Shape (return_size, sequence_length, embedding_dim)
         # Create a mask to select the last K items of sequences
+        # Shape (return_size, sequence_length)
         mask = create_last_k_mask(embeddings.size(1), last_item_index, self.last_k)
         mask = mask.to(dtype=embeddings.dtype, device=embeddings.device)
 
         # Apply the mask to the embeddings
-        masked_embeddings = embeddings * mask.unsqueeze(
-            2
-        )  # Shape (return_size, sequence_length, embedding_dim)
+        masked_embeddings = embeddings * mask.unsqueeze(2)  # Shape (return_size, sequence_length, embedding_dim)
 
         # Sum the masked embeddings and divide by the count of non-zero elements in the mask
-        sum_embeddings = torch.sum(
-            masked_embeddings, dim=1
-        )  # Shape (return_size, embedding_dim)
-        count = (
-            torch.sum(mask, dim=1).clamp(min=1).unsqueeze(1)
-        )  # Shape (return_size, embedding_dim)
+        sum_embeddings = torch.sum(masked_embeddings, dim=1)  # Shape (return_size, embedding_dim)
+        count = torch.sum(mask, dim=1).clamp(min=1).unsqueeze(1)  # Shape (return_size, 1)
         return sum_embeddings / count  # Shape (return_size, embedding_dim)
 
 

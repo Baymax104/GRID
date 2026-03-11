@@ -48,15 +48,11 @@ class SemanticEmbeddingInferenceModule(LightningModule):
                 Shape (batch_size, n_features)
         """
         semantic_embedding_model_input_name_to_feature = {
-            input_embedding_model_input_name: model_input.transformed_features[
-                feature_name
-            ]
+            input_embedding_model_input_name: model_input.transformed_features[feature_name]
             for input_embedding_model_input_name, feature_name in self.semantic_embedding_model_input_map.items()
         }
         with torch.no_grad():
-            semantic_embeddings = self.semantic_embedding_model(
-                **semantic_embedding_model_input_name_to_feature
-            )
+            semantic_embeddings = self.semantic_embedding_model(**semantic_embedding_model_input_name_to_feature)
         return semantic_embeddings
 
     def model_step(self, model_input: ItemData) -> torch.Tensor:
@@ -72,7 +68,6 @@ class SemanticEmbeddingInferenceModule(LightningModule):
 
         Args:
             batch: A batch of data of ItemData type.
-            batch_idx: The index of the batch.
 
         Returns:
             model_output: A SharedKeyAcrossPredictionsOutput object containing the item

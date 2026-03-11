@@ -174,7 +174,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         write_interval: str = "batch",
         should_merge_files_on_main: bool = True,
         should_merge_list_of_keyed_tensors_to_single_tensor: bool = True,
-        post_processing_functions: Optional[List[Dict[str, callable]]] = [],
+        post_processing_functions: Optional[List[Dict[str, callable]]] = None,
         **kwargs,
     ):
         """
@@ -192,7 +192,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         os.makedirs(self.output_dir, exist_ok=True)
         self.should_merge_files_on_main = should_merge_files_on_main
         self.should_merge_list_of_keyed_tensors_to_single_tensor = should_merge_list_of_keyed_tensors_to_single_tensor
-        self.post_processing_functions = post_processing_functions
+        self.post_processing_functions = post_processing_functions if post_processing_functions else []
 
     def _create_file_path(self) -> str:
         """Create a file path for the pickle file."""
@@ -200,9 +200,11 @@ class LocalPickleWriter(BaseBufferedWriter):
 
     def _local_file_path(self, file_path: Optional[str] = None) -> str:
         """Create a local file path for the pickle file."""
-        return (
-            f"{self.output_dir}/{file_path if file_path else self._create_file_path()}"
-        )
+        return f"{self.output_dir}/{file_path if file_path else self._create_file_path()}"
+
+    def _distributed_barrier(self):
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            torch.distributed.barrier()
 
     @retry()
     def _flush_buffer(self):
@@ -226,14 +228,14 @@ class LocalPickleWriter(BaseBufferedWriter):
             # if we use multiple workers, we need to wait for all of them to finish writing
             # before merging the files
             if trainer.global_rank is not None:
-                torch.distributed.barrier()
+                self._distributed_barrier()
             if self.global_rank == 0:
                 log.info("Merging pickle files on main process.")
                 self._merge_files()
 
             # other processes can continue after merging
             if trainer.global_rank is not None:
-                torch.distributed.barrier()
+                self._distributed_barrier()
 
         # conducting post-processing functions on the files
         for process_func in self.post_processing_functions:
@@ -246,7 +248,7 @@ class LocalPickleWriter(BaseBufferedWriter):
                 else:
                     process_func["function"](file_path)
                 if trainer.global_rank is not None:
-                    torch.distributed.barrier()
+                    self._distributed_barrier()
 
     def _merge_files(self):
         """Merge all pickle files in the output directory into a single file."""

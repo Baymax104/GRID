@@ -7,6 +7,7 @@ from typing import Callable, Optional, Tuple, Type, TypeVar
 
 from src.utils.pylogger import RankedLogger
 
+
 T = TypeVar("T")  # return type
 
 logger = RankedLogger(__name__)
@@ -22,6 +23,7 @@ class RetriesFailedException(Exception):
 
 class __RetriableTimeoutException(Exception):
     pass
+
 
 def timeout(
     seconds=10,

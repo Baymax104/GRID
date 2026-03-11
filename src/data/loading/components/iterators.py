@@ -175,7 +175,7 @@ class TFRecordIterator(RawDataIterator):
             every element in this iterator is a batch of data.
         """
         assert self.list_of_file_paths is not None, "list_of_file_paths is not set"
-        raw_dataset = tf.data.TFRecordDataset(self.list_of_file_paths, compression_type="GZIP")
+        raw_dataset = tf.data.TFRecordDataset(self.list_of_file_paths, compression_type="GZIP", buffer_size=256 * 1024)
 
         if self.should_shuffle_rows:
             # the buffer here is the number of records to shuffle

@@ -1,6 +1,6 @@
 import hydra
 import rootutils
-
+import torch
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
@@ -8,7 +8,10 @@ from src.utils import RankedLogger, extras
 from src.utils.custom_hydra_resolvers import *
 from src.utils.launcher_utils import pipeline_launcher
 
+
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+
+torch.set_float32_matmul_precision("medium")
 
 
 def inference(cfg: DictConfig):

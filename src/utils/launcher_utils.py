@@ -171,7 +171,6 @@ def pipeline_launcher(cfg: DictConfig):
     Launches the pipeline with the given configuration and logger.
     Args:
         cfg (DictConfig): Configuration object containing pipeline settings.
-        log (RankedLogger): Logger object for logging information.
     Yields:
         PipelineModules: A dataclass containing the instantiated objects.
     Raises:
@@ -183,11 +182,6 @@ def pipeline_launcher(cfg: DictConfig):
 
     pipeline_modules: PipelineModules | None = None
     try:
-        os.environ["MASTER_ADDR"] = "localhost"
-        os.environ["MASTER_PORT"] = "29500"
-        os.environ["RANK"] = "0"
-        os.environ["WORLD_SIZE"] = "1"
-        torch.distributed.init_process_group(backend="nccl", init_method="env://")
         pipeline_modules: PipelineModules = initialize_pipeline_modules(cfg)
         # Log hyperparameters if loggers are present
         if len(pipeline_modules.loggers) > 0:
@@ -197,7 +191,6 @@ def pipeline_launcher(cfg: DictConfig):
     except Exception as ex:
         raise ex
     finally:
-        torch.distributed.destroy_process_group()
         # We add the try catch to make sure the loggers are finalized even if the task fails.
         if pipeline_modules:
             finalize_loggers(pipeline_modules.trainer)

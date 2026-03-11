@@ -57,9 +57,9 @@ trainer:
   default_root_dir: ${paths.output_dir}
   min_steps: 1
   max_steps: 80000
-  max_epochs: 1
+  max_epochs: 10
   accelerator: gpu
-  devices: -1
+  devices: [0, 1]
   num_nodes: 1
   precision: 32
   log_every_n_steps: 2500

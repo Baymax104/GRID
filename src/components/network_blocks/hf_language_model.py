@@ -5,9 +5,7 @@ import torch.nn as nn
 from transformers import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutput
 
-from src.models.components.network_blocks.embedding_aggregator import (
-    EmbeddingAggregator,
-)
+from src.models.components.network_blocks.embedding_aggregator import EmbeddingAggregator
 
 
 class HFLanguageModel(nn.Module):
@@ -18,7 +16,8 @@ class HFLanguageModel(nn.Module):
         postprocessor: nn.Module = nn.Identity(),
         return_last_hidden_states: bool = False,
     ):
-        """Initialize the HuggingFace language model.
+        """
+        Initialize the HuggingFace language model.
 
         This is a wrapper around a HuggingFace PreTrainedModel that generates text
         sequence embeddings by passing the last hidden states of the PreTrainedModel
@@ -27,7 +26,8 @@ class HFLanguageModel(nn.Module):
         Args:
             huggingface_model: HuggingFace model to use for language modeling
             aggregator: Aggregator to use to aggregate the embeddings
-            postprocessor: Postprocessor to use to process the aggregated embeddings
+            postprocessor: Postprocessor to use to process the aggregated embeddings.
+                Defaults to nn.Identity, it means no postprocessor is applied.
             return_last_hidden_states: Whether to return the last hidden states
         """
         super(HFLanguageModel, self).__init__()
@@ -44,19 +44,19 @@ class HFLanguageModel(nn.Module):
         """Forward pass of the HuggingFace language model.
 
         Args:
-            input_ids: Tensor of token ids.
-            attention_mask: Tensor of attention masks.
+            input_ids: Shape (batch_size, sequence_length).
+                Tensor of token ids.
+            attention_mask: Shape (batch_size, sequence_length).
+                Tensor of attention masks.
 
         Returns:
             postprocessed_embeddings: Postprocessed embeddings.
             embeddings: Last hidden states if return_last_hidden_states is True.
         """
-        # TODO(lcollins2): Generalize this to handle other types of inputs
-        outputs: BaseModelOutput = self.huggingface_model(
-            input_ids=input_ids, attention_mask=attention_mask
-        )
-        embeddings = outputs.last_hidden_state
-        aggregated_embeddings = self.aggregator(embeddings, attention_mask)
+        outputs: BaseModelOutput = self.huggingface_model(input_ids=input_ids, attention_mask=attention_mask)
+        embeddings = outputs.last_hidden_state  # Shape (batch_size, sequence_length, embedding_dim)
+        # aggregate features in token level as item features
+        aggregated_embeddings = self.aggregator(embeddings, attention_mask)  # Shape (batch_size, embedding_dim)
         postprocessed_embeddings = self.postprocessor(aggregated_embeddings)
         if self.return_last_hidden_states:
             return postprocessed_embeddings, embeddings

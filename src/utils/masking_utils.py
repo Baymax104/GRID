@@ -2,8 +2,11 @@ from typing import Optional
 
 import torch
 
+
 def create_last_k_mask(
-    sequence_length: int, last_item_index: torch.Tensor, last_k: Optional[int] = None
+    sequence_length: int,
+    last_item_index: torch.Tensor,
+    last_k: Optional[int] = None
 ) -> torch.tensor:
     """
     Creates a mask to select the last K items of sequences.
@@ -26,9 +29,7 @@ def create_last_k_mask(
     else:
         if last_k < 1:
             raise ValueError("last_k must be None or greater than or equal to 1")
-        start_index = torch.clamp(
-            last_item_index - last_k + 1, min=0
-        )  # Shape (batch_size,)
+        start_index = torch.clamp(last_item_index - last_k + 1, min=0)  # Shape (batch_size,)
 
     indices = (
         torch.arange(sequence_length, device=last_item_index.device)
@@ -36,7 +37,6 @@ def create_last_k_mask(
         .expand(last_item_index.size(0), -1)
     )  # shape (batch_size, sequence_length)
 
-    mask = (indices >= start_index.unsqueeze(1)) & (
-        indices <= last_item_index.unsqueeze(1)
-    )  # Shape (batch_size, sequence_length)
+    # Shape (batch_size, sequence_length)
+    mask = (indices >= start_index.unsqueeze(1)) & (indices <= last_item_index.unsqueeze(1))
     return mask

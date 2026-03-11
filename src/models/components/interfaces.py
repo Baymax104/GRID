@@ -5,7 +5,7 @@ import torch
 
 class ModelOutput:
     def __init__(self, *args, **kwargs):
-        raise NotImplementedError
+        pass
 
     @property
     def list_of_row_format(self):
@@ -42,6 +42,7 @@ class SharedKeyAcrossPredictionsOutput(ModelOutput):
         key_name: str = "idx",
         prediction_name: str = "prediction",
     ):
+        super().__init__()
         self.key = key
         self.predictions = predictions
         self.key_name = key_name
@@ -77,6 +78,7 @@ class OneKeyPerPredictionOutput(ModelOutput):
         key_name: str = "idx",
         prediction_name: str = "prediction",
     ):
+        super().__init__()
         self.keys = keys
         self.predictions = predictions
         self.key_name = key_name
@@ -86,8 +88,5 @@ class OneKeyPerPredictionOutput(ModelOutput):
     def list_of_row_format(self):
         return [
             {self.key_name: key, self.prediction_name: pred}
-            for key, pred in zip(
-                self._convert_to_list(self.keys),
-                self._convert_to_list(self.predictions),
-            )
+            for key, pred in zip(self._convert_to_list(self.keys), self._convert_to_list(self.predictions))
         ]
