@@ -135,7 +135,7 @@ data_loading:
       dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
 model:
-  _target_: src.modules.clustering.residual_quantization.ResidualQuantization
+  _target_: src.models.residual_quantization.ResidualQuantization
   track_residuals: true
   verbose: true
   train_layer_wise: true
@@ -144,30 +144,30 @@ model:
   n_layers: ${num_hierarchies}
   init_buffer_size: 3072
   quantization_layer:
-    _target_: src.modules.clustering.vector_quantization.VectorQuantization
+    _target_: src.models.modules.clustering.vector_quantization.VectorQuantization
     n_clusters: ${codebook_width}
     n_features: ${model.input_dim}
     distance_function:
-      _target_: src.components.distance_functions.SquaredEuclideanDistance
+      _target_: src.models.components.distance_functions.SquaredEuclideanDistance
     quantization_strategy:
-      _target_: src.components.quantization_strategies.STEQuantization
+      _target_: src.models.components.quantization_strategies.STEQuantization
       distance_function: ${model.quantization_layer.distance_function}
       compute_reconstruction_loss_embeddings: false
     initializer:
-      _target_: src.components.clustering_initializers.KMeansPlusPlusInitInitializer
+      _target_: src.models.components.clustering_initializers.KMeansPlusPlusInitInitializer
       n_clusters: ${model.quantization_layer.n_clusters}
       initialize_on_cpu: false
       distance_function: ${model.quantization_layer.distance_function}
     init_buffer_size: ${model.init_buffer_size}
     loss_function:
-      _target_: src.components.loss_functions.BetaQuantizationLoss
+      _target_: src.models.components.loss_functions.BetaQuantizationLoss
       beta: 0.25
     optimizer: null
   optimizer: ${optim.optimizer}
   scheduler: null
   quantization_layer_list: null
   training_loop_function:
-    _target_: src.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
+    _target_: src.models.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
     _partial_: true
 callbacks:
   model_checkpoint:

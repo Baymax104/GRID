@@ -33,7 +33,7 @@ class MLP(nn.Module):
         if hidden_dim_list is None:
             hidden_dim_list = []
         hidden_dim_list.append(output_dim)
-        layers = [nn.Linear(input_dim, hidden_dim_list[0], bias=bias)]
+        layers: list[nn.Module] = [nn.Linear(input_dim, hidden_dim_list[0], bias=bias)]
         for i in range(1, len(hidden_dim_list)):
             layers.append(activation())
             layers.append(

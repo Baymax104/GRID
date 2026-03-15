@@ -18,16 +18,12 @@ model:
       d_ff: 1024
       d_kv: 64
       num_layers: 4
-  _target_: src.models.modules.semantic_id.tiger_generation_model.SemanticIDEncoderDecoder
+  _target_: src.models.tiger_generation_model.SemanticIDEncoderDecoder
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id
   postprocessor: null
   aggregator: null
-  loss_function: null
-  optimizer: null
-  scheduler: null
-  evaluator: null
   weight_tying: true
   compile: false
   decoder:
@@ -57,7 +53,6 @@ id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
 tags:
 - amazon-p5-gr-train
 callbacks:
-  bq_writer: null
   pickle_writer:
     _target_: src.utils.inference_utils.LocalPickleWriter
     output_dir: ${paths.output_dir}/pickle

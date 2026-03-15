@@ -7,19 +7,12 @@
 defaults:
   - _self_
   - data_loading: null
-  - model: null
   - callbacks: default
-  - logger: csv # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - logger: default
   - trainer: default
   - paths: default
   - extras: default
   - hydra: default
-  - loss: null
-  - optim: null
-  - eval: null
-
-  # experiment configs allow for version control of specific hyperparameters
-  # e.g. best hyperparameters for given model and datamodule
   - experiment: null
 
 # task name, determines output directory path

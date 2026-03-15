@@ -5,7 +5,7 @@ import torch.nn as nn
 from transformers import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutput
 
-from src.models.components.network_blocks.embedding_aggregator import EmbeddingAggregator
+from src.models.modules.embedding_aggregator import EmbeddingAggregator
 
 
 class HFLanguageModel(nn.Module):

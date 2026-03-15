@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 
-from src.utils.masking_utils import create_last_k_mask
+from src.utils.tensor_utils import create_last_k_mask
 
 
 class AggregationStrategy(ABC):

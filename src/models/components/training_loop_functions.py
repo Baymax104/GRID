@@ -7,8 +7,8 @@ def scale_loss_by_world_size_for_initialization_training_loop(
     loss: torch.Tensor,
     world_size: int,
     is_initialized: bool = True,
-    initalization_optimizer_lr: float = 0.5,
-    initalization_optimizer: torch.optim.Optimizer = torch.optim.SGD,
+    initialization_optimizer_lr: float = 0.5,
+    initialization_optimizer: torch.optim.Optimizer = torch.optim.SGD,
 ):
     """
     Training loop that scales the loss by the number of GPUs used for training during
@@ -59,17 +59,19 @@ def scale_loss_by_world_size_for_initialization_training_loop(
     and no longer need to scale the loss by the world size.
 
     Args:
-        trainer: The trainer object.
+        model: Current trained model.
         loss: The loss value. If the model is not yet initialized, this loss
             should be the squared distance between the model's parameters, which should
             have value zero at this point, and the desired initial parameters.
         world_size: The number of GPUs used for training.
         is_initialized: A boolean indicating whether the model is already initialized.
+        initialization_optimizer: Optimizer for model.
+        initialization_optimizer_lr: Learning rate for model.
     """
     if not is_initialized:
         # Perform special initialization
         # We scale the loss by the world size for proper initialization
-        opt = initalization_optimizer(model.parameters(), lr=initalization_optimizer_lr)
+        opt = initialization_optimizer(model.parameters(), lr=initialization_optimizer_lr)  # noqa
         loss = loss * world_size
     else:
         # Use the default training loop

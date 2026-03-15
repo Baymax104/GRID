@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Sequence
 
 import rich
@@ -11,6 +10,7 @@ from rich.prompt import Prompt
 
 from src.utils import pylogger
 from src.utils.file_utils import open_local_or_remote
+
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 

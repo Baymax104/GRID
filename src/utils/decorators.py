@@ -21,7 +21,7 @@ class RetriesFailedException(Exception):
     pass
 
 
-class __RetriableTimeoutException(Exception):
+class __RetriableTimeoutException(TimedOutException):
     pass
 
 
@@ -131,7 +131,7 @@ def retry(
                 __RetriableTimeoutException,
             )
 
-            ret_val: T
+            ret_val: T = None
             while mtries >= 0:
                 try:
                     ret_val = fn(*args, **kwargs)

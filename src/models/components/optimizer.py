@@ -17,7 +17,7 @@ class PassThroughOptimizer(Optimizer):
     def step(self, closure=None):
         return None
 
-    def zero_grad(self):
+    def zero_grad(self, **kwargs):
         for group in self.param_groups:
             for p in group["params"]:
                 if p.grad is not None:

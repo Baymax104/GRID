@@ -1,16 +1,16 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import torch
 import transformers
 from torchmetrics.aggregation import BaseAggregator
 
-from src.components.eval_metrics import RetrievalEvaluator
+from src.models.components.eval_metrics import RetrievalEvaluator
 from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
 from src.models.components.interfaces import SharedKeyAcrossPredictionsOutput
-from src.models.components.network_blocks.embedding_aggregator import (
+from src.models.modules.embedding_aggregator import (
     EmbeddingAggregator,
 )
 from src.models.modules.base_module import BaseModule

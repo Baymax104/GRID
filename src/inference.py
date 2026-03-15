@@ -1,6 +1,8 @@
 import hydra
+import psutil
 import rootutils
 import torch
+
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
@@ -9,9 +11,10 @@ from src.utils.custom_hydra_resolvers import *
 from src.utils.launcher_utils import pipeline_launcher
 
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+console_logger = RankedLogger(__name__, rank_zero_only=True)
 
 torch.set_float32_matmul_precision("medium")
+torch.set_num_threads(psutil.cpu_count(logical=False))
 
 
 def inference(cfg: DictConfig):
@@ -26,10 +29,10 @@ def inference(cfg: DictConfig):
     """
 
     with pipeline_launcher(cfg) as pipeline_modules:
-        command_line_logger.info("Starting inference!")
+        console_logger.info("Starting inference!")
         ckpt_path = pipeline_modules.cfg.get("ckpt_path", None)
         if not ckpt_path:
-            command_line_logger.warning(
+            console_logger.warning(
                 "No ckpt_path was provided. If using a model you trained, this is mandatory. Only leave ckpt_path=None if using a pre-trained model."
             )
 

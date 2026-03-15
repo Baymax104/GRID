@@ -6,7 +6,7 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric
 from torchmetrics.aggregation import BaseAggregator
 
-from src.components.eval_metrics import Evaluator
+from src.models.components.eval_metrics import Evaluator
 from src.utils.pylogger import RankedLogger
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
@@ -198,7 +198,7 @@ class BaseModule(LightningModule):
     ) -> None:
         """Perform a single validation step on a batch of data from the validation set.
 
-        :param batch: A batch of data of data (tuple) where first object is a SequentialModelInputData object
+        :param batch: A batch of data (tuple) where first object is a SequentialModelInputData object
         and second is a SequentialModuleLabelData object.
         """
         self.eval_step(batch, self.val_loss)

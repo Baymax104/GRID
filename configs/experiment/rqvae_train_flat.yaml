@@ -135,7 +135,7 @@ data_loading:
       dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
 model:
-  _target_: src.modules.clustering.residual_quantization.ResidualQuantization
+  _target_: src.models.residual_quantization.ResidualQuantization
   track_residuals: true
   verbose: true
   train_layer_wise: false
@@ -147,9 +147,9 @@ model:
     _args_:
     - _target_: torch.nn.BatchNorm1d
       num_features: ${model.input_dim}
-    - _target_: src.models.components.network_blocks.normalize_layer.NormalizeLayer
+    - _target_: src.models.modules.normalize_layer.NormalizeLayer
   encoder:
-    _target_: src.models.components.network_blocks.mlp.MLP
+    _target_: src.models.modules.mlp.MLP
     input_dim: ${model.input_dim}
     hidden_dim_list:
     - 768
@@ -160,7 +160,7 @@ model:
       _target_: torch.nn.ReLU
       _partial_: true
   decoder:
-    _target_: src.models.components.network_blocks.mlp.MLP
+    _target_: src.models.modules.mlp.MLP
     input_dim: ${model.encoder.output_dim}
     hidden_dim_list:
     - 128
@@ -172,17 +172,17 @@ model:
       _partial_: true
   init_buffer_size: 3072
   quantization_layer:
-    _target_: src.modules.clustering.vector_quantization.VectorQuantization
+    _target_: src.models.modules.clustering.vector_quantization.VectorQuantization
     n_clusters: ${codebook_width}
     n_features: ${model.encoder.output_dim}
     distance_function:
-      _target_: src.components.distance_functions.SquaredEuclideanDistance
+      _target_: src.models.components.distance_functions.SquaredEuclideanDistance
     quantization_strategy:
-      _target_: src.components.quantization_strategies.STEQuantization
+      _target_: src.models.components.quantization_strategies.STEQuantization
       distance_function: ${model.quantization_layer.distance_function}
       compute_reconstruction_loss_embeddings: true
     initializer:
-      _target_: src.components.clustering_initializers.ClusteringModuleInitializer
+      _target_: src.models.components.clustering_initializers.ClusteringModuleInitializer
       n_clusters: ${model.quantization_layer.n_clusters}
       initialize_on_cpu: false
       clustering_module:
@@ -191,7 +191,7 @@ model:
         n_features: ${model.quantization_layer.n_features}
         distance_function: ${model.quantization_layer.distance_function}
         initializer:
-          _target_: src.components.clustering_initializers.KMeansPlusPlusInitInitializer
+          _target_: src.models.components.clustering_initializers.KMeansPlusPlusInitInitializer
           n_clusters: ${model.quantization_layer.n_clusters}
           distance_function: ${model.quantization_layer.distance_function}
           initialize_on_cpu: false
@@ -200,7 +200,7 @@ model:
       max_iter: 1000
     init_buffer_size: ${model.init_buffer_size}
     loss_function:
-      _target_: src.components.loss_functions.BetaQuantizationLoss
+      _target_: src.models.components.loss_functions.BetaQuantizationLoss
       beta: 0.25
       reduction: mean
     optimizer: null
@@ -209,7 +209,7 @@ model:
     reduction: mean
   reconstruction_loss_weight: 1.0
   training_loop_function:
-    _target_: src.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
+    _target_: src.models.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
     _partial_: true
   optimizer: ${optim.optimizer}
   scheduler: null
@@ -279,7 +279,7 @@ optim:
     lr: 0.001
     weight_decay: 0.0
   scheduler:
-    _target_: src.components.scheduler.WarmupLinearScheduler
+    _target_: src.models.components.scheduler.WarmupLinearScheduler
     _partial_: true
     warmup_steps: 1000
     min_ratio: 0.01

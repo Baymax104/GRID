@@ -1,31 +1,18 @@
 # @package _global_
 
 defaults:
+  - _self_
   - paths: default
-  - logger: csv
+  - logger: default
   - trainer: default
   - hydra: default
   - data_loading: null
   - extras: default
   - experiment: null
-  - _self_
 
 task_name: "inference"
 id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
 tags: ["inference"]
-
-
-model:
-  loss_function: null
-  optimizer: null
-  scheduler: null
-  evaluator: null
-
-callbacks:
-  bq_writer:
-    table_id: ???
-
-
 
 # passing checkpoint path is necessary for inference
 ckpt_path: ???

@@ -1,12 +1,9 @@
 from typing import Any, Dict, List
 
 import torch
-import torch.nn.functional as F
 import torchmetrics
 from torchmetrics.metric import Metric
 from torchmetrics.utilities.distributed import gather_all_tensors
-
-## Custom Metrics
 
 
 class CustomMeanReductionMetric(torchmetrics.Metric):
@@ -20,7 +17,7 @@ class CustomMeanReductionMetric(torchmetrics.Metric):
         self.total_values = 0
 
     def compute(self) -> torch.Tensor:
-        # Aggregates the metric accross workers and returns the final value
+        # Aggregates the metric across workers and returns the final value
         metric_values_tensor = torch.tensor(self.metric_values).to(self.device)
         total_values_tensor = torch.tensor(self.total_values).to(self.device)
         # Compute final metric
@@ -71,7 +68,6 @@ class CustomRetrievalMetric(CustomMeanReductionMetric):
     def update(
         self, preds: torch.Tensor, target: torch.Tensor, indexes: torch.Tensor, **kwargs
     ) -> None:
-
         batch_size = int(len(indexes) / (indexes == 0).sum().item())
         preds = preds.reshape(batch_size, -1)
         target = target.reshape(batch_size, -1).int()
@@ -135,7 +131,7 @@ class Recall(CustomRetrievalMetric):
             min=1
         )  # Use clamp to avoid zero
         return recall
-## Evaluators
+
 
 class Evaluator:
     def __init__(self, metrics: Dict[str, Metric], *args, **kwargs):
@@ -167,6 +163,7 @@ class RetrievalEvaluator(Evaluator):
         num_negatives: int = 500,
         placeholder_token_buffer: int = 100,
     ):
+        super().__init__(metrics)
         self.metrics = {
             f"{metric_name}@{top_k}": metric_object(
                 top_k=top_k, sync_on_compute=False, compute_with_cache=False

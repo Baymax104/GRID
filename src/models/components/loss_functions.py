@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, Tuple, Union, Dict
 
+
 class FullBatchCrossEntropyLoss(nn.Module):
     """
     Contrastive loss with negative samples being all candidates in the embedding table.
@@ -69,7 +70,8 @@ class FullBatchCrossEntropyLoss(nn.Module):
         loss = self.cross_entroy_loss(logits, labels.long())
 
         return loss
-    
+
+
 class WeightedSquaredError(torch.nn.Module):
     def __init__(self):
         """Initialize the WeightedSquaredError loss function."""
@@ -90,13 +92,14 @@ class WeightedSquaredError(torch.nn.Module):
             A tensor containing the weighted squared error loss of shape (1,)
         """
         error = x - y
-        squared_error = torch.sum(error**2, dim=-1)
+        squared_error = torch.sum(error ** 2, dim=-1)
         # If weights are not provided, use uniform weights
         # This is equivalent to the standard squared error loss
         if weights is None:
             return torch.sum(squared_error)
         return torch.sum(weights * squared_error)
-    
+
+
 class BetaQuantizationLoss(torch.nn.Module):
     def __init__(self, beta: float = 0.25, reduction: str = "sum"):
         """Initialize the Beta Quantization Loss.

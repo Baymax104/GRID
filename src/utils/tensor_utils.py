@@ -83,23 +83,29 @@ def merge_list_of_keyed_tensors_to_single_tensor(
     the tensors along the specified index key.
     e.g.,
     data = [
-    [
-        {'user_id': 123,
-        {'semantic_id': torch.tensor([21, 32, 124]),
-        other features.....}
+        [
+            {
+                'user_id': 123,
+                'semantic_id': torch.tensor([21, 32, 124]),
+                other features.....,
+            }
         ],
-    [
-        {'user_id': 456,
-        {'semantic_id': torch.tensor([11, 22, 33]),
-        other features.....}
+        [
+            {
+                'user_id': 456,
+                'semantic_id': torch.tensor([11, 22, 33]),
+                other features.....,
+            }
+        ]
     ]
     output:
-    tensor([...,
-            [21, 32, 124], # row 123
-            ...,
-            [11, 22, 33], # row 456
-            ...
-            ])
+    tensor([
+        ...,
+        [21, 32, 124], # row 123
+        ...,
+        [11, 22, 33], # row 456
+        ...,
+    ])
 
     Args:
         data (list[dict[str, torch.Tensor]]): A list of dictionaries where each dictionary
@@ -116,9 +122,7 @@ def merge_list_of_keyed_tensors_to_single_tensor(
         if index < batch_size:
             output_tensor[index] = torch.tensor(value)
         else:
-            raise IndexError(
-                f"Index {index} out of bounds for batch size {batch_size}."
-            )
+            raise IndexError(f"Index {index} out of bounds for batch size {batch_size}.")
     return output_tensor
 
 
@@ -205,3 +209,42 @@ def transpose_tensor_from_file(
         # Save the result to a file
         torch.save(result, file_path)
         return None
+
+
+def create_last_k_mask(
+    sequence_length: int,
+    last_item_index: torch.Tensor,
+    last_k: Optional[int] = None
+) -> torch.tensor:
+    """
+    Creates a mask to select the last K items of sequences.
+    If a sequence has less than K items, all items are considered for the row.
+    If last_k is None, all items are considered for all rows.
+
+    Args:
+        sequence_length (int): The length of the sequences.
+        last_item_index (torch.Tensor) of shape (batch_size,).
+            The tensor containing the indices of the last items in the each row
+        last_k (Optional[int]): The number of last K items to consider.
+            If None, all items are considered.
+    Returns:
+        torch.Tensor: A boolean tensor of shape (batch_size, sequence_length) with
+            True for the last K items in each row and False for the rest.
+    """
+
+    if last_k is None:
+        start_index = torch.zeros_like(last_item_index)
+    else:
+        if last_k < 1:
+            raise ValueError("last_k must be None or greater than or equal to 1")
+        start_index = torch.clamp(last_item_index - last_k + 1, min=0)  # Shape (batch_size,)
+
+    indices = (
+        torch.arange(sequence_length, device=last_item_index.device)
+        .unsqueeze(0)
+        .expand(last_item_index.size(0), -1)
+    )  # shape (batch_size, sequence_length)
+
+    # Shape (batch_size, sequence_length)
+    mask = (indices >= start_index.unsqueeze(1)) & (indices <= last_item_index.unsqueeze(1))
+    return mask

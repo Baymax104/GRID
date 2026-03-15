@@ -1,15 +1,15 @@
 import functools
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 import torch.nn as nn
 
-from src.components.distance_functions import DistanceFunction
-from src.components.clustering_initializers import (
+from src.models.components.distance_functions import DistanceFunction
+from src.models.components.clustering_initializers import (
     ClusteringInitializer,
     KMeansPlusPlusInitInitializer,
 )
-from src.components.loss_functions import WeightedSquaredError
+from src.models.components.loss_functions import WeightedSquaredError
 from src.models.modules.clustering.base_clustering_module import BaseClusteringModule
 
 

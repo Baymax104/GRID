@@ -2,14 +2,15 @@ import datetime
 import logging
 import os
 import pickle
+from typing import Any, Dict, Literal, Optional, Union
+
 import pyarrow as pa
 import torch
 from google.cloud import bigquery
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
-from typing import Any, Dict, List, Optional, Union
 
-from src.models.components.interfaces import ModelOutput
+from src.models.components.model_output import ModelOutput
 from src.utils.decorators import retry
 from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
 
@@ -22,8 +23,8 @@ class BaseBufferedWriter(BasePredictionWriter):
         self,
         # Update this based on data size. The goal is to limit the number of writes to BQ without exceeding the memory of your machine.
         flush_frequency: int = 5000,
-        write_interval: str = "batch",
-        schema: Optional[List[Union[bigquery.SchemaField, pa.Field]]] = None,
+        write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
+        schema: Optional[list[Union[bigquery.SchemaField, pa.Field]]] = None,
         prediction_key_name: Optional[str] = None,
         prediction_name: Optional[str] = None,
     ):
@@ -42,7 +43,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         super().__init__(write_interval)
         self.flush_frequency = flush_frequency
         # Buffer to accumulate rows before writing
-        self.rows_buffer: List[dict] = []
+        self.rows_buffer: list[dict] = []
         self.schema = schema
         self.global_rank = None
         self.prediction_key_name = prediction_key_name
@@ -84,9 +85,7 @@ class BaseBufferedWriter(BasePredictionWriter):
 
     def _flush_buffer(self) -> None:
         """Override this method to implement the logic for flushing the buffer."""
-        raise NotImplementedError(
-            "You need to implement the `_flush_buffer` method in your subclass."
-        )
+        raise NotImplementedError("You need to implement the `_flush_buffer` method in your subclass.")
 
     def handle_batch(self, model_output: ModelOutput):
         """
@@ -95,17 +94,19 @@ class BaseBufferedWriter(BasePredictionWriter):
             model_output: The ModelOutput object containing the predictions.
         """
         if model_output is None:
-            log.warning(
-                f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch.")
+            log.warning(f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch.")
             return
         rows = model_output.list_of_row_format
 
         if len(rows) + len(self.rows_buffer) < self.flush_frequency:
             self.rows_buffer.extend(rows)
         else:
+            # fill rows buffer and flush it
             rows_left = self.flush_frequency - len(self.rows_buffer)
             self.rows_buffer.extend(rows[:rows_left])
             self.flush_buffer()
+
+            # append the rest of rows
             self.rows_buffer.extend(rows[rows_left:])
 
     def write_on_batch_end(
@@ -113,7 +114,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         trainer: Trainer,
         pl_module: LightningModule,
         prediction: ModelOutput,
-        batch_indices: List[int],
+        batch_indices: list[int],
         batch: Any,
         batch_idx: int,
         dataloader_idx: int,
@@ -129,8 +130,8 @@ class BaseBufferedWriter(BasePredictionWriter):
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        predictions: List[ModelOutput],
-        batch_indices: List[List[int]],
+        predictions: list[ModelOutput],
+        batch_indices: list[list[int]],
     ) -> None:
         """
         Called at the end of a prediction epoch.
@@ -155,7 +156,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         self.flush_buffer()
         log.info(f"Rank {self.global_rank} finished writing predictions.")
         # TODO (clark): technically write_on_epoch_end should handle this correctly
-        # but if we dont't do this as well here, the number of rows in the final BQ table will
+        # but if we don't do this as well here, the number of rows in the final BQ table will
         # always be a multiplier of flush_frequency
         # and we will lose some rows if the last batch is smaller than flush_frequency
         # this is an indicator of something not working fully as expected
@@ -171,10 +172,10 @@ class LocalPickleWriter(BaseBufferedWriter):
         self,
         output_dir: str,
         flush_frequency: int = 1000,
-        write_interval: str = "batch",
+        write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
         should_merge_files_on_main: bool = True,
         should_merge_list_of_keyed_tensors_to_single_tensor: bool = True,
-        post_processing_functions: Optional[List[Dict[str, callable]]] = None,
+        post_processing_functions: Optional[list[Dict[str, callable]]] = None,
         **kwargs,
     ):
         """
@@ -185,7 +186,7 @@ class LocalPickleWriter(BaseBufferedWriter):
             write_interval: "batch" or "epoch".
             should_merge_files_on_main: If True, merge all files on the main process after writing.
             should_merge_list_of_keyed_tensors_to_single_tensor: If True, merge list of keyed tensors to a single tensor.
-            post_processing_functions: List of ordered post-processing functions to apply to the files.
+            post_processing_functions: list of ordered post-processing functions to apply to the files.
         """
         super().__init__(write_interval=write_interval, flush_frequency=flush_frequency, **kwargs)
         self.output_dir = output_dir
@@ -208,7 +209,7 @@ class LocalPickleWriter(BaseBufferedWriter):
 
     @retry()
     def _flush_buffer(self):
-        """Flush the buffer to a pickle file."""
+        """Flush the buffer to a local temporary pickle file."""
 
         file_path = self._create_file_path()
         with open(self._local_file_path(file_path=file_path), "wb") as f:

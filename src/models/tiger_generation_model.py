@@ -13,9 +13,9 @@ from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.models.components.interfaces import OneKeyPerPredictionOutput
-from src.models.components.network_blocks.mlp import MLP
-from src.models.modules.huggingface.transformer_base_module import TransformerBaseModule
+from src.models.components.model_output import OneKeyPerPredictionOutput
+from src.models.modules.mlp import MLP
+from src.models.modules.transformer_base_module import TransformerBaseModule
 from src.utils.utils import (
     delete_module,
     find_module_shape,

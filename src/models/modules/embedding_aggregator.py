@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 
-from src.models.components.network_blocks.aggregation_strategy import (
-    AggregationStrategy,
-)
+from src.models.components.aggregation_strategy import AggregationStrategy
 
 
 class EmbeddingAggregator(nn.Module):

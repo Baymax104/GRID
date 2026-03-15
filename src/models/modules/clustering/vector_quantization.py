@@ -1,12 +1,12 @@
 import functools
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 
-from src.components.distance_functions import DistanceFunction
-from src.components.clustering_initializers import ClusteringInitializer
-from src.components.loss_functions import WeightedSquaredError
-from src.components.quantization_strategies import QuantizationStrategy
+from src.models.components.distance_functions import DistanceFunction
+from src.models.components.clustering_initializers import ClusteringInitializer
+from src.models.components.loss_functions import WeightedSquaredError
+from src.models.components.quantization_strategies import QuantizationStrategy
 from src.models.modules.clustering.base_clustering_module import BaseClusteringModule
 
 

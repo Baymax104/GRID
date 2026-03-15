@@ -195,6 +195,7 @@ data_loading:
     val_dataloader_config: ${..val_dataloader_config.dataloader}
     test_dataloader_config: ${..test_dataloader_config.dataloader}
 model:
+  _target_: src.models.tiger_generation_model.SemanticIDEncoderDecoder
   huggingface_model:
     _target_: transformers.T5EncoderModel
     config:
@@ -206,7 +207,6 @@ model:
       d_ff: 1024
       d_kv: 64
       num_layers: 4
-  _target_: src.models.modules.semantic_id.tiger_generation_model.SemanticIDEncoderDecoder
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id
@@ -324,15 +324,15 @@ optim:
   scheduler: null
 eval:
   evaluator:
-    _target_: src.components.eval_metrics.SIDRetrievalEvaluator
+    _target_: src.models.components.eval_metrics.SIDRetrievalEvaluator
     top_k_list:
     - 5
     - 10
     metrics:
       ndcg:
-        _target_: src.components.eval_metrics.NDCG
+        _target_: src.models.components.eval_metrics.NDCG
         _partial_: true
       recall:
-        _target_: src.components.eval_metrics.Recall
+        _target_: src.models.components.eval_metrics.Recall
         _partial_: true
 

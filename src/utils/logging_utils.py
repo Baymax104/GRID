@@ -1,14 +1,15 @@
 import json
 import os
 from importlib.util import find_spec
-from typing import Any, Dict
+from typing import Any
 
 from dotenv import load_dotenv
-from lightning import Callback, LightningDataModule, LightningModule, Trainer
+from lightning import LightningModule, Trainer
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
 
 from src.utils import pylogger
+
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -49,9 +50,7 @@ def finalize_loggers(trainer: Any, status=END_RUN) -> None:
         if hasattr(logger, "finalize"):
             logger.finalize(status)
 
-    if find_spec(
-        "wandb"
-    ):  # check if wandb is installed. If so, close connection to wandb.
+    if find_spec("wandb"):  # check if wandb is installed. If so, close connection to wandb.
         import wandb
 
         if wandb.run:
@@ -61,17 +60,20 @@ def finalize_loggers(trainer: Any, status=END_RUN) -> None:
 
 @rank_zero_only
 def log_hyperparameters(
-    cfg: DictConfig, model: LightningModule, trainer: Trainer
+    cfg: DictConfig,
+    model: LightningModule,
+    trainer: Trainer
 ) -> None:
-    """Controls which config parts are saved by Lightning loggers.
+    """
+    Controls which config parts are saved by Lightning loggers.
 
-    Additionally saves:
+    Args:
+        cfg: A DictConfig object containing the main config.
+        model: The Lightning model.
+        trainer: The Lightning trainer.
+
+    Additional saves:
         - Number of model parameters
-
-    :param object_dict: A dictionary containing the following objects:
-        - `"cfg"`: A DictConfig object containing the main config.
-        - `"model"`: The Lightning model.
-        - `"trainer"`: The Lightning trainer.
     """
     hparams = {}
     # We resolve the configs to get the actual paths for logging.

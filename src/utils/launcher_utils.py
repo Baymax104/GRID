@@ -1,9 +1,7 @@
-import os
 from contextlib import contextmanager
 from dataclasses import dataclass
 
 import hydra
-import torch
 import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, ModelSummary
@@ -59,9 +57,9 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
     ckpt_path = cfg.get("ckpt_path", None)
 
     if (
-            ckpt_path is not None
-            and has_no_extension(ckpt_path)
-            and cfg.get("should_retrieve_latest_ckpt_path", False)
+        ckpt_path is not None
+        and has_no_extension(ckpt_path)
+        and cfg.get("should_retrieve_latest_ckpt_path", False)
     ):
         # If a path to a folder is passed, we assume it contains folders with versions of checkpoints.
         # We expect those folders to be named using a timestamp.
@@ -71,14 +69,10 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
             checkpoint_folders.sort(reverse=True)
             # We take the first one, which is the most recent one.
             latest_ckpt_folder = checkpoint_folders[0]
-            last_modified = get_last_modified_file(
-                folder_path=latest_ckpt_folder, suffix="*.ckpt"
-            )
+            last_modified = get_last_modified_file(folder_path=latest_ckpt_folder, suffix="*.ckpt")
             if len(last_modified) > 0:
                 ckpt_path = last_modified
-                command_line_logger.info(
-                    f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint."
-                )
+                command_line_logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
 
     # If there is a checkpoint callback running, and the restart_metadata file shows we are not on the first run,
     # we check if there are checkpoints in the checkpoint folder and restart from there instead of the initial checkpoint.
@@ -91,14 +85,10 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
     ):
         checkpoint_folder = cfg.callbacks.model_checkpoint.dirpath
         # We check if there are files with the extension .ckpt in the checkpoint folder. If so, we get the latest one.
-        last_modified = get_last_modified_file(
-            folder_path=checkpoint_folder, suffix="*.ckpt"
-        )
+        last_modified = get_last_modified_file(folder_path=checkpoint_folder, suffix="*.ckpt")
         if len(last_modified) > 0:
             ckpt_path = last_modified
-            command_line_logger.info(
-                f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint."
-            )
+            command_line_logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
 
     cfg.ckpt_path = ckpt_path
     return cfg
@@ -134,23 +124,19 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
 
     cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
 
+    enable_checkpointing = has_class_object_inside_list(callbacks, ModelCheckpoint)
+    enable_model_summary = has_class_object_inside_list(callbacks, ModelSummary)
     trainer: Trainer = hydra.utils.instantiate(
         cfg.trainer,
         callbacks=callbacks,
+        logger=loggers,
         # The default behavior for lightning it to set `enable_checkpointing` and
         # `enable_model_summary` to True, which might be misleading when we are trying to
-        # debug. We change the default to False, but this can be overriden by either
+        # debug. We change the default to False, but this can be overridden by either
         # setting the parameters in the config file or passing the callbacks as part
-        # of the callbacks yaml.
-        enable_checkpointing=cfg.trainer.get(
-            "enable_checkpointing",
-            has_class_object_inside_list(callbacks, ModelCheckpoint),
-        ),
-        enable_model_summary=cfg.trainer.get(
-            "enable_model_summary",
-            has_class_object_inside_list(callbacks, ModelSummary),
-        ),
-        logger=loggers,
+        # of the callbacks YAML.
+        enable_checkpointing=cfg.trainer.get("enable_checkpointing", enable_checkpointing),
+        enable_model_summary=cfg.trainer.get("enable_model_summary", enable_model_summary),
     )
 
     pipeline_modules = PipelineModules(

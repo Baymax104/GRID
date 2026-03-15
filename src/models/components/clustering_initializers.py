@@ -1,14 +1,13 @@
-from abc import abstractmethod
-from functools import partial
+from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
 from pytorch_lightning import LightningModule
 
-from src.components.distance_functions import DistanceFunction
+from src.models.components.distance_functions import DistanceFunction
 
 
-class ClusteringInitializer(nn.Module):
+class ClusteringInitializer(nn.Module, ABC):
     """
     Base class for clustering initializers.
     This class provides an interface for initializing centroids for clustering algorithms.

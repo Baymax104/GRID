@@ -33,7 +33,7 @@ dependencies = [
     "torchrec==1.2.0",
     "torchsnapshot==0.1.0",
     "torchvision==0.21.0",
-    "wandb==0.19.0",
+    "wandb>=0.24.0",
 ]
 
 [[tool.uv.index]]
