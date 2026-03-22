@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pathlib import Path
 from shutil import SameFileError
 from typing import BinaryIO, List, Optional
 
@@ -65,6 +66,7 @@ def get_last_modified_file(
     if not file_list:
         return ""
 
+    latest_file = None
     latest_mtime = 0
     for file in file_list:
         info = fs.info(file)
@@ -199,3 +201,17 @@ def replace_char_after_segment(
 
     # If segment is not found, return the original path unchanged
     return path
+
+
+def sync_file(path: str):
+    path = Path(path)
+    os.sync()
+    if path.is_file():
+        with open(path, "r") as f:
+            os.fsync(f.fileno())
+    elif path.is_dir():
+        dir_fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)

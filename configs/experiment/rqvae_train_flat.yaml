@@ -5,14 +5,15 @@ embedding_dim: ???
 num_hierarchies: ???
 codebook_width: ??? 
 
-task_name: train
-id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
+task_name: rqvae_train_flat
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
 - amazon-assign-ids-train
 train: true
 test: false
 ckpt_path: null
 seed: 42
+
 data_loading:
   features_config:
     features:

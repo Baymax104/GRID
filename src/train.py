@@ -1,10 +1,12 @@
+import os
+
 import hydra
-import psutil
 import rootutils
 import torch
 
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 from src.utils import RankedLogger, extras
 from src.utils.custom_hydra_resolvers import *
@@ -15,7 +17,6 @@ from src.utils.restart_job import LocalJobLauncher
 console_logger = RankedLogger(__name__, rank_zero_only=True)
 
 torch.set_float32_matmul_precision("medium")
-torch.set_num_threads(psutil.cpu_count(logical=False))
 
 
 def train(cfg: DictConfig):

@@ -1,18 +1,12 @@
-import os
 import random
 from abc import ABC, abstractmethod
 from typing import Callable
 
+import tensorflow as tf
 from pyarrow import parquet as pq
 
 from src.utils.decorators import retry
 from src.utils.file_utils import open_pyarrow_file
-
-
-# We suppress the tensorflow warnings. Needs to happened before the tf import
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-import tensorflow as tf
 
 
 tf.config.set_visible_devices([], "GPU")  # Disable all for tensorflow

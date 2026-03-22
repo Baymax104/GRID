@@ -4,16 +4,14 @@ import torch
 import transformers
 from torchmetrics.aggregation import BaseAggregator
 
-from src.models.components.eval_metrics import RetrievalEvaluator
 from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.models.components.interfaces import SharedKeyAcrossPredictionsOutput
-from src.models.modules.embedding_aggregator import (
-    EmbeddingAggregator,
-)
+from src.models.components.eval_metrics import RetrievalEvaluator
+from src.models.components.model_output import SharedKeyAcrossPredictionsOutput
 from src.models.modules.base_module import BaseModule
+from src.models.modules.embedding_aggregator import EmbeddingAggregator
 
 
 class TransformerBaseModule(BaseModule):
@@ -29,7 +27,7 @@ class TransformerBaseModule(BaseModule):
         weight_tying: bool,
         compile: bool,
         training_loop_function: callable = None,
-        feature_to_model_input_map: Dict[str, str] = {},
+        feature_to_model_input_map: Dict[str, str] = None,
         decoder: torch.nn.Module = None,
     ) -> None:
 
@@ -61,7 +59,7 @@ class TransformerBaseModule(BaseModule):
         self.embedding_post_processor = postprocessor
         self.decoder = decoder
         self.aggregator = aggregator
-        self.feature_to_model_input_map = feature_to_model_input_map
+        self.feature_to_model_input_map = feature_to_model_input_map if feature_to_model_input_map else {}
 
     def get_embedding_table(self):
         if self.hparams.weight_tying:  # type: ignore
@@ -71,20 +69,17 @@ class TransformerBaseModule(BaseModule):
 
     def training_step(
         self,
-        batch: Tuple[Tuple[SequentialModelInputData, SequentialModuleLabelData]],
+        batch: Tuple[SequentialModelInputData, SequentialModuleLabelData],
         batch_idx: int,
     ) -> torch.Tensor:
         """Perform a single training step on a batch of data from the training set.
 
-        :param batch: A batch of data of data (tuple). Because of lightning, the tuple is wrapped in another tuple,
+        :param batch: A batch of data (tuple). Because of lightning, the tuple is wrapped in another tuple,
         and the actual batch is at position 0. The batch is a tuple of data where first object is a SequentialModelInputData object
         and second is a SequentialModuleLabelData object.
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        # Lightning wraps it in a tuple for training, we get the batch from position 0.
-        # this behavior only happens for training_step.
-        batch = batch[0]
         # Batch is a tuple of model inputs and labels.
         model_input: SequentialModelInputData = batch[0]
         label_data: SequentialModuleLabelData = batch[1]
@@ -136,13 +131,9 @@ class TransformerBaseModule(BaseModule):
         # Updates metrics inside evaluator.
         self.evaluator(
             query_embeddings=model_output_after_aggregation,
-            key_embeddings=self.get_embedding_table().to(
-                model_output_after_aggregation.device
-            ),
+            key_embeddings=self.get_embedding_table().to(model_output_after_aggregation.device),
             # TODO: (lneves) hardcoded for now, will need to change for multiple features
-            labels=list(label_data.labels.values())[0].to(
-                model_output_after_aggregation.device
-            ),
+            labels=list(label_data.labels.values())[0].to(model_output_after_aggregation.device),
         )
         loss_to_aggregate(loss)
 
@@ -151,10 +142,15 @@ class TransformerBaseModule(BaseModule):
         batch: Tuple[SequentialModelInputData, SequentialModuleLabelData],
         batch_idx: int,
     ):
-        """Perform a single prediction step on a batch of data from the test set.
+        """
+        Perform a single prediction step on a batch of data from the test set.
 
-        :param batch: A batch of data of data (tuple) where first object is a SequentialModelInputData object
-        and second is a SequentialModuleLabelData object.
+        :param
+
+        Args:
+            batch: A batch of data (tuple) where first object is a SequentialModelInputData object
+                and second is a SequentialModuleLabelData object.
+            batch_idx: batch index
         """
         model_input: SequentialModelInputData = batch[0]
         model_output_before_aggregation, _ = self.model_step(model_input=model_input)
@@ -162,7 +158,6 @@ class TransformerBaseModule(BaseModule):
         model_output_after_aggregation = self.aggregator(
             model_output_before_aggregation, model_input.mask
         )
-        # TODO(lneves): Currently passing batch idx, change it to user_id and allow for the user to specify the key and prediction names.
         model_output = SharedKeyAcrossPredictionsOutput(
             key=batch_idx,
             predictions=model_output_after_aggregation,

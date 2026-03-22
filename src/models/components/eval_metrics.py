@@ -48,9 +48,6 @@ class CustomMeanReductionMetric(torchmetrics.Metric):
         self.metric_values = 0
         self.total_values = 0
 
-    def update(self) -> None:
-        raise NotImplementedError
-
 
 class CustomRetrievalMetric(CustomMeanReductionMetric):
     """
@@ -66,7 +63,11 @@ class CustomRetrievalMetric(CustomMeanReductionMetric):
         self.top_k = top_k
 
     def update(
-        self, preds: torch.Tensor, target: torch.Tensor, indexes: torch.Tensor, **kwargs
+        self,
+        preds: torch.Tensor,
+        target: torch.Tensor,
+        indexes: torch.Tensor,
+        **kwargs
     ) -> None:
         batch_size = int(len(indexes) / (indexes == 0).sum().item())
         preds = preds.reshape(batch_size, -1)
@@ -125,11 +126,7 @@ class Recall(CustomRetrievalMetric):
         true_positives = topk_true.sum(dim=1)
         total_relevant = target.sum(dim=1)
 
-        recall = true_positives / total_relevant.minimum(
-            torch.tensor(self.top_k, device=self.device)
-        ).clamp(
-            min=1
-        )  # Use clamp to avoid zero
+        recall = true_positives / total_relevant.minimum(torch.tensor(self.top_k, device=self.device)).clamp(min=1)
         return recall
 
 
@@ -195,9 +192,7 @@ class RetrievalEvaluator(Evaluator):
             pos_embeddings = key_embeddings[labels]
             key_embeddings = key_embeddings[inbatch_negatives]
             # key_embeddings shape: (bsz, num_negatives+1, emb_dim)
-            key_embeddings = torch.cat(
-                [pos_embeddings.unsqueeze(1), key_embeddings], dim=1
-            )
+            key_embeddings = torch.cat([pos_embeddings.unsqueeze(1), key_embeddings], dim=1)
             # the positive index will always be 0 because the pos embedding will always be the first one.
             labels = torch.zeros(num_of_samples).long()
 
@@ -267,6 +262,7 @@ class SIDRetrievalEvaluator(Evaluator):
         metrics: Dict[str, CustomRetrievalMetric],
         top_k_list: List[int],
     ):
+        super().__init__(metrics)
         self.metrics = {
             f"{metric_name}@{top_k}": metric_object(
                 top_k=top_k, sync_on_compute=False, compute_with_cache=False

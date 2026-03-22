@@ -205,7 +205,8 @@ def _is_process_running(proc: psutil.Process) -> bool:
 
 
 def clean_up_resources(
-    trainer: Optional[Trainer] = None, exception: Optional[Exception] = None
+    trainer: Optional[Trainer] = None,
+    exception: Optional[BaseException] = None
 ) -> None:
     """Clean up distributed processes and CUDA resources."""
     if dist.is_initialized():

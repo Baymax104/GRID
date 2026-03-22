@@ -8,6 +8,7 @@ import traceback
 from datetime import datetime
 from typing import Any, Callable, TypeVar, Union
 
+import pytz
 from lightning import Trainer
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
@@ -23,6 +24,7 @@ from src.utils.restart_job_utils import (
     load_metadata_from_local_or_remote,
     save_metadata_to_local_or_remote,
 )
+
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 F = TypeVar("F", bound=Callable[..., Any])
@@ -76,13 +78,11 @@ class RestartAndLoadCheckpointCallback(Callback):
 
         self.metadata_path = os.path.join(self.metadata_dir, "restart_metadata.json")
         self._load_metadata()
-        self._save_metadata()
+        self._save_metadata()  # noqa
 
     def _load_metadata(self) -> None:
         # Load metadata from disk, if it exists, then save it to the metadata attribute
-        self.metadata: JobCheckpointMetadata = load_metadata_from_local_or_remote(
-            self.metadata_path
-        )
+        self.metadata: JobCheckpointMetadata = load_metadata_from_local_or_remote(self.metadata_path)
 
     @rank_zero_only
     def _save_metadata(self) -> None:
@@ -101,7 +101,7 @@ class RestartAndLoadCheckpointCallback(Callback):
         if master_port and master_port not in self.metadata.used_ports:
             self.metadata.used_ports.append(master_port)
 
-        self._save_metadata()
+        self._save_metadata()  # noqa
 
     def on_exception(self, trainer, pl_module, exception) -> None:
         """Handle exceptions by saving state and initiating restart if needed."""
@@ -116,26 +116,23 @@ class RestartAndLoadCheckpointCallback(Callback):
 
         self.metadata.restarts.append(
             RestartMetadata(
-                time=datetime.now().isoformat(),
+                time=datetime.now(pytz.timezone("Asia/Shanghai")).isoformat(),
                 exception=str(exception),
                 run_number=self.metadata.current_run,
             ).to_dict()
         )
         self.metadata.current_run += 1
         command_line_logger.info(f"Restarting job. Current metadata: {self.metadata}")
-        self._save_metadata()
+        self._save_metadata()  # noqa
 
         # Clean up resources
         self._cleanup_resources(trainer, exception)
 
-    def _cleanup_resources(self, trainer: Trainer, exception: Exception) -> None:
+    def _cleanup_resources(self, trainer: Trainer, exception: BaseException) -> None:
         clean_up_resources(trainer, exception)
 
         command_line_logger.info(f"Resources cleaned up.")
         os._exit(1)
-
-
-## Launcher
 
 
 class BaseJobLauncher:
@@ -165,6 +162,7 @@ class BaseJobLauncher:
     """
 
     def __init__(self, cfg: DictConfig, max_retries: int = 3, retry_delay: int = 5):
+        self.metadata_path = None
         self.cfg = cfg
         self.logger = RankedLogger(__name__, rank_zero_only=True)
         self.max_retries = cfg.get("max_retries", max_retries)
@@ -205,9 +203,7 @@ class BaseJobLauncher:
         cmd = self.prepare_command()
 
         while self.run_count <= self.max_retries:
-            self.logger.info(
-                f"Starting job (attempt {self.run_count + 1}/{self.max_retries + 1}): {' '.join(cmd)}"
-            )
+            self.logger.info(f"Starting job (attempt {self.run_count + 1}/{self.max_retries + 1}): {' '.join(cmd)}")
 
             success = self.run_single_attempt(cmd)
 
@@ -216,9 +212,7 @@ class BaseJobLauncher:
                 return True
 
             self.run_count += 1
-            metadata_run = get_attribute_from_metadata_file(
-                self.metadata_path, "current_run"
-            )
+            metadata_run = get_attribute_from_metadata_file(self.metadata_path, "current_run")
             if metadata_run != self.run_count:
                 self.logger.error(
                     f"Metadata run count {metadata_run} does not match current run count {self.run_count}."
@@ -231,8 +225,9 @@ class BaseJobLauncher:
                 metadata.current_run = self.run_count
                 save_metadata_to_local_or_remote(metadata, self.metadata_path)
             if self.run_count <= self.max_retries:
-                self.logger.info(
-                    f"Retrying in {self.retry_delay} seconds. Attempt {self.run_count + 1}/{self.max_retries + 1}"
+                self.logger.warning(
+                    f"Retrying in {self.retry_delay} seconds. "
+                    f"Attempt {self.run_count + 1}/{self.max_retries + 1}"
                 )
                 time.sleep(self.retry_delay)
             else:
@@ -251,7 +246,7 @@ class BaseJobLauncher:
         self.process = subprocess.Popen(cmd, env=os.environ)
 
         try:
-            while _is_process_running(self.process):
+            while _is_process_running(self.process):  # noqa
                 time.sleep(5)
 
             if self.process.returncode == 0:
@@ -315,9 +310,7 @@ class LocalJobLauncher(BaseJobLauncher):
             and cfg.get("trainer")
             and cfg.trainer.num_nodes > 1
         ):
-            self.logger.warning(
-                "Retry logic is not supported for multi-node training, setting should_skip_retry to True."
-            )
+            self.logger.warning("Retry logic is not supported for multi-node training, setting should_skip_retry to True.")
             self.should_skip_retry = True
 
         if self.should_skip_retry:
@@ -331,9 +324,7 @@ class LocalJobLauncher(BaseJobLauncher):
         try:
             return self.execute_job()
         except Exception as e:
-            self.logger.error(
-                f"Error launching job. Exception {e} {traceback.format_exc()}"
-            )
+            self.logger.error(f"Error launching job. Exception {e} {traceback.format_exc()}")
             self.cleanup()
             return False
         except KeyboardInterrupt:

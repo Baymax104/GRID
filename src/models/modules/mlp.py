@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Callable, Optional
 
 import torch
 from torch import nn
@@ -11,8 +11,8 @@ class MLP(nn.Module):
         self,
         input_dim: int,
         output_dim: int,
-        hidden_dim_list: Optional[List[int]] = None,
-        activation: nn.Module = nn.ReLU,
+        hidden_dim_list: Optional[list[int]] = None,
+        activation: Callable[..., nn.Module] = nn.ReLU,
         bias: bool = True,
         dropout: float = 0.0,
     ) -> None:
@@ -21,7 +21,7 @@ class MLP(nn.Module):
         Args:
             input_dim (int): The dimensionality of the input tensor.
             output_dim (int): The dimensionality of the output tensor.
-            hidden_dim_list Optional(List[int]): A list of the dimensions of each hidden
+            hidden_dim_list Optional(list[int]): A list of the dimensions of each hidden
                 layer output. The number of layers in the MLP is the length of this list
                 plus one.
             activation (nn.Module): The activation function to use between layers.
@@ -36,9 +36,7 @@ class MLP(nn.Module):
         layers: list[nn.Module] = [nn.Linear(input_dim, hidden_dim_list[0], bias=bias)]
         for i in range(1, len(hidden_dim_list)):
             layers.append(activation())
-            layers.append(
-                nn.Linear(hidden_dim_list[i - 1], hidden_dim_list[i], bias=bias)
-            )
+            layers.append(nn.Linear(hidden_dim_list[i - 1], hidden_dim_list[i], bias=bias))
             layers.append(nn.Dropout(dropout))
         self.output_dim = output_dim
         self.input_dim = input_dim

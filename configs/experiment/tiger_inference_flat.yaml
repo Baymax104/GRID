@@ -3,6 +3,12 @@ data_dir: ???
 semantic_id_path: ???
 ckpt_path: ???
 num_hierarchies: ???
+
+task_name: tiger_inference_flat
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+tags:
+  - amazon-p5-gr-train
+
 seed: 42
 sequence_length: 120
 
@@ -48,10 +54,7 @@ model:
   codebooks: ${data_loading.predict_dataloader_config.dataloader.dataset_config.semantic_id_map.sequence_data}
   mlp_layers: 2
   top_k_for_generation: 10
-task_name: inference
-id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
-tags:
-- amazon-p5-gr-train
+
 callbacks:
   pickle_writer:
     _target_: src.utils.inference_utils.LocalPickleWriter

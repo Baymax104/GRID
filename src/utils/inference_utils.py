@@ -2,7 +2,7 @@ import datetime
 import logging
 import os
 import pickle
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import pyarrow as pa
 import torch
@@ -13,6 +13,7 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 from src.models.components.model_output import ModelOutput
 from src.utils.decorators import retry
 from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
+from src.utils.file_utils import sync_file
 
 
 log = logging.getLogger(__name__)
@@ -175,7 +176,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
         should_merge_files_on_main: bool = True,
         should_merge_list_of_keyed_tensors_to_single_tensor: bool = True,
-        post_processing_functions: Optional[list[Dict[str, callable]]] = None,
+        post_processing_functions: Optional[list[callable]] = None,
         **kwargs,
     ):
         """
@@ -206,6 +207,8 @@ class LocalPickleWriter(BaseBufferedWriter):
     def _distributed_barrier(self):
         if torch.distributed.is_available() and torch.distributed.is_initialized():
             torch.distributed.barrier()
+        else:
+            log.info(f"Distributed not available, skipping distributed barrier.")
 
     @retry()
     def _flush_buffer(self):
@@ -223,36 +226,29 @@ class LocalPickleWriter(BaseBufferedWriter):
         trainer: Trainer,
         pl_module: LightningModule,
     ) -> None:
+        assert trainer.global_rank is not None, "Global rank was not provided."
+
         super().on_predict_end(trainer, pl_module)
 
-        if self.should_merge_files_on_main:
-            # if we use multiple workers, we need to wait for all of them to finish writing
-            # before merging the files
-            if trainer.global_rank is not None:
-                self._distributed_barrier()
-            if self.global_rank == 0:
-                log.info("Merging pickle files on main process.")
-                self._merge_files()
+        self._distributed_barrier()
+        if self.global_rank != 0:
+            log.info(f"Rank {self.global_rank} exits on predict end.")
+            return
 
-            # other processes can continue after merging
-            if trainer.global_rank is not None:
-                self._distributed_barrier()
+        if self.should_merge_files_on_main and self.global_rank == 0:
+            log.info("Merging pickle files on main process.")
+            self._merge_files()
 
-        # conducting post-processing functions on the files
+        # conducting post-processing functions on the main process
         for process_func in self.post_processing_functions:
             all_files = [f for f in os.listdir(self.output_dir)]
             for file in all_files:
                 file_path = os.path.join(self.output_dir, file)
-                if process_func.get("main_only", False):
-                    if self.global_rank == 0:
-                        process_func["function"](file_path)
-                else:
-                    process_func["function"](file_path)
-                if trainer.global_rank is not None:
-                    self._distributed_barrier()
+                process_func(file_path)
 
     def _merge_files(self):
         """Merge all pickle files in the output directory into a single file."""
+        sync_file(self.output_dir)
         all_files = [f for f in os.listdir(self.output_dir) if f.endswith(".pkl")]
         merged_data = []
         for file in all_files:

@@ -4,14 +4,15 @@ semantic_id_path: ???
 num_hierarchies: ???
 sequence_length: 120
 
-task_name: train
-id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
+task_name: tiger_train_flat
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
 - amazon-p5-gr-train
 train: true
 test: true
 ckpt_path: null
 seed: 42
+
 data_loading:
   features_config:
     features:
@@ -194,6 +195,7 @@ data_loading:
     train_dataloader_config: ${..train_dataloader_config.dataloader}
     val_dataloader_config: ${..val_dataloader_config.dataloader}
     test_dataloader_config: ${..test_dataloader_config.dataloader}
+
 model:
   _target_: src.models.tiger_generation_model.SemanticIDEncoderDecoder
   huggingface_model:
@@ -239,6 +241,7 @@ model:
   num_user_bins: null
   codebooks: ${data_loading.train_dataloader_config.dataloader.dataset_config.semantic_id_map.sequence_data}
   mlp_layers: 2
+
 callbacks:
   model_checkpoint:
     _target_: lightning.pytorch.callbacks.ModelCheckpoint
@@ -273,20 +276,22 @@ callbacks:
   restart_job:
     _target_: src.utils.restart_job.RestartAndLoadCheckpointCallback
     metadata_dir: ${paths.metadata_dir}
+
 logger:
   csv:
     _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
     save_dir: ${paths.output_dir}
     name: csv/
     prefix: ''
+
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
   min_steps: 1
-  max_steps: 320000
+  max_steps: 100
   max_epochs: 10
   accelerator: gpu
-  devices: -1
+  devices: [0, 1]
   num_nodes: 1
   precision: 32-true
   log_every_n_steps: 100

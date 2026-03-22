@@ -9,7 +9,7 @@ from torchmetrics.aggregation import BaseAggregator
 from src.models.components.eval_metrics import Evaluator
 from src.utils.pylogger import RankedLogger
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+console_logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 class BaseModule(LightningModule):
@@ -21,7 +21,7 @@ class BaseModule(LightningModule):
         loss_function: torch.nn.Module,
         evaluator: Evaluator,
         training_loop_function: callable = None,
-    ) -> None:
+    ):
         """
         Args:
             model: The model to train.
@@ -61,7 +61,7 @@ class BaseModule(LightningModule):
 
     @prediction_key_name.setter
     def prediction_key_name(self, value: str) -> None:
-        command_line_logger.debug(f"Setting prediction_key_name to {value}")
+        console_logger.debug(f"Setting prediction_key_name to {value}")
         self._prediction_key_name = value
 
     @property
@@ -70,7 +70,7 @@ class BaseModule(LightningModule):
 
     @prediction_name.setter
     def prediction_name(self, value: str) -> None:
-        command_line_logger.debug(f"Setting prediction_name to {value}")
+        console_logger.debug(f"Setting prediction_name to {value}")
         self._prediction_name = value
 
     def forward(
@@ -109,14 +109,12 @@ class BaseModule(LightningModule):
         self.evaluator.reset()
 
     def on_validation_epoch_end(self) -> None:
-        "Lightning hook that is called when a validation epoch ends."
+        # Lightning hook that is called when a validation epoch ends.
         self.log("val/loss", self.val_loss, sync_dist=False, prog_bar=True, logger=True)
         self.log_metrics("val")
 
     def on_test_epoch_end(self) -> None:
-        self.log(
-            "test/loss", self.test_loss, sync_dist=False, prog_bar=True, logger=True
-        )
+        self.log("test/loss", self.test_loss, sync_dist=False, prog_bar=True, logger=True)
         self.log_metrics("test")
 
     def on_exception(self, exception):
@@ -134,7 +132,7 @@ class BaseModule(LightningModule):
         logger=True,
         prog_bar=False,
         call_compute=False,
-    ) -> Dict[str, Any]:
+    ):
 
         metrics_dict = {
             f"{prefix}/{metric_name}": metric_object.compute()

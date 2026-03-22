@@ -5,8 +5,15 @@ codebook_width: ???
 num_hierarchies: ???
 embedding_dim: ???
 ckpt_path: ???
-seed: 42
 
+task_name: rkmeans_inference_flat
+
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+
+tags:
+  - amazon-assign-ids-inference
+
+seed: 42
 
 model:
   _target_: src.models.residual_quantization.ResidualQuantization
@@ -33,17 +40,11 @@ model:
   scheduler: null
   quantization_layer_list: null
   training_loop_function:
-    _target_: src.mdoels.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
+    _target_: src.models.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
     _partial_: true
   loss_function: null
   evaluator: null
 
-task_name: inference
-
-id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
-
-tags:
-- amazon-assign-ids-inference
 
 callbacks:
   pickle_writer:
@@ -55,14 +56,10 @@ callbacks:
     prediction_key_name: item_id
     prediction_name: cluster_ids
     post_processing_functions:
-    - function:
-        _target_: src.utils.tensor_utils.deduplicate_rows_in_tensor
-        _partial_: true
-      main_only: true
-    - function:
-        _target_: src.utils.tensor_utils.transpose_tensor_from_file
-        _partial_: true
-      main_only: true
+    - _target_: src.utils.tensor_utils.deduplicate_rows_in_tensor
+      _partial_: true
+    - _target_: src.utils.tensor_utils.transpose_tensor_from_file
+      _partial_: true
 
 paths:
   root_dir: .
@@ -87,7 +84,7 @@ trainer:
   max_steps: 80000
   max_epochs: 10
   accelerator: gpu
-  devices: -1
+  devices: [0, 1]
   num_nodes: 1
   precision: bf16-mixed
   log_every_n_steps: 2500

@@ -1,8 +1,11 @@
 import ast
 import operator as op
+from datetime import datetime
 from typing import Optional
 
+import pytz
 from omegaconf import DictConfig, ListConfig, OmegaConf
+
 
 """"
 Hydra allows for custom resolvers, which are functions that can be used to resolve values in the config.
@@ -156,6 +159,11 @@ def remove_item_from_list(input_list: ListConfig, item_to_remove: str) -> ListCo
     return ListConfig([item for item in input_list if item != item_to_remove])
 
 
+def now_of_timezone(pattern: str, timezone: str = "Asia/Shanghai") -> str:
+    tz = pytz.timezone(timezone)
+    return datetime.now(tz).strftime(pattern)
+
+
 # resolvers need to be registered to be accessible during config composition.
 # The resolver name is the function name without the type annotations.
 OmegaConf.register_new_resolver("remove_chars_from_string", remove_chars_from_string)
@@ -164,3 +172,4 @@ OmegaConf.register_new_resolver("extract_fields_from_list_of_dicts", extract_fie
 OmegaConf.register_new_resolver("create_map_from_list_of_dicts", create_map_from_list_of_dicts)
 OmegaConf.register_new_resolver("math_eval", math_eval)
 OmegaConf.register_new_resolver("remove_item_from_list", remove_item_from_list)
+OmegaConf.register_new_resolver("now_tz", now_of_timezone)

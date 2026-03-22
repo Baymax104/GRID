@@ -60,18 +60,14 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         self.embedding_dim = embedding_dim
         self.num_hierarchies = num_hierarchies
         self.should_check_prefix = should_check_prefix
-        if codebooks != None:
+        if codebooks is not None:
             self.codebooks = codebooks.t()
-            assert (
-                self.codebooks.size(1) == num_hierarchies
-            ), "codebooks should be of shape (-1, num_hierarchies)"
+            assert self.codebooks.size(1) == num_hierarchies, "codebooks should be of shape (-1, num_hierarchies)"
         else:
             logging.warning(
-                "Not using pre-cached codebooks, \
-            please make sure that \n \
-                            1) dataset is properly pre-processed \n \
-                            2) num_hierarchies and  num_embeddings_per_hierarchy are proerly set\
-            "
+                "Not using pre-cached codebooks, please make sure that\n"
+                "1) dataset is properly pre-processed\n"
+                "2) num_hierarchies and  num_embeddings_per_hierarchy are proerly set\n"
             )
 
         self.top_k_for_generation = top_k_for_generation
@@ -187,8 +183,8 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
 
         # Calculate how many times the full offset pattern needs to repeat
         num_repeats = (
-            num_cols + num_hierarchies - 1
-        ) // num_hierarchies  # Integer division to handle cases where num_cols is not a multiple of num_hierarchies
+                          num_cols + num_hierarchies - 1
+                      ) // num_hierarchies  # Integer division to handle cases where num_cols is not a multiple of num_hierarchies
 
         # Repeat the offsets and slice to match the number of columns
         repeated_offsets = offsets.repeat(num_repeats)[:num_cols]
@@ -229,7 +225,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         for i in range(0, num_prefixes, batch_size):
             # Get the current batch of prefixes.
             batch_prefix = prefix[
-                i : i + batch_size
+                i: i + batch_size
             ]  # Shape: [batch_size, hierarchy_level]
 
             # Perform the comparison.  Broadcasting is now limited by batch_size.
@@ -351,12 +347,12 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
                 * self.top_k_for_generation
             ).flatten()
             # accordingly update kv cache given the winning beams
-            if past_key_values != None:
+            if past_key_values is not None:
                 past_key_values.reorder_cache(replace_indices)
 
             indices_topk = torch.gather(indices, 1, indices_topk)
 
-        if replace_indices != None:
+        if replace_indices is not None:
             generated_ids = torch.cat(
                 [
                     generated_ids.reshape(-1, hierarchy)[replace_indices].reshape(
@@ -405,7 +401,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         """
         Make the model deterministic by turning off some flags.
         This is needed as the default functions in lightning such as
-        on_validation_start on_predict_start cannnot properly set the flags
+        on_validation_start on_predict_start cannot properly set the flags
         for the encoder and decoder.
         (TODO) clark: in the future we can revisit this and make it more generic
 
@@ -413,17 +409,17 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
             is_training (bool): Whether the model is in training mode or not.
         """
         if is_training:
-            if self.decoder != None:
+            if self.decoder is not None:
                 self.decoder.decoder.is_training = True
                 self.decoder.decoder.train()
-            if self.encoder != None:
+            if self.encoder is not None:
                 self.encoder.encoder.is_training = True
                 self.encoder.encoder.train()
         else:
-            if self.decoder != None:
+            if self.decoder is not None:
                 self.decoder.decoder.is_training = False
                 self.decoder.decoder.eval()
-            if self.encoder != None:
+            if self.encoder is not None:
                 self.encoder.encoder.is_training = False
                 self.encoder.encoder.eval()
 
@@ -886,8 +882,8 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
     def predict_step(self, batch: SequentialModelInputData):
         generated_sids, _ = self.model_step(batch)
         ids = [
-            id.item() if isinstance(id, torch.Tensor) else id
-            for id in batch.user_id_list
+            id_.item() if isinstance(id, torch.Tensor) else id
+            for id_ in batch.user_id_list
         ]
         model_output = OneKeyPerPredictionOutput(
             keys=ids,
@@ -901,7 +897,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         self,
         model_input: SequentialModelInputData,
         label_data: Optional[SequentialModuleLabelData] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ):
         """
         Perform a forward pass of the model and calculate the loss if label_data is provided.
 
@@ -944,10 +940,9 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         # the label locations is shared for all semantic id hierarchies
         loss = 0
         for hierarchy in range(self.num_hierarchies):
-
-            input = self.decoder.decoder_mlp[hierarchy](model_output[:, hierarchy])
+            input_ = self.decoder.decoder_mlp[hierarchy](model_output[:, hierarchy])
             loss += self.loss_function(
-                input=input,
+                input=input_,
                 target=fut_ids[:, hierarchy].long(),
             )
         return model_output, loss
@@ -964,7 +959,7 @@ class SemanticIDDecoderModule(torch.nn.Module):
         decoder: transformers.PreTrainedModel,
         decoder_mlp: Optional[torch.nn.Module] = None,
         bos_token: Optional[torch.nn.Parameter] = None,
-    ) -> None:
+    ):
         """
         Initialize the SemanticIDDecoderModule.
 
@@ -979,10 +974,8 @@ class SemanticIDDecoderModule(torch.nn.Module):
         super().__init__()
         # some sanity checks
         if bos_token is not None:
-            assert decoder.config.is_decoder == True, "Decoder must be a decoder model"
-            assert (
-                decoder.config.is_encoder_decoder == False
-            ), "Decoder must be a standalone decoder model"
+            assert decoder.config.is_decoder is True, "Decoder must be a decoder model"
+            assert decoder.config.is_encoder_decoder is False, "Decoder must be a standalone decoder model"
 
         self.decoder = decoder
         # this bos token is prompt for the decoder
@@ -1001,7 +994,7 @@ class SemanticIDDecoderModule(torch.nn.Module):
         encoder_attention_mask: torch.Tensor,
         use_cache: bool = False,
         past_key_values: DynamicCache = DynamicCache(),
-    ) -> torch.Tensor:
+    ):
         """
         Forward pass for the decoder module.
         Parameters:
@@ -1035,15 +1028,12 @@ class SemanticIDEncoderModule(torch.nn.Module):
     See Figure 2.b in https://arxiv.org/pdf/2305.05065.
     """
 
-    def __init__(
-        self,
-        encoder: transformers.PreTrainedModel,
-    ) -> None:
+    def __init__(self, encoder: transformers.PreTrainedModel):
         """
         Initialize the SemanticIDEncoderModule module.
 
-        Paremeters:
-        encoder (transformers.PreTrainedModel): the encoder model (e.g., transformers.T5EncoderModel).
+        Parameters:
+            encoder (transformers.PreTrainedModel): the encoder model (e.g., transformers.T5EncoderModel).
         """
         super().__init__()
 
@@ -1065,7 +1055,6 @@ class SemanticIDEncoderModule(torch.nn.Module):
         attention_mask: torch.Tensor,
         sequence_embedding: torch.Tensor,
     ) -> torch.Tensor:
-
         encoder_output = self.encoder(
             inputs_embeds=sequence_embedding,
             attention_mask=attention_mask,
@@ -1074,7 +1063,6 @@ class SemanticIDEncoderModule(torch.nn.Module):
         return embeddings
 
 
-# TODO (clark): this is a T5 specific implementation
 # this class is used for bloating the mlp layers in the encoder and decoder
 # original T5 implementation only has one layer
 class T5MultiLayerFF(nn.Module):

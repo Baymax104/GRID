@@ -5,8 +5,8 @@ embedding_dim: ???
 num_hierarchies: ???
 codebook_width: ??? 
 
-task_name: train
-id: ${now:%Y-%m-%d}/${now:%H-%M-%S}
+task_name: rkmeans_train_flat
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
 - amazon-assign-ids-train
 train: true
