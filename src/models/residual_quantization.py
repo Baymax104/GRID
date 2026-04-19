@@ -1,6 +1,6 @@
 import copy
 import logging
-from typing import Any, Optional, Callable
+from typing import Any, Callable, Optional
 
 import torch
 from lightning import LightningModule
@@ -73,8 +73,8 @@ class ResidualQuantization(LightningModule):
             ],
         )
 
-        self.current_layer = None
-        self.steps_per_layer = None
+        self.current_layer = 0
+        self.steps_per_layer = 0
         self.optimizer = optimizer
         self.scheduler = scheduler
 
@@ -343,22 +343,28 @@ class ResidualQuantization(LightningModule):
                     layer_frac_unique_metric(train_layer_coverages[layer_idx])
                     layer_id_entropy_metric(train_layer_id_entropies[layer_idx])
 
-                train_dict_to_log.update({
-                    "train/last_residuals_norm_ratio": self.train_last_residuals_norm_ratio,
-                    "train/first_residuals_norm_ratio": self.train_first_residuals_norm_ratio,
-                    "train/first_centroids_norm": self.first_centroids_norm,
-                    "train/last_centroids_norm": self.last_centroids_norm,
-                    "train/frac_unique_ids": self.train_frac_unique_ids,
-                    "train/mse": self.train_mse,
-                })
-                train_dict_to_log.update({
-                    f"train/layer_{layer_idx}/frac_layer_coverages": getattr(self, f"train_layer_coverages_{layer_idx}")
-                    for layer_idx in range(self.n_layers)
-                })
-                train_dict_to_log.update({
-                    f"train/layer_{layer_idx}/id_entropy": getattr(self, f"train_layer_id_entropy_{layer_idx}")
-                    for layer_idx in range(self.n_layers)
-                })
+                train_dict_to_log.update(
+                    {
+                        "train/last_residuals_norm_ratio": self.train_last_residuals_norm_ratio,
+                        "train/first_residuals_norm_ratio": self.train_first_residuals_norm_ratio,
+                        "train/first_centroids_norm": self.first_centroids_norm,
+                        "train/last_centroids_norm": self.last_centroids_norm,
+                        "train/frac_unique_ids": self.train_frac_unique_ids,
+                        "train/mse": self.train_mse,
+                    }
+                )
+                train_dict_to_log.update(
+                    {
+                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(self, f"train_layer_coverages_{layer_idx}")
+                        for layer_idx in range(self.n_layers)
+                    }
+                )
+                train_dict_to_log.update(
+                    {
+                        f"train/layer_{layer_idx}/id_entropy": getattr(self, f"train_layer_id_entropy_{layer_idx}")
+                        for layer_idx in range(self.n_layers)
+                    }
+                )
 
         self.log_dict(
             train_dict_to_log,
@@ -387,12 +393,12 @@ class ResidualQuantization(LightningModule):
 
         if (
             self.train_layer_wise
-            and self.global_step % self.steps_per_layer == 0
+            and self.global_step % self.steps_per_layer == 0  # reach the step per layer
             and (
-                self.quantization_layer_list[self.current_layer].is_initialized
-                or self.current_layer < 0
+                self.quantization_layer_list[self.current_layer].is_initialized  # current layer is initialized
+                or self.current_layer < 0  # or current layer is encoder layer
             )
-            and self.current_layer < self.n_layers - 1
+            and self.current_layer < self.n_layers - 1  # current layer is in quantization layer range
         ):
             self.log_if_true(
                 f"Finished training layer {self.current_layer} of {self.n_layers}",

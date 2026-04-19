@@ -1,14 +1,14 @@
 import functools
-from typing import Tuple
+from typing import Callable, Tuple
 
 import torch
 import torch.nn as nn
 
-from src.models.components.distance_functions import DistanceFunction
 from src.models.components.clustering_initializers import (
     ClusteringInitializer,
     KMeansPlusPlusInitInitializer,
 )
+from src.models.components.distance_functions import DistanceFunction
 from src.models.components.loss_functions import WeightedSquaredError
 from src.models.modules.clustering.base_clustering_module import BaseClusteringModule
 
@@ -21,7 +21,7 @@ class MiniBatchKMeans(BaseClusteringModule):
         distance_function: DistanceFunction,
         initializer: ClusteringInitializer = KMeansPlusPlusInitInitializer,
         loss_function: torch.nn.Module = WeightedSquaredError(),
-        optimizer: torch.optim.Optimizer = functools.partial(
+        optimizer: Callable[..., torch.optim.Optimizer] = functools.partial(
             torch.optim.SGD,
             lr=0.5,
         ),
@@ -55,7 +55,8 @@ class MiniBatchKMeans(BaseClusteringModule):
         self.cluster_counts = torch.zeros(self.n_clusters)
 
     def forward(
-        self, batch: torch.Tensor
+        self,
+        batch: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform a forward pass of the K-Means model on the input batch.
@@ -74,12 +75,10 @@ class MiniBatchKMeans(BaseClusteringModule):
         # Compute cluster assignments
         # Note that assignments is automatically detached from the computation graph
         # because it results from argmin
-        assignments = self.predict_step(batch, return_embeddings=False)
-        assignments_one_hot = (
-            nn.functional.one_hot(assignments, self.n_clusters)
-        ).detach()
+        assignments = self.predict_step(batch, return_embeddings=False)  # Shape (batch_size,)
+        assignments_one_hot = nn.functional.one_hot(assignments, self.n_clusters).detach()  # Shape (batch_size, n_clusters)
         # Count points in each cluster
-        batch_cluster_counts = torch.sum(assignments_one_hot, dim=0)
+        batch_cluster_counts = torch.sum(assignments_one_hot, dim=0)  # Shape (n_clusters,)
         self.cluster_counts += batch_cluster_counts
         # Accumulate points for each cluster
         batch_cluster_sums = torch.mm(assignments_one_hot.float().t(), batch)
@@ -87,8 +86,10 @@ class MiniBatchKMeans(BaseClusteringModule):
         return assignments, batch_cluster_counts, batch_cluster_sums
 
     def model_step(
-        self, batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, bool]:
+        self,
+        batch: torch.Tensor,
+        **kwargs
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """
         Perform a forward pass of the K-Means model on the batch and compute the loss.
 
@@ -113,9 +114,14 @@ class MiniBatchKMeans(BaseClusteringModule):
 
         # Initialize centroids using the chosen method
         # Buffer initial batches for better initialization
+
+        # Use initial state to represent whether the layer is initialized
+        # The initialization may cover multiple steps due to the mismatch between the buffer size and the batch size
+        # Update initial state if the layer have been initialized on previous step
         if self.is_initial_step:
             self.is_initial_step = False
             self.is_initialized = True
+
         if not self.is_initialized:
             return self.initialization_step(batch)
 
@@ -129,14 +135,13 @@ class MiniBatchKMeans(BaseClusteringModule):
 
         if self.update_manually:
             self.centroids[mask] = self.centroids[mask].data - (
-                (centroids[mask].data - mask_target) * centroid_weights.unsqueeze(1)
-            )
+                centroids[mask].data - mask_target) * centroid_weights.unsqueeze(1)
             return assignments, centroids[assignments], None
-        else:
-            # The MiniBatchKMeans algorithm update above is equivalent to an SGD step
-            # with learning rate 0.5 on the loss function below
-            loss = self.loss_function(centroids[mask], mask_target, centroid_weights)
-            return assignments, centroids[assignments], loss
+
+        # The MiniBatchKMeans algorithm update above is equivalent to an SGD step
+        # with learning rate 0.5 on the loss function below
+        loss = self.loss_function(centroids[mask], mask_target, centroid_weights)
+        return assignments, centroids[assignments], loss
 
     def on_train_start(self) -> None:
         """Lightning callback to reset the model state at the start of training."""

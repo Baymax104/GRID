@@ -122,9 +122,7 @@ class KMeansPlusPlusInitInitializer(ClusteringInitializer):
 
         n_samples = buffer.shape[0]
         n_features = buffer.shape[1]
-        centroids = torch.zeros(
-            (self.n_clusters, n_features), dtype=buffer.dtype, device=buffer.device
-        )
+        centroids = torch.zeros((self.n_clusters, n_features), dtype=buffer.dtype, device=buffer.device)
 
         # Choose first centroid randomly
         first_centroid_idx = torch.randint(0, n_samples, (1,), device=buffer.device)
@@ -135,17 +133,11 @@ class KMeansPlusPlusInitInitializer(ClusteringInitializer):
         # However, we only need to execute this loop once at initialization
         for i in range(1, self.n_clusters):
             # Compute distances to the nearest existing centroid
-            min_distances = torch.min(
-                self.distance_function.compute(buffer, centroids[:i]), dim=1
-            )[0]
+            min_distances = torch.min(self.distance_function.compute(buffer, centroids[:i]), dim=1)[0]
             if min_distances.sum() == 0:
                 # All points are already centroids, so we simply assign the remaining
                 # centroids randomly
-                centroids[i:] = buffer[
-                    torch.randint(
-                        0, n_samples, (self.n_clusters - i,), device=buffer.device
-                    )
-                ]
+                centroids[i:] = buffer[torch.randint(0, n_samples, (self.n_clusters - i,), device=buffer.device)]
                 break
 
             # Choose the next centroid with probability proportional to distance
@@ -158,7 +150,7 @@ class KMeansPlusPlusInitInitializer(ClusteringInitializer):
 
         if self.initialize_on_cpu:
             # Move the centroids back to the original device
-            centroids = centroids.to(old_device)
+            centroids = centroids.to(old_device)  # noqa
 
         return centroids
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 from lightning.pytorch import LightningModule
@@ -6,8 +6,8 @@ from lightning.pytorch.utilities import rank_zero_only
 from torch import nn
 from torchmetrics import MeanMetric
 
-from src.models.components.distance_functions import DistanceFunction
 from src.models.components.clustering_initializers import ClusteringInitializer
+from src.models.components.distance_functions import DistanceFunction
 from src.models.components.loss_functions import WeightedSquaredError
 
 
@@ -19,8 +19,8 @@ class BaseClusteringModule(LightningModule):
         distance_function: DistanceFunction,
         initializer: ClusteringInitializer,
         loss_function: nn.Module,
-        optimizer: torch.optim.Optimizer,
-        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+        optimizer: Callable[..., torch.optim.Optimizer],
+        scheduler: Callable[..., Optional[torch.optim.lr_scheduler._LRScheduler]] = None,
         init_buffer_size: int = 1000,
         update_manually: bool = False,
     ):
@@ -40,6 +40,7 @@ class BaseClusteringModule(LightningModule):
         """
         super(BaseClusteringModule, self).__init__()
 
+        self.init_centroids = None
         self.n_clusters = n_clusters
         self.n_features = n_features
         self.distance_function = distance_function
@@ -49,9 +50,7 @@ class BaseClusteringModule(LightningModule):
         self.initializer = initializer
         self.init_buffer_size = init_buffer_size
 
-        self.centroids = torch.nn.Parameter(
-            torch.zeros(self.n_clusters, self.n_features), requires_grad=True
-        )
+        self.centroids = torch.nn.Parameter(torch.zeros(self.n_clusters, self.n_features), requires_grad=True)
         self.update_manually = update_manually
         if self.update_manually:
             self.centroids.requires_grad = False
@@ -70,9 +69,7 @@ class BaseClusteringModule(LightningModule):
             batch: Data points of shape (batch_size, n_features)
         """
         batch = batch.detach()
-        n_to_add = min(
-            self.init_buffer_size - self.init_buffer.shape[0], batch.shape[0]
-        )
+        n_to_add = min(self.init_buffer_size - self.init_buffer.shape[0], batch.shape[0])
         self.init_buffer = torch.cat([self.init_buffer, batch[:n_to_add]], dim=0)
 
     @rank_zero_only
@@ -87,17 +84,11 @@ class BaseClusteringModule(LightningModule):
             ValueError: If the buffer size is less than the number of clusters.
         """
         if buffer.shape[0] < self.n_clusters:
-            raise ValueError(
-                f"Buffer size {buffer.shape[0]} is less than the number of clusters"
-                f" {self.n_clusters}."
-            )
+            raise ValueError(f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}.")
 
         self.init_centroids = self.initializer(buffer)
 
-    def initialization_step(
-        self,
-        batch: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
+    def initialization_step(self, batch: torch.Tensor):
         """
         Perform a model step that occurs before centroids are initialized.
 
@@ -113,44 +104,36 @@ class BaseClusteringModule(LightningModule):
             batch: Data points of shape (batch_size, n_features)
         """
         self._buffer_points(batch)
+
+        # return zero assignments and embeddings if the buffer is not full
         if self.init_buffer.shape[0] < self.init_buffer_size:
-            centroid_zero_embeddings = torch.zeros_like(
-                self.centroids.data, dtype=batch.dtype, device=self.device
-            )
+            centroid_zero_embeddings = torch.zeros_like(self.centroids.data, dtype=batch.dtype, device=self.device)
             loss = self.init_loss_function(self.centroids, centroid_zero_embeddings)
-            # The centroids at the start of this step are 0, so we return dummy embeddings
-            # and assignments
-            batch_zero_embeddings = torch.zeros_like(
-                batch, dtype=batch.dtype, device=self.device
-            )
-            batch_zero_assignments = torch.zeros(
-                batch.shape[0], dtype=torch.long, device=self.device
-            )
+            # The centroids at the start of this step are 0, so we return dummy embeddings and assignments
+            batch_zero_embeddings = torch.zeros_like(batch, dtype=batch.dtype, device=self.device)
+            batch_zero_assignments = torch.zeros(batch.shape[0], dtype=torch.long, device=self.device)
             return batch_zero_assignments, batch_zero_embeddings, loss
-        else:
-            self.init_centroids = torch.zeros_like(
-                self.centroids.data, dtype=batch.dtype, device=self.device
-            )
-            # This function is rank zero only, so only the buffer from the first device
-            # is used to initialize the centroids
-            self.compute_initial_centroids(self.init_buffer)
-            self.is_initial_step = True
-            self.init_buffer = torch.tensor([], device=self.device)
 
-            if self.update_manually:
-                # If we are updating manually, we set the centroids to the initial
-                # centroids without gradients
-                self.centroids[:] = self.init_centroids.data
-                distances = self.distance_function.compute(batch, self.centroids.data)
-                assignments = torch.argmin(distances, dim=1).to(self.device)
-                return assignments, self.centroids[assignments], None
+        # Once the buffer is full, calculate initial assignments, embeddings and loss
+        self.is_initial_step = True
+        self.init_centroids = torch.zeros_like(self.centroids.data, dtype=batch.dtype, device=self.device)
+        self.compute_initial_centroids(buffer=self.init_buffer)  # noqa
+        self.init_buffer = torch.tensor([], device=self.device)
 
-            loss = self.init_loss_function(self.centroids, self.init_centroids)
-            distances = self.distance_function.compute(batch, self.init_centroids)
+        if self.update_manually:
+            # If we are updating manually, we set the centroids to the initial
+            # centroids without gradients
+            self.centroids[:] = self.init_centroids.data
+            distances = self.distance_function.compute(batch, self.centroids.data)
             assignments = torch.argmin(distances, dim=1).to(self.device)
-            return assignments, self.init_centroids[assignments], loss
+            return assignments, self.centroids[assignments], None
 
-    def forward(self, batch: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, bool]:
+        loss = self.init_loss_function(self.centroids, self.init_centroids)
+        distances = self.distance_function.compute(batch, self.init_centroids)
+        assignments = torch.argmin(distances, dim=1).to(self.device)
+        return assignments, self.init_centroids[assignments], loss
+
+    def forward(self, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, bool]:
         """
         Update clusters based on the points in `batch`.
 
@@ -163,13 +146,13 @@ class BaseClusteringModule(LightningModule):
             whether the algorithm has completed, meaning it has either converged or
             reached the maximum number of iterations.
         """
-        raise NotImplementedError(
-            "Inherit from this class and implement the forward method."
-        )
+        raise NotImplementedError("Inherit from this class and implement the forward method.")
 
     def model_step(
-        self, batch: torch.Tensor, **kwargs
-    ) -> Tuple[torch.Tensor, torch.Tensor, bool]:
+        self,
+        batch: torch.Tensor,
+        **kwargs
+    ) -> tuple[torch.Tensor, torch.Tensor, bool]:
         """
         Update clusters based on the points in `batch`.
 
@@ -182,13 +165,9 @@ class BaseClusteringModule(LightningModule):
             whether the algorithm has completed, meaning it has either converged or
             reached the maximum number of iterations.
         """
-        raise NotImplementedError(
-            "Inherit from this class and implement the forward method."
-        )
+        raise NotImplementedError("Inherit from this class and implement the forward method.")
 
-    def training_step(
-        self, batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, bool]:
+    def training_step(self, batch: torch.Tensor):
         """
         Update clusters based on the points in `batch`.
 
@@ -218,8 +197,10 @@ class BaseClusteringModule(LightningModule):
         return loss
 
     def predict_step(
-        self, batch: torch.Tensor, return_embeddings: bool = True
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        batch: torch.Tensor,
+        return_embeddings: bool = True
+    ):
         """
         Predict cluster assignments for input points.
 
@@ -234,9 +215,9 @@ class BaseClusteringModule(LightningModule):
         """
         batch = batch.to(self.device)
         with torch.no_grad():
-            centroids = self.get_centroids().data
-            distances = self.distance_function.compute(batch, centroids)
-            assignments = torch.argmin(distances, dim=1)
+            centroids = self.get_centroids().data  # Shape (n_clusters, n_features)
+            distances = self.distance_function.compute(batch, centroids)  # Shape (batch_size, n_clusters)
+            assignments = torch.argmin(distances, dim=1)  # Shape (batch_size,)
             if not return_embeddings:
                 return assignments
             return assignments, centroids[assignments]
@@ -260,7 +241,7 @@ class BaseClusteringModule(LightningModule):
         Returns:
             Residuals of shape (batch_size, n_features)
         """
-        _, centroids = self.predict_step(batch)
+        _, centroids = self.predict_step(batch, return_embeddings=True)
         return batch - centroids
 
     def on_train_start(self) -> None:
@@ -269,7 +250,7 @@ class BaseClusteringModule(LightningModule):
         self.init_buffer = torch.tensor([], device=self.device)
         self.centroids = self.centroids.to(self.device)
 
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
 
