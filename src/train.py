@@ -11,7 +11,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from src.utils import RankedLogger, extras
 from src.utils.custom_hydra_resolvers import *
 from src.utils.launcher_utils import pipeline_launcher
-from src.utils.restart_job import LocalJobLauncher
 
 
 console_logger = RankedLogger(__name__, rank_zero_only=True)
@@ -80,8 +79,11 @@ def main(cfg: DictConfig) -> Optional[float]:
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     extras(cfg)
-    job_launcher = LocalJobLauncher(cfg=cfg)
-    job_launcher.launch(function_to_run=train)
+    train(cfg)
+
+    # do not use job launcher
+    # job_launcher = LocalJobLauncher(cfg=cfg)
+    # job_launcher.launch(function_to_run=train)
 
 
 if __name__ == "__main__":

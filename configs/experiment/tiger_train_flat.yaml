@@ -233,10 +233,6 @@ model:
       num_layers: 4
       is_decoder: true
       is_encoder_decoder: false
-    embed_tokens:
-      _target_: torch.nn.Embedding
-      num_embeddings: ${model.huggingface_model.config.vocab_size}
-      embedding_dim: ${model.huggingface_model.config.d_model}
   num_hierarchies: ${num_hierarchies}
   num_user_bins: null
   codebooks: ${data_loading.train_dataloader_config.dataloader.dataset_config.semantic_id_map.sequence_data}
@@ -273,9 +269,9 @@ callbacks:
   model_summary:
     _target_: lightning.pytorch.callbacks.RichModelSummary
     max_depth: -1
-  restart_job:
-    _target_: src.utils.restart_job.RestartAndLoadCheckpointCallback
-    metadata_dir: ${paths.metadata_dir}
+  # restart_job:
+  #   _target_: src.utils.restart_job.RestartAndLoadCheckpointCallback
+  #   metadata_dir: ${paths.metadata_dir}
 
 logger:
   csv:

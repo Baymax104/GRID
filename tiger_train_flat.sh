@@ -1,9 +1,13 @@
 #!/bin/bash
 
-conda run -n GRID --no-capture-output \
-  torchrun --nproc_per_node=2 -m src.train \
+NPROC_PER_NODE=2
+
+OMP_NUM_THREADS=$(( $(nproc) / NPROC_PER_NODE )) \
+  uv run \
+  torchrun --nproc_per_node=$NPROC_PER_NODE -m src.train \
   experiment=tiger_train_flat \
-  semantic_id_path=logs/inference/runs/2026-03-22/09-03-45/pickle/merged_predictions_tensor.pt \
+  +should_skip_retry=true \
+  semantic_id_path=logs/rkmeans_inference_flat/runs/2026-04-19/23-11-11/pickle/merged_predictions_tensor.pt \
   data_dir=data/beauty \
   num_hierarchies=4 \
 

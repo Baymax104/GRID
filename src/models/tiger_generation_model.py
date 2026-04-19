@@ -313,10 +313,9 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
             # real KV cache starts from the first hierarchy rather than 0-th
             # this is because in 0th hierarchy, self-attention doesn't have cache.
             # and kv cache in huggingface has poor support for this corner case
-            past_key_values = EncoderDecoderCache(
-                self_attention_cache=DynamicCache(),
-                cross_attention_cache=DynamicCache(),
-            )
+            self_attention_cache = DynamicCache()
+            cross_attention_cache = DynamicCache()
+            past_key_values = EncoderDecoderCache(self_attention_cache, cross_attention_cache)
             replace_indices = None
         else:
             # we have beams, generating more beams from the existing beams
@@ -759,9 +758,9 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         marginal_log_prob = None
 
         # initialize kv cache
-        past_key_values = EncoderDecoderCache(
-            self_attention_cache=DynamicCache(), cross_attention_cache=DynamicCache()
-        )
+        self_attention_cache = DynamicCache()
+        cross_attention_cache = DynamicCache()
+        past_key_values = EncoderDecoderCache(self_attention_cache, cross_attention_cache)
 
         for hierarchy in range(self.num_hierarchies):
             if generated_ids is not None:
