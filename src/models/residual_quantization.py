@@ -369,7 +369,7 @@ class ResidualQuantization(LightningModule):
         self.log_dict(
             train_dict_to_log,
             on_step=True,
-            on_epoch=True,
+            on_epoch=False,
             prog_bar=True,
             logger=True,
             sync_dist=True,

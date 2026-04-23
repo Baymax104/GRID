@@ -2,7 +2,9 @@
 data_dir: ???
 semantic_id_path: ???
 num_hierarchies: ???
-sequence_length: 120
+devices: ???
+
+sequence_length: 200
 
 task_name: tiger_train_flat
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
@@ -80,12 +82,12 @@ data_loading:
           transform:
             _target_: src.data.loading.components.label_function.NextKTokenMasking
             next_k: ${model.num_hierarchies}
-      batch_size_per_device: 32
-      num_workers: 8
+      batch_size_per_device: 8
+      num_workers: 16
       timeout: 60
       assign_files_by_size: false
       oov_token: null
-      masking_token: -1
+      masking_token: 0
       sequence_length: ${sequence_length}
       padding_token: -1
       drop_last: true
@@ -97,7 +99,7 @@ data_loading:
         padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
         sequence_field_name: sequence_data
         sid_hierarchy: ${model.num_hierarchies}
-        max_batch_size: 512
+        max_batch_size: 8
       dataset_config:
         _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
         user_id_field: user_id
@@ -202,12 +204,12 @@ model:
     _target_: transformers.T5EncoderModel
     config:
       _target_: transformers.T5Config
-      vocab_size: 256
-      d_model: 128
-      num_heads: 6
+      vocab_size: 256  # it corresponds to codebook width
+      d_model: 256
+      num_heads: 8
       dropout_rate: 0.15
-      d_ff: 1024
-      d_kv: 64
+      d_ff: 2048
+      d_kv: 128
       num_layers: 4
   feature_to_model_input_map:
     sequence_data: input_ids
@@ -220,6 +222,7 @@ model:
   evaluator: ${eval.evaluator}
   weight_tying: true
   compile: false
+  should_check_prefix: true
   decoder:
     _target_: transformers.models.t5.modeling_t5.T5Stack
     config:
@@ -227,7 +230,7 @@ model:
       vocab_size: ${model.huggingface_model.config.vocab_size}
       d_model: ${model.huggingface_model.config.d_model}
       num_heads: ${model.huggingface_model.config.num_heads}
-      dropout_rate: 0.15
+      dropout_rate: 0.1
       d_ff: ${model.huggingface_model.config.d_ff}
       d_kv: ${model.huggingface_model.config.d_kv}
       num_layers: 4
@@ -254,6 +257,7 @@ callbacks:
     train_time_interval: null
     every_n_epochs: null
     save_on_train_epoch_end: false
+
   early_stopping:
     _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: ${callbacks.model_checkpoint.monitor}
@@ -268,7 +272,7 @@ callbacks:
     check_on_train_epoch_end: false
   model_summary:
     _target_: lightning.pytorch.callbacks.RichModelSummary
-    max_depth: -1
+    max_depth: 1
   # restart_job:
   #   _target_: src.utils.restart_job.RestartAndLoadCheckpointCallback
   #   metadata_dir: ${paths.metadata_dir}
@@ -279,27 +283,34 @@ logger:
     save_dir: ${paths.output_dir}
     name: csv/
     prefix: ''
+  wandb:
+    _target_: lightning.pytorch.loggers.wandb.WandbLogger
+    name: ${now_tz:%Y-%m-%d_%H-%M-%S}
+    save_dir: ${paths.output_dir}
+    project: GRID
+    group: tiger
 
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
   min_steps: 1
-  max_steps: 100
+  max_steps: 15000
+  min_epochs: 0
   max_epochs: 10
   accelerator: gpu
-  devices: [0, 1]
+  devices: ${devices}
   num_nodes: 1
   precision: 32-true
   log_every_n_steps: 100
-  val_check_interval: 1600
+  val_check_interval: 500
   deterministic: false
-  accumulate_grad_batches: 16
+  accumulate_grad_batches: 1
   profiler:
     _target_: lightning.pytorch.profilers.PassThroughProfiler
   strategy: ddp
-  sync_batchnorm: true
+  sync_batchnorm: false
   num_sanity_val_steps: 0
-  min_epochs: 0
+
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -308,21 +319,30 @@ paths:
   work_dir: ${hydra:runtime.cwd}
   profile_dir: ${hydra:run.dir}/profile_output
   metadata_dir: ${paths.output_dir}/metadata
+
 extras:
   ignore_warnings: false
   enforce_tags: true
   print_config_warnings: true
   print_config: true
+
 loss:
   loss_function:
     _target_: torch.nn.CrossEntropyLoss
+
 optim:
   optimizer:
-    _target_: torch.optim.Adam
+    _target_: torch.optim.AdamW
     _partial_: true
-    lr: 0.001
-    weight_decay: 0.0001
-  scheduler: null
+    lr: 0.00005
+    weight_decay: 0.001
+  scheduler:
+    _target_: src.models.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _partial_: true
+    warmup_steps: 500
+    min_ratio: 0.05
+    scheduler_steps: ${trainer.max_steps}
+
 eval:
   evaluator:
     _target_: src.models.components.eval_metrics.SIDRetrievalEvaluator
@@ -336,4 +356,3 @@ eval:
       recall:
         _target_: src.models.components.eval_metrics.Recall
         _partial_: true
-

@@ -79,3 +79,15 @@ def scale_loss_by_world_size_for_initialization_training_loop(
     opt.zero_grad()
     model.manual_backward(loss)
     opt.step()
+
+    # In manual optimization mode, LR schedulers are not stepped automatically.
+    # Step them here after the optimizer update once initialization is finished.
+    if is_initialized:
+        schedulers = model.lr_schedulers()
+        if schedulers is None:
+            return
+        if not isinstance(schedulers, (list, tuple)):
+            schedulers = [schedulers]
+        for scheduler in schedulers:
+            if scheduler is not None:
+                scheduler.step()

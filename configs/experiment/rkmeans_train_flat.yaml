@@ -4,6 +4,7 @@ embedding_path: ???
 embedding_dim: ???
 num_hierarchies: ???
 codebook_width: ??? 
+devices: ???
 
 task_name: rkmeans_train_flat
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
@@ -159,7 +160,12 @@ model:
     _target_: torch.optim.SGD
     _partial_: true
     lr: 0.5
-  scheduler: null
+  scheduler:
+    _target_: src.models.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _partial_: true
+    warmup_steps: 100
+    min_ratio: 0.3
+    scheduler_steps: ${trainer.max_steps}
   quantization_layer_list: null
   training_loop_function:
     _target_: src.models.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
@@ -194,21 +200,22 @@ logger:
     prefix: ''
   wandb:
     _target_: lightning.pytorch.loggers.wandb.WandbLogger
-    name: wandb/
+    name: ${now_tz:%Y-%m-%d_%H-%M-%S}
     save_dir: ${paths.output_dir}
     project: GRID
+    group: rkmeans
 
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
   min_steps: 1
-  max_steps: 300
+  max_steps: 1000
   accelerator: gpu
-  devices: [0, 1]
+  devices: ${devices}
   num_nodes: 1
   precision: bf16-mixed
   log_every_n_steps: 10
-  val_check_interval: 100000000
+  val_check_interval: 50
   deterministic: false
   accumulate_grad_batches: 1
   profiler:
@@ -230,4 +237,4 @@ extras:
   ignore_warnings: false
   enforce_tags: true
   print_config_warnings: true
-  print_config: true
+  print_config: false

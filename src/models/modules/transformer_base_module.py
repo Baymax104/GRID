@@ -253,7 +253,7 @@ class TransformerBaseModule(LightningModule):
             "train/loss",
             self.train_loss,
             on_step=True,
-            on_epoch=True,
+            on_epoch=False,
             prog_bar=True,
             logger=True,
             sync_dist=True,

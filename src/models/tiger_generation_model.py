@@ -298,7 +298,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
                         dim=1,
                     )
                 ).reshape(-1, self.num_embeddings_per_hierarchy)
-            candidate_logits[~valid_prefix_mask] = float("-inf")
+                candidate_logits[~valid_prefix_mask] = float("-inf")
 
         candidate_logits = torch.nn.functional.softmax(candidate_logits, dim=-1)
         proba, indices = torch.sort(candidate_logits, descending=True)
