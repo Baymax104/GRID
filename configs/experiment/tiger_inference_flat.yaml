@@ -24,7 +24,7 @@ model:
       d_ff: 1024
       d_kv: 64
       num_layers: 4
-  _target_: src.models.tiger_generation_model.SemanticIDEncoderDecoder
+  _target_: src.models.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id

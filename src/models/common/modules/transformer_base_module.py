@@ -10,10 +10,10 @@ from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.models.components.eval_metrics import Evaluator
-from src.models.components.eval_metrics import RetrievalEvaluator
-from src.models.components.model_output import SharedKeyAcrossPredictionsOutput
-from src.models.modules.embedding_aggregator import EmbeddingAggregator
+from src.models.common.components.eval_metrics import Evaluator
+from src.models.common.components.eval_metrics import RetrievalEvaluator
+from src.models.common.components.model_output import SharedKeyAcrossPredictionsOutput
+from src.models.common.modules.embedding_aggregator import EmbeddingAggregator
 from src.utils.pylogger import RankedLogger
 
 

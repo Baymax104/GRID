@@ -10,7 +10,7 @@ from google.cloud import bigquery
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
 
-from src.models.components.model_output import ModelOutput
+from src.models.common.components.model_output import ModelOutput
 from src.utils.decorators import retry
 from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
 from src.utils.file_utils import sync_file

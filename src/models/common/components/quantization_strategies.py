@@ -4,7 +4,7 @@ from typing import Tuple
 import torch
 import torch.nn.functional as F
 
-from src.models.components.distance_functions import DistanceFunction
+from src.models.common.components.distance_functions import DistanceFunction
 from src.utils.utils import gumbel_softmax_sample
 
 

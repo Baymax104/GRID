@@ -6,9 +6,9 @@ from lightning.pytorch.utilities import rank_zero_only
 from torch import nn
 from torchmetrics import MeanMetric
 
-from src.models.components.clustering_initializers import ClusteringInitializer
-from src.models.components.distance_functions import DistanceFunction
-from src.models.components.loss_functions import WeightedSquaredError
+from src.models.common.components.clustering_initializers import ClusteringInitializer
+from src.models.common.components.distance_functions import DistanceFunction
+from src.models.common.components.loss_functions import WeightedSquaredError
 
 
 class BaseClusteringModule(LightningModule):

@@ -199,7 +199,7 @@ data_loading:
     test_dataloader_config: ${..test_dataloader_config.dataloader}
 
 model:
-  _target_: src.models.tiger_generation_model.SemanticIDEncoderDecoder
+  _target_: src.models.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
   huggingface_model:
     _target_: transformers.T5EncoderModel
     config:
@@ -337,7 +337,7 @@ optim:
     lr: 0.00005
     weight_decay: 0.001
   scheduler:
-    _target_: src.models.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _target_: src.models.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
     _partial_: true
     warmup_steps: 500
     min_ratio: 0.05
@@ -345,14 +345,14 @@ optim:
 
 eval:
   evaluator:
-    _target_: src.models.components.eval_metrics.SIDRetrievalEvaluator
+    _target_: src.models.common.components.eval_metrics.SIDRetrievalEvaluator
     top_k_list:
     - 5
     - 10
     metrics:
       ndcg:
-        _target_: src.models.components.eval_metrics.NDCG
+        _target_: src.models.common.components.eval_metrics.NDCG
         _partial_: true
       recall:
-        _target_: src.models.components.eval_metrics.Recall
+        _target_: src.models.common.components.eval_metrics.Recall
         _partial_: true

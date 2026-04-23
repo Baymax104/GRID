@@ -4,13 +4,13 @@ from typing import Callable, Tuple
 import torch
 import torch.nn as nn
 
-from src.models.components.clustering_initializers import (
+from src.models.common.components.clustering_initializers import (
     ClusteringInitializer,
     KMeansPlusPlusInitInitializer,
 )
-from src.models.components.distance_functions import DistanceFunction
-from src.models.components.loss_functions import WeightedSquaredError
-from src.models.modules.clustering.base_clustering_module import BaseClusteringModule
+from src.models.common.components.distance_functions import DistanceFunction
+from src.models.common.components.loss_functions import WeightedSquaredError
+from src.models.quantization.modules.base_clustering_module import BaseClusteringModule
 
 
 class MiniBatchKMeans(BaseClusteringModule):

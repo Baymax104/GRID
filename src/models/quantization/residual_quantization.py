@@ -10,8 +10,8 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.data.loading.components.interfaces import ItemData
-from src.models.components.model_output import OneKeyPerPredictionOutput
-from src.models.modules.clustering.base_clustering_module import BaseClusteringModule
+from src.models.common.components.model_output import OneKeyPerPredictionOutput
+from src.models.quantization.modules.base_clustering_module import BaseClusteringModule
 
 
 class ResidualQuantization(LightningModule):

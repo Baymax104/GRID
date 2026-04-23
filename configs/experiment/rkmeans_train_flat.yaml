@@ -135,7 +135,7 @@ data_loading:
       limit_files: null
 
 model:
-  _target_: src.models.residual_quantization.ResidualQuantization
+  _target_: src.models.quantization.residual_quantization.ResidualQuantization
   track_residuals: true
   verbose: true
   train_layer_wise: true
@@ -144,13 +144,13 @@ model:
   n_layers: ${num_hierarchies}
   init_buffer_size: 3072
   quantization_layer:
-    _target_: src.models.modules.clustering.mini_batch_kmeans.MiniBatchKMeans
+    _target_: src.models.quantization.modules.mini_batch_kmeans.MiniBatchKMeans
     n_clusters: ${codebook_width}
     n_features: ${model.input_dim}
     distance_function:
-      _target_: src.models.components.distance_functions.SquaredEuclideanDistance
+      _target_: src.models.common.components.distance_functions.SquaredEuclideanDistance
     initializer:
-      _target_: src.models.components.clustering_initializers.KMeansPlusPlusInitInitializer
+      _target_: src.models.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
       n_clusters: ${model.quantization_layer.n_clusters}
       distance_function: ${model.quantization_layer.distance_function}
       initialize_on_cpu: false
@@ -161,14 +161,14 @@ model:
     _partial_: true
     lr: 0.5
   scheduler:
-    _target_: src.models.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _target_: src.models.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
     _partial_: true
     warmup_steps: 100
     min_ratio: 0.3
     scheduler_steps: ${trainer.max_steps}
   quantization_layer_list: null
   training_loop_function:
-    _target_: src.models.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
+    _target_: src.models.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
     _partial_: true
 
 callbacks:

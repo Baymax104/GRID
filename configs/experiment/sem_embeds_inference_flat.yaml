@@ -9,19 +9,19 @@ tags:
 - semantic-embeddings-inference
 
 model:
-  _target_: src.models.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
+  _target_: src.models.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
   semantic_embedding_model_input_map:
     input_ids: text_tokens
     attention_mask: text_mask
   semantic_embedding_model:
-    _target_: src.models.modules.hf_language_model.HFLanguageModel
+    _target_: src.models.embedding.modules.hf_language_model.HFLanguageModel
     huggingface_model:
       _target_: transformers.T5EncoderModel.from_pretrained
       pretrained_model_name_or_path: ${embedding_model}
     aggregator:
-      _target_: src.models.modules.embedding_aggregator.EmbeddingAggregator
+      _target_: src.models.common.modules.embedding_aggregator.EmbeddingAggregator
       aggregation_strategy:
-        _target_: src.models.components.aggregation_strategy.MeanAggregation
+        _target_: src.models.common.components.aggregation_strategy.MeanAggregation
 
 callbacks:
   pickle_writer:

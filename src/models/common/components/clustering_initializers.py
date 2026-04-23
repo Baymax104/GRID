@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from pytorch_lightning import LightningModule
 
-from src.models.components.distance_functions import DistanceFunction
+from src.models.common.components.distance_functions import DistanceFunction
 
 
 class ClusteringInitializer(nn.Module, ABC):
@@ -187,7 +187,7 @@ class ClusteringModuleInitializer(ClusteringInitializer):
         """
         super().__init__(n_clusters=n_clusters, initialize_on_cpu=initialize_on_cpu)
 
-        from src.models.modules.clustering.base_clustering_module import (  # we import here to avoid circular imports
+        from src.models.quantization.modules.base_clustering_module import (  # we import here to avoid circular imports
             BaseClusteringModule,
         )
 
