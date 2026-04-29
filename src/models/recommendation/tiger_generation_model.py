@@ -512,4 +512,5 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
                 input=input_,
                 target=fut_ids[:, hierarchy].long(),
             )
+        loss = loss / self.num_hierarchies
         return model_output, loss

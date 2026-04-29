@@ -82,7 +82,7 @@ data_loading:
           transform:
             _target_: src.data.loading.components.label_function.NextKTokenMasking
             next_k: ${model.num_hierarchies}
-      batch_size_per_device: 8
+      batch_size_per_device: 32
       num_workers: 16
       timeout: 60
       assign_files_by_size: false
@@ -99,7 +99,7 @@ data_loading:
         padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
         sequence_field_name: sequence_data
         sid_hierarchy: ${model.num_hierarchies}
-        max_batch_size: 8
+        max_batch_size: 32
       dataset_config:
         _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
         user_id_field: user_id
@@ -131,7 +131,7 @@ data_loading:
           features_to_apply:
           - sequence_data
           num_hierarchies: ${model.num_hierarchies}
-      assign_all_files_per_worker: true
+      assign_all_files_per_worker: false
   val_dataloader_config:
     dataloader:
       _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
@@ -200,29 +200,30 @@ data_loading:
 
 model:
   _target_: src.models.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
+
+  # TransformerBaseModule
   huggingface_model:
     _target_: transformers.T5EncoderModel
     config:
       _target_: transformers.T5Config
       vocab_size: 256  # it corresponds to codebook width
-      d_model: 256
-      num_heads: 8
-      dropout_rate: 0.15
-      d_ff: 2048
-      d_kv: 128
+      d_model: 128
+      num_heads: 6
+      dropout_rate: 0.1
+      d_ff: 1024
+      d_kv: 64
       num_layers: 4
-  feature_to_model_input_map:
-    sequence_data: input_ids
-    user_id: user_id
   postprocessor: null
   aggregator: null
-  loss_function: ${loss.loss_function}
   optimizer: ${optim.optimizer}
   scheduler: ${optim.scheduler}
+  loss_function: ${loss.loss_function}
   evaluator: ${eval.evaluator}
   weight_tying: true
   compile: false
-  should_check_prefix: true
+  feature_to_model_input_map:
+    sequence_data: input_ids
+    user_id: user_id
   decoder:
     _target_: transformers.models.t5.modeling_t5.T5Stack
     config:
@@ -236,9 +237,14 @@ model:
       num_layers: 4
       is_decoder: true
       is_encoder_decoder: false
-  num_hierarchies: ${num_hierarchies}
-  num_user_bins: null
+
+  # SemanticIDGenerativeRecommender
   codebooks: ${data_loading.train_dataloader_config.dataloader.dataset_config.semantic_id_map.sequence_data}
+  num_hierarchies: ${num_hierarchies}
+  should_check_prefix: true
+
+  # SemanticIDEncoderDecoder
+  num_user_bins: null
   mlp_layers: 2
 
 callbacks:
@@ -294,7 +300,7 @@ trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
   min_steps: 1
-  max_steps: 15000
+  max_steps: 20000
   min_epochs: 0
   max_epochs: 10
   accelerator: gpu
@@ -329,17 +335,18 @@ extras:
 loss:
   loss_function:
     _target_: torch.nn.CrossEntropyLoss
+    ignore_index: -1
 
 optim:
   optimizer:
     _target_: torch.optim.AdamW
     _partial_: true
-    lr: 0.00005
+    lr: 1.0e-4
     weight_decay: 0.001
   scheduler:
     _target_: src.models.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
     _partial_: true
-    warmup_steps: 500
+    warmup_steps: 1000
     min_ratio: 0.05
     scheduler_steps: ${trainer.max_steps}
 
