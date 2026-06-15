@@ -341,7 +341,7 @@ optim:
   optimizer:
     _target_: torch.optim.AdamW
     _partial_: true
-    lr: 1.0e-4
+    lr: 3.0e-4
     weight_decay: 0.001
   scheduler:
     _target_: src.models.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
