@@ -644,6 +644,7 @@ dependencies = [
     { name = "lightning" },
     { name = "matplotlib" },
     { name = "modelscope" },
+    { name = "pytz" },
     { name = "rootutils" },
     { name = "sentencepiece" },
     { name = "tensorflow-cpu" },
@@ -672,6 +673,7 @@ requires-dist = [
     { name = "lightning", specifier = "==2.6.5" },
     { name = "matplotlib", specifier = ">=3.11.0" },
     { name = "modelscope", specifier = ">=1.38.0" },
+    { name = "pytz", specifier = ">=2026.2" },
     { name = "rootutils", specifier = ">=1.0.7" },
     { name = "sentencepiece", specifier = "==0.2.1" },
     { name = "tensorflow-cpu", specifier = "==2.21.0" },
@@ -2203,6 +2205,15 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/52/2c/8e73a3929b4c4bd600cafd38a97aaf7242a8cf518fb9f33d27c274ec898f/pytorch_lightning-2.6.5.tar.gz", hash = "sha256:1c32cefa76a1a9c4c5250338272d961d1e48b180e68396849efe128538ddb28e" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/8b/4d/5740c27110b83634d8491c3b5facf0111b3e554c3164f4fb953be9bddaf6/pytorch_lightning-2.6.5-py3-none-any.whl", hash = "sha256:62d9c8549b2278fedc3364f0a5607a56c6063d18635008f8cf3fae8d802b0d76" },
+]
+
+[[package]]
+name = "pytz"
+version = "2026.2"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/ff/46/dd499ec9038423421951e4fad73051febaa13d2df82b4064f87af8b8c0c3/pytz-2026.2.tar.gz", hash = "sha256:0e60b47b29f21574376f218fe21abc009894a2321ea16c6754f3cad6eb7cdd6a" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/ec/dd/96da98f892250475bdf2328112d7468abdd4acc7b902b6af23f4ed958ea0/pytz-2026.2-py2.py3-none-any.whl", hash = "sha256:04156e608bee23d3792fd45c94ae47fae1036688e75032eea2e3bf0323d1f126" },
 ]
 
 [[package]]
