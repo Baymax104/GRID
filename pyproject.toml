@@ -1,29 +1,28 @@
 [project]
 name = "grid"
 version = "0.1.0"
-description = "GRID Windows 开发最小依赖环境"
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.12"
 dependencies = [
-    "fsspec>=2024.9.0",
-    "hydra-colorlog==1.2.0",
-    "hydra-core>=1.3,<1.4",
-    "lightning==2.5.0",
-    "numpy>=1.26,<3",
-    "omegaconf>=2.3,<3",
-    "psutil>=5.9,<8",
-    "pyarrow>=17,<22",
-    "python-dotenv>=1.0,<2",
-    "pytz>=2024.1",
-    "rich>=13,<15",
-    "rootutils==1.0.7",
-    "sentencepiece==0.2.0",
-    "tokenizers>=0.20,<0.22",
-    "torch==2.6.0",
-    "torchaudio==2.6.0",
-    "torchmetrics>=1.6,<2",
-    "torchvision==0.21.0",
-    "transformers>=4.48,<5",
+    "datasets>=5.0.0",
+    "transformers>=5.12.1",
+    "hydra-colorlog>=1.2.0",
+    "lightning==2.6.5",
+    "matplotlib>=3.11.0",
+    "modelscope>=1.38.0",
+    "rootutils>=1.0.7",
+    "sentencepiece==0.2.1",
+    "tensorflow-cpu==2.21.0",
+    "tfrecord==1.14.6",
+    "torch==2.9.1",
+    "torchaudio==2.9.1",
+    "torchmetrics==1.0.3",
+    "torchvision==0.24.1",
+    "wandb>=0.28.0",
+    "hydra-core>=1.3.3",
+    # 仅 Linux 安装
+    "torchrec==1.4.0; sys_platform == 'linux'",
 ]
 
 [[tool.uv.index]]
@@ -32,5 +31,7 @@ default = true
 
 [dependency-groups]
 dev = [
-    "notebook>=7.5.7",
+    "notebook>=7.6.0",
+    "ruff>=0.15.20",
+    "icecream>=2.2.0",
 ]

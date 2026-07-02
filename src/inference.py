@@ -5,7 +5,7 @@ import rootutils
 import torch
 
 
-rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 from src.utils import RankedLogger, extras

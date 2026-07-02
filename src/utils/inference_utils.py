@@ -2,11 +2,9 @@ import datetime
 import logging
 import os
 import pickle
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional
 
-import pyarrow as pa
 import torch
-from google.cloud import bigquery
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
 
@@ -22,10 +20,8 @@ log = logging.getLogger(__name__)
 class BaseBufferedWriter(BasePredictionWriter):
     def __init__(
         self,
-        # Update this based on data size. The goal is to limit the number of writes to BQ without exceeding the memory of your machine.
         flush_frequency: int = 5000,
         write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
-        schema: Optional[list[Union[bigquery.SchemaField, pa.Field]]] = None,
         prediction_key_name: Optional[str] = None,
         prediction_name: Optional[str] = None,
     ):
@@ -33,7 +29,6 @@ class BaseBufferedWriter(BasePredictionWriter):
         Args:
             flush_frequency: Number of rows to accumulate before flushing
             write_interval: "batch" or "epoch".
-            schema: (Optional) Schema for the output data.
             prediction_key_name: (Optional) The key to key the predictions by e.g. user_id, item_id, etc.
             If not provided, it will be the module's responsibility to either hardcode
             or set it through the module's attributes.
@@ -45,7 +40,6 @@ class BaseBufferedWriter(BasePredictionWriter):
         self.flush_frequency = flush_frequency
         # Buffer to accumulate rows before writing
         self.rows_buffer: list[dict] = []
-        self.schema = schema
         self.global_rank = None
         self.prediction_key_name = prediction_key_name
         self.prediction_name = prediction_name
