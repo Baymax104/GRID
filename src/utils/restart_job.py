@@ -8,6 +8,11 @@ import traceback
 from datetime import datetime
 from typing import Any, Callable, TypeVar, Union
 
+"""Deprecated restart helpers kept for historical reference and manual opt-in only.
+
+The default train / inference mainline no longer imports or wires this module.
+"""
+
 import pytz
 from lightning import Trainer
 from lightning.pytorch.callbacks import Callback
@@ -31,11 +36,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 class RestartAndLoadCheckpointCallback(Callback):
-    """A callback that saves checkpoints and metadata for job restart capabilities.
+    """Deprecated restart callback kept for historical reference and manual opt-in only.
 
     This callback is designed to provide restart functionality for Lightning training jobs,
     capturing metadata about the training environment and handling exceptions by
     initiating clean restarts.
+
+    It is no longer part of the default train / inference mainline.
 
     It saves checkpoint metadata to disk (either local or remote storage) to enable
     job resumption after failures. The callback tracks distributed training configuration,
@@ -136,7 +143,7 @@ class RestartAndLoadCheckpointCallback(Callback):
 
 
 class BaseJobLauncher:
-    """Base class for job launchers with retry functionality.
+    """Deprecated base launcher for retry-based restarts.
 
     This class provides a foundation for executing jobs with automatic retry capabilities.
     It handles setup of metadata directories, command preparation, and job execution with
@@ -275,7 +282,7 @@ class BaseJobLauncher:
 
 
 class LocalJobLauncher(BaseJobLauncher):
-    """Job Launcher for local execution with retry capability.
+    """Deprecated local launcher for retry-based restarts.
 
     This class handles the execution of jobs locally with support for automatic retries
     in case of failure. It can be configured to skip retry logic, particularly for

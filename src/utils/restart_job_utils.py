@@ -4,6 +4,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set, TypeVar
 
+"""Deprecated restart metadata helpers kept for historical reference and manual opt-in only.
+
+The default train / inference mainline no longer depends on these helpers.
+"""
+
 import psutil
 from lightning import Trainer
 from omegaconf import DictConfig

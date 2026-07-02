@@ -20,7 +20,6 @@ from src.utils.file_utils import (
     list_subfolders,
 )
 from src.utils.logging_utils import finalize_loggers
-from src.utils.restart_job_utils import get_attribute_from_metadata_file
 from src.utils.utils import has_class_object_inside_list
 
 
@@ -40,12 +39,11 @@ class PipelineModules:
 
 def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
     """
-    Updates the configuration with the most recent checkpoint path if the job is a retry, a checkpoint callback exists,
-    and a checkpoint file is found.
+    Updates the configuration with the most recent checkpoint path when ``ckpt_path``
+    points to a checkpoint directory.
 
-    This function is useful for resuming training from the most recent checkpoint when a job is restarted.
-    It checks if the current run is part of a retry (using restart metadata), and if so, it looks for the
-    most recently modified checkpoint file in the checkpoint directory to use instead of the initial checkpoint.
+    This keeps the convenience of resolving a checkpoint folder to its newest
+    checkpoint file without coupling the default pipeline to any restart metadata.
 
     Args:
         cfg (DictConfig): The configuration dictionary containing training parameters.
@@ -73,22 +71,6 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
             if len(last_modified) > 0:
                 ckpt_path = last_modified
                 command_line_logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
-
-    # If there is a checkpoint callback running, and the restart_metadata file shows we are not on the first run,
-    # we check if there are checkpoints in the checkpoint folder and restart from there instead of the initial checkpoint.
-    if (
-        cfg.get("callbacks", {}).get("model_checkpoint", {}).get("restart_job", {})
-        and get_attribute_from_metadata_file(
-            f"{cfg.callbacks.restart_job.metadata_dir}/restart_metadata.json",
-            "current_run"
-        ) > 0  # current run is part of a retry
-    ):
-        checkpoint_folder = cfg.callbacks.model_checkpoint.dirpath
-        # We check if there are files with the extension .ckpt in the checkpoint folder. If so, we get the latest one.
-        last_modified = get_last_modified_file(folder_path=checkpoint_folder, suffix="*.ckpt")
-        if len(last_modified) > 0:
-            ckpt_path = last_modified
-            command_line_logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
 
     cfg.ckpt_path = ckpt_path
     return cfg

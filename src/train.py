@@ -5,7 +5,7 @@ import rootutils
 import torch
 
 
-rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 from src.utils import RankedLogger, extras
@@ -80,10 +80,6 @@ def main(cfg: DictConfig) -> Optional[float]:
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     extras(cfg)
     train(cfg)
-
-    # do not use job launcher
-    # job_launcher = LocalJobLauncher(cfg=cfg)
-    # job_launcher.launch(function_to_run=train)
 
 
 if __name__ == "__main__":
