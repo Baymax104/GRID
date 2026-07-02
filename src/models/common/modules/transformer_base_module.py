@@ -147,12 +147,12 @@ class TransformerBaseModule(LightningModule):
     def on_validation_epoch_end(self) -> None:
         # Lightning hook that is called when a validation epoch ends.
         if self.evaluator:
-            self.log("val/loss", self.val_loss, sync_dist=False, prog_bar=True, logger=True)
+            self.log("val/loss", self.val_loss, sync_dist=False, prog_bar=False, logger=True)
             self.log_metrics("val")
 
     def on_test_epoch_end(self) -> None:
         if self.evaluator:
-            self.log("test/loss", self.test_loss, sync_dist=False, prog_bar=True, logger=True)
+            self.log("test/loss", self.test_loss, sync_dist=False, prog_bar=False, logger=True)
             self.log_metrics("test")
 
     def on_exception(self, exception):
@@ -254,7 +254,7 @@ class TransformerBaseModule(LightningModule):
             self.train_loss,
             on_step=True,
             on_epoch=False,
-            prog_bar=True,
+            prog_bar=False,
             logger=True,
             sync_dist=True,
         )

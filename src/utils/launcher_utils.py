@@ -6,7 +6,7 @@ import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, ModelSummary
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, open_dict
 
 from src.utils import (
     RankedLogger,
@@ -19,11 +19,22 @@ from src.utils.file_utils import (
     has_no_extension,
     list_subfolders,
 )
-from src.utils.logging_utils import finalize_loggers
+from src.utils.logging_utils import DryRunLogger, finalize_loggers
 from src.utils.utils import has_class_object_inside_list
 
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+
+DRY_RUN_DISABLED_CALLBACK_TARGETS = {
+    "lightning.pytorch.callbacks.ModelCheckpoint",
+    "lightning.pytorch.callbacks.EarlyStopping",
+    "src.utils.inference_utils.LocalPickleWriter",
+}
+
+DRY_RUN_DISABLED_LOGGER_TARGETS = {
+    "lightning.pytorch.loggers.csv_logs.CSVLogger",
+    "lightning.pytorch.loggers.wandb.WandbLogger",
+}
 
 
 @dataclass
@@ -76,6 +87,52 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
     return cfg
 
 
+def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
+    """Apply minimal-run and no-result-writing overrides for dry run mode."""
+    if not cfg.get("dry_run", False):
+        return cfg
+
+    command_line_logger.info("Applying dry run overrides: minimal execution without business result writes.")
+
+    with open_dict(cfg):
+        if cfg.get("callbacks"):
+            for name, cb_conf in cfg.callbacks.items():
+                if (
+                    isinstance(cb_conf, DictConfig)
+                    and cb_conf.get("_target_") in DRY_RUN_DISABLED_CALLBACK_TARGETS
+                ):
+                    command_line_logger.info(f"Disabling callback for dry run: {name} <{cb_conf.get('_target_')}>")
+                    cfg.callbacks[name] = None
+
+        if cfg.get("logger"):
+            for name, lg_conf in cfg.logger.items():
+                if (
+                    isinstance(lg_conf, DictConfig)
+                    and lg_conf.get("_target_") in DRY_RUN_DISABLED_LOGGER_TARGETS
+                ):
+                    command_line_logger.info(f"Disabling logger for dry run: {name} <{lg_conf.get('_target_')}>")
+                    cfg.logger[name] = None
+
+        cfg.trainer.log_every_n_steps = 1
+        cfg.trainer.limit_predict_batches = 1
+
+        if "train" in cfg:
+            cfg.trainer.max_epochs = 1
+            cfg.trainer.max_steps = 1
+            cfg.trainer.limit_train_batches = 1
+            cfg.trainer.limit_val_batches = 0
+            cfg.trainer.limit_test_batches = 0
+            cfg.trainer.num_sanity_val_steps = 0
+
+            if cfg.get("model") and "train_layer_wise" in cfg.model:
+                cfg.model.train_layer_wise = False
+
+        if "test" in cfg:
+            cfg.test = False
+
+    return cfg
+
+
 def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     """
     Initialize and instantiate various objects required for running pipelines.
@@ -90,6 +147,9 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
+    cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
+    cfg = apply_dry_run_overrides(cfg)
+
     command_line_logger.info(f"Instantiating datamodule <{cfg.data_loading.datamodule._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data_loading.datamodule)
 
@@ -101,10 +161,11 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
 
     command_line_logger.info("Instantiating loggers...")
     loggers: list[Logger] = instantiate_loggers(cfg.get("logger"))
+    if cfg.get("dry_run", False) and len(loggers) == 0:
+        command_line_logger.info("Using DryRunLogger to satisfy Lightning logging without writing business results.")
+        loggers = [DryRunLogger()]
 
     command_line_logger.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-
-    cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
 
     enable_checkpointing = has_class_object_inside_list(callbacks, ModelCheckpoint)
     enable_model_summary = has_class_object_inside_list(callbacks, ModelSummary)

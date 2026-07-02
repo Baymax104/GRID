@@ -308,7 +308,6 @@ class ResidualQuantization(LightningModule):
         self.train_quantization_loss(quantization_loss)
         self.train_reconstruction_loss(reconstruction_loss)
         train_dict_to_log = {
-            "train/loss": self.train_loss,
             "train/quantization_loss": self.train_quantization_loss,
             "train/reconstruction_loss": self.train_reconstruction_loss,
         }
@@ -366,11 +365,13 @@ class ResidualQuantization(LightningModule):
                     }
                 )
 
+        train_dict_to_log["train/loss"] = self.train_loss
+
         self.log_dict(
             train_dict_to_log,
             on_step=True,
             on_epoch=False,
-            prog_bar=True,
+            prog_bar=False,
             logger=True,
             sync_dist=True,
         )
@@ -574,17 +575,18 @@ class ResidualQuantization(LightningModule):
         )
 
         val_dict_to_log = {
-            "val/loss": self.val_loss,
             "val/first_residuals_norm_ratio": self.val_first_residuals_norm_ratio,
             "val/last_residuals_norm_ratio": self.val_last_residuals_norm_ratio,
             "val/frac_unique_ids": self.val_frac_unique_ids,
             "val/mse": self.val_mse,
         }
+        val_dict_to_log["val/loss"] = self.val_loss
+
         self.log_dict(
             val_dict_to_log,
             on_step=False,
             on_epoch=True,
-            prog_bar=True,
+            prog_bar=False,
             logger=True,
             sync_dist=True,
         )
@@ -615,17 +617,18 @@ class ResidualQuantization(LightningModule):
         )
 
         test_dict_to_log = {
-            "test/loss": self.test_loss,
             "test/first_residuals_norm_ratio": self.test_first_residuals_norm_ratio,
             "test/last_residuals_norm_ratio": self.test_last_residuals_norm_ratio,
             "test/frac_unique_ids": self.test_frac_unique_ids,
             "test/mse": self.test_mse,
         }
+        test_dict_to_log["test/loss"] = self.test_loss
+
         self.log_dict(
             test_dict_to_log,
             on_step=False,
             on_epoch=True,
-            prog_bar=True,
+            prog_bar=False,
             logger=True,
             sync_dist=True,
         )

@@ -1,4 +1,5 @@
 import os
+import sys
 
 import hydra
 import rootutils
@@ -9,6 +10,7 @@ rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 from src.utils import RankedLogger, extras
+from src.utils.cli_utils import rewrite_dry_run_flag
 from src.utils.custom_hydra_resolvers import *
 from src.utils.launcher_utils import pipeline_launcher
 
@@ -83,4 +85,5 @@ def main(cfg: DictConfig) -> Optional[float]:
 
 
 if __name__ == "__main__":
+    sys.argv = rewrite_dry_run_flag()
     main()

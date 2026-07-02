@@ -190,7 +190,7 @@ class BaseClusteringModule(LightningModule):
             train_dict_to_log,
             on_step=True,
             on_epoch=True,
-            prog_bar=True,
+            prog_bar=False,
             logger=True,
             sync_dist=True,
         )

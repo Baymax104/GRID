@@ -1,0 +1,4 @@
+## Default progress bar with 1-based epoch display.
+
+tqdm_progress_bar:
+  _target_: src.utils.progress_bar.OneBasedEpochProgressBar

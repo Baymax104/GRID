@@ -33,3 +33,5 @@ test: True
 
 # simply provide checkpoint path to resume training
 ckpt_path: null
+
+dry_run: false

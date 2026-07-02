@@ -5,6 +5,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from lightning import LightningModule, Trainer
+from lightning.pytorch.loggers import Logger
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
 
@@ -15,6 +16,35 @@ log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 # logging constants
 END_RUN = "end_run"
+
+
+class DryRunLogger(Logger):
+    """Minimal no-op logger used to satisfy Lightning logging during dry runs."""
+
+    @property
+    def name(self) -> str:
+        return "dry_run"
+
+    @property
+    def version(self) -> str:
+        return "0"
+
+    @property
+    def save_dir(self) -> str:
+        return ""
+
+    @property
+    def experiment(self) -> "DryRunLogger":
+        return self
+
+    def log_hyperparams(self, params: Any) -> None:
+        return None
+
+    def log_metrics(self, metrics: dict[str, Any], step: int) -> None:
+        return None
+
+    def finalize(self, status: str) -> None:
+        return None
 
 
 def convert_dict_to_json_string(data: dict) -> str:

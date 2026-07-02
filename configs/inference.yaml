@@ -2,6 +2,7 @@
 
 defaults:
   - _self_
+  - callbacks: inference_default
   - paths: default
   - logger: default
   - trainer: default
@@ -16,3 +17,5 @@ tags: ["inference"]
 
 # passing checkpoint path is necessary for inference
 ckpt_path: ???
+
+dry_run: false
