@@ -1,19 +1,13 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Callable
+from urllib.parse import unquote, urlparse
 
-import tensorflow as tf
 from pyarrow import parquet as pq
+from tfrecord.reader import example_loader
+from tfrecord.iterator_utils import shuffle_iterator
 
 from src.utils.decorators import retry
 from src.utils.file_utils import open_pyarrow_file
-
-
-tf.config.set_visible_devices([], "GPU")  # Disable all for tensorflow
-
-
-# if GPU version of TF installed,
-# it will automatically occupy the full GPU memory
 
 
 class RawDataIterator(ABC):
@@ -92,27 +86,28 @@ class ParquetDataIterator(RawDataIterator):
 class TFRecordIterator(RawDataIterator):
     """
     Data iterator class for tfrecord files
-
-    Args:
-        use_ragged_tensor: bool, Whether to use ragged tensors.
     """
 
-    def __init__(
-        self,
-        use_ragged_tensor: bool = False,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.feature_description = None
-        self.use_ragged_tensor = use_ragged_tensor
 
-    def initialize_feature_description(self, raw_dataset: tf.data.TFRecordDataset):
-        """
-        If the feature description is not set, infer the feature description from the first record in the dataset.
-        """
-        if self.feature_description is None:
-            sample_record: tf.Tensor = next(iter(raw_dataset))
-            self.feature_description = self.infer_feature_type(self.parse_tfrecord(sample_record).features.feature)
+    @staticmethod
+    def _normalize_example_loader_path(file_path: str) -> str:
+        """Convert local file URIs to plain filesystem paths for tfrecord loader."""
+        parsed = urlparse(file_path)
+        if parsed.scheme != "file":
+            return file_path
+
+        normalized_path = unquote(parsed.path)
+
+        if parsed.netloc and parsed.netloc not in {"", "localhost"}:
+            normalized_path = f"//{parsed.netloc}{normalized_path}"
+
+        # Windows file URI: /C:/path -> C:/path
+        if len(normalized_path) >= 3 and normalized_path[0] == "/" and normalized_path[2] == ":":
+            normalized_path = normalized_path[1:]
+
+        return normalized_path
 
     def iterrows(self):
         """
@@ -124,50 +119,24 @@ class TFRecordIterator(RawDataIterator):
             every element in this iterator is a sample.
         """
         assert self.list_of_file_paths is not None, "list_of_file_paths is not set"
-        raw_dataset = tf.data.TFRecordDataset(
-            self.list_of_file_paths,
-            compression_type="GZIP",
-            buffer_size=256 * 1024,
-        )
+        iterators = [
+            example_loader(self._normalize_example_loader_path(file_path), None, compression_type="gzip")
+            for file_path in self.list_of_file_paths
+        ]
+
+        def merged_examples():
+            for iterator in iterators:
+                yield from iterator
+
+        dataset_iterator = merged_examples()
         if self.should_shuffle_rows:
-            # the buffer here is the number of records to shuffle
-            # the larger the buffer, the more memory it will use
-            # too large might cause OOM
-            raw_dataset = raw_dataset.shuffle(buffer_size=128)
+            dataset_iterator = shuffle_iterator(iter(dataset_iterator), queue_size=128)
 
-        self.initialize_feature_description(raw_dataset)
-        # We create an iterator and manually iterate to allow for retrying the
-        # "next" operation in case of a failure.
-        dataset_iterator = iter(raw_dataset)
+        dataset_iterator = iter(dataset_iterator)
         curr_example = self._get_next_example(dataset_iterator)
-        while curr_example:
-            example = tf.io.parse_single_example(curr_example, self.feature_description)
-            yield example
+        while curr_example is not None:
+            yield curr_example
             curr_example = self._get_next_example(dataset_iterator)
-
-    # dynamic inferring the feature description of tfrecord files
-    def infer_feature_type(self, example_proto: tf.Tensor) -> dict:
-        feature_description = {}
-        # feature has variable length, RaggedFeature in TF 2.x is recommended
-        # VarLenFeature is used for compatibility
-        tf_feature_type = tf.io.RaggedFeature if self.use_ragged_tensor else tf.io.VarLenFeature
-        for key, value in example_proto.items():
-            if isinstance(value, tf.train.Feature):
-                if value.HasField("bytes_list"):
-                    feature_description[key] = tf_feature_type(tf.string)
-                elif value.HasField("float_list"):
-                    feature_description[key] = tf_feature_type(tf.float32)
-                elif value.HasField("int64_list"):
-                    feature_description[key] = tf_feature_type(tf.int64)
-                else:
-                    raise ValueError("Unknown feature type")
-        return feature_description
-
-    # parsing the tfrecord files from bytes
-    def parse_tfrecord(self, record: tf.Tensor) -> tf.Tensor:
-        example = tf.train.Example()
-        example.ParseFromString(record.numpy())
-        return example
 
     def shuffle(self, seed=42) -> RawDataIterator:
         # TODO(lneves): Unify the shuffle method for all iterators
