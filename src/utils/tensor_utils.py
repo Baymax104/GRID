@@ -1,4 +1,3 @@
-
 import torch
 
 from src.utils.file_utils import open_local_or_remote
@@ -123,9 +122,7 @@ def merge_list_of_keyed_tensors_to_single_tensor(
     return output_tensor
 
 
-def deduplicate_rows_in_tensor(
-    file_path: str | None = None, return_tensor: bool = False
-) -> None | torch.Tensor:
+def deduplicate_rows_in_tensor(file_path: str | None = None, return_tensor: bool = False) -> None | torch.Tensor:
     """
     Identifies and de-duplicate repeated rows in a PyTorch tensor.
     Rows that are not duplicated will have a new column with value 0,
@@ -206,9 +203,7 @@ def transpose_tensor_from_file(
         return None
 
 
-def create_last_k_mask(
-    sequence_length: int, last_item_index: torch.Tensor, last_k: int | None = None
-) -> torch.tensor:
+def create_last_k_mask(sequence_length: int, last_item_index: torch.Tensor, last_k: int | None = None) -> torch.tensor:
     """
     Creates a mask to select the last K items of sequences.
     If a sequence has less than K items, all items are considered for the row.

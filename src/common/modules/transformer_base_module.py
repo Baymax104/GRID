@@ -6,13 +6,13 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric
 from torchmetrics.aggregation import BaseAggregator
 
+from src.common.components.eval_metrics import Evaluator
+from src.common.components.model_output import SharedKeyAcrossPredictionsOutput
+from src.common.modules.embedding_aggregator import EmbeddingAggregator
 from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.common.components.eval_metrics import Evaluator
-from src.common.components.model_output import SharedKeyAcrossPredictionsOutput
-from src.common.modules.embedding_aggregator import EmbeddingAggregator
 from src.utils.pylogger import RankedLogger
 
 console_logger = RankedLogger(__name__, rank_zero_only=True)
