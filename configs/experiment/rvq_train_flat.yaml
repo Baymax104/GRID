@@ -186,9 +186,7 @@ callbacks:
     every_n_epochs: null
     save_on_train_epoch_end: null
   early_stopping: null
-  model_summary:
-    _target_: lightning.pytorch.callbacks.RichModelSummary
-    max_depth: -1
+  model_summary: null
 logger:
   csv:
     _target_: lightning.pytorch.loggers.csv_logs.CSVLogger

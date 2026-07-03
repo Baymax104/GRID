@@ -274,9 +274,7 @@ callbacks:
     stopping_threshold: null
     divergence_threshold: null
     check_on_train_epoch_end: false
-  model_summary:
-    _target_: lightning.pytorch.callbacks.RichModelSummary
-    max_depth: 1
+  model_summary: null
   # restart_job:
   #   _target_: src.utils.restart_job.RestartAndLoadCheckpointCallback
   #   metadata_dir: ${paths.metadata_dir}

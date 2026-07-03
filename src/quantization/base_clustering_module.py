@@ -259,7 +259,6 @@ class BaseClusteringModule(LightningModule):
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    "monitor": "train/loss",
                     "interval": "step",
                     "frequency": 1,
                 },

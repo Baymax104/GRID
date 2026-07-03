@@ -690,7 +690,6 @@ class ResidualQuantization(LightningModule):
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    "monitor": "val/loss",
                     "interval": "step",
                     "frequency": 1,
                 },
