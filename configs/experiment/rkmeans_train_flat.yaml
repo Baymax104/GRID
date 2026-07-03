@@ -36,7 +36,6 @@ data_loading:
       _target_: src.data.loading.components.interfaces.ItemDatasetConfig
       item_id_field: id
       keep_item_id: true
-      iterate_per_row: true
       data_iterator:
         _target_: src.data.loading.components.iterators.TFRecordIterator
       features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features}, "name", False, "is_item_ids", "True"}

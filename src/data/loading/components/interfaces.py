@@ -47,8 +47,6 @@ class SequenceDatasetConfig(BaseDatasetConfig):
         The list of preprocessing functions. Should be in the order they must be applied.
     num_placeholder_tokens_map: Optional[dict]
         The number of placeholder tokens map.
-    iterate_per_row: bool
-        Whether to iterate per row or per batches.
     keep_user_id: bool
         Whether to keep the user id feature in the batches.
     field_type_map: Optional[dict]
@@ -57,8 +55,6 @@ class SequenceDatasetConfig(BaseDatasetConfig):
         The minimum sequence length. Only works if iterating per row.
     feature_map: Optional[dict]
         maps the feature names to the desired feature names.
-    iterate_per_row: bool
-        Whether to iterate per row or per batches.
     features_to_consider: list[str]
         List of features to consider. If not specified, consider all features.
     file_format: str
@@ -72,7 +68,6 @@ class SequenceDatasetConfig(BaseDatasetConfig):
     user_id_field: str
     data_iterator: RawDataIterator
     preprocessing_functions: list[callable]  # type: ignore
-    iterate_per_row: bool = False
     keep_user_id: bool = False
     num_placeholder_tokens_map: Optional[dict] = field(default_factory=dict)
     field_type_map: Optional[dict] = field(default_factory=dict)
@@ -281,8 +276,6 @@ class ItemDatasetConfig(BaseDatasetConfig):
         The preprocessing functions to be applied to the data.
     data_iterator: RawDataIterator
         The data iterator.
-    iterate_per_row: bool
-        Whether to iterate per row or per batch.
     keep_item_id: bool
         Whether to keep the item id in the data.
     features_to_consider: Optional[List[str]]
@@ -303,7 +296,6 @@ class ItemDatasetConfig(BaseDatasetConfig):
     item_id_field: str
     preprocessing_functions: list[callable]  # type: ignore
     data_iterator: RawDataIterator
-    iterate_per_row: bool = True
     keep_item_id: bool = True
     features_to_consider: Optional[List[str]] = None
     feature_map: Optional[Dict[str, str]] = None

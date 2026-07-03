@@ -15,7 +15,6 @@ class BaseDataset:
         dataset_config: BaseDatasetConfig,
         data_folder: str,
         should_shuffle_rows: bool = False,
-        batch_size: int = 1,
         is_for_training: bool = True,
         assign_all_files_per_worker: bool = False,
     ):
@@ -25,7 +24,6 @@ class BaseDataset:
             dataset_config (BaseDatasetConfig): Configuration for the dataset.
             data_folder (str): Path to the folder where the data is stored.
             should_shuffle_rows (bool): Whether to shuffle the rows of the dataset.
-            batch_size (int): Batch size to be used for the dataset.
             is_for_training (bool): Whether the dataset is for training or not.
             assign_all_files_per_worker (bool): Whether to assign all files to each worker or not.
                 This will enable each worker to access all files. Each worker will locally shuffle the files.
@@ -39,7 +37,6 @@ class BaseDataset:
         self.should_shuffle_rows = should_shuffle_rows
         self.data_folder = data_folder
         self.list_of_file_paths = []
-        self.batch_size = batch_size
         self.is_for_training = is_for_training
         self.assign_all_files_per_worker = assign_all_files_per_worker
 
@@ -100,7 +97,6 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         dataset_config: BaseDatasetConfig,
         data_folder: str,
         should_shuffle_rows: bool = False,
-        batch_size: int = 1,
         is_for_training: bool = True,
         assign_all_files_per_worker: bool = False,
     ):
@@ -108,7 +104,6 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
             dataset_config=dataset_config,
             data_folder=data_folder,
             should_shuffle_rows=should_shuffle_rows,
-            batch_size=batch_size,
             is_for_training=is_for_training,
             assign_all_files_per_worker=assign_all_files_per_worker,
         )
@@ -136,12 +131,8 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
 
         self.data_iterator.should_shuffle_rows = self.should_shuffle_rows
 
-        # get real data and dataset real iterator
-        # We provide the flexibility to iterate per row, if per row preprocessing is needed, or per batch.
-        if self.dataset_config.iterate_per_row:
-            self.dataset_to_iterate = self.data_iterator.iterrows()
-        else:
-            self.dataset_to_iterate = self.data_iterator.iter_batches(self.batch_size)
+        # get real data and dataset real iterator using the only supported row-based mode.
+        self.dataset_to_iterate = self.data_iterator.iterrows()
 
         command_line_logger.debug(
             f"GLOBAL ID {self.global_dataloader_worker_id} GPU Worker: {self.global_worker_id}/{self.total_workers} with {len(self.data_iterator.list_of_file_paths)} files\

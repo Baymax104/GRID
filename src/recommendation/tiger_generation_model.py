@@ -9,12 +9,10 @@ from src.data.loading.components.interfaces import (
     SequentialModuleLabelData,
 )
 from src.common.components.model_output import OneKeyPerPredictionOutput
-from recommendation.modules import (
-    SemanticIDDecoderModule,
-    SemanticIDEncoderModule,
-    SemanticIDGenerativeRecommender,
-    T5MultiLayerFF,
-)
+from src.recommendation.base_recommender import SemanticIDGenerativeRecommender
+from src.recommendation.decoder_module import SemanticIDDecoderModule
+from src.recommendation.encoder_module import SemanticIDEncoderModule
+from src.recommendation.t5_multi_layer_ff import T5MultiLayerFF
 from src.utils.utils import get_parent_module_and_attr
 
 

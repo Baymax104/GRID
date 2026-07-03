@@ -6,6 +6,7 @@ import rootutils
 import torch
 from omegaconf import DictConfig
 
+import src.utils.custom_hydra_resolvers as _custom_hydra_resolvers
 from src.utils import RankedLogger, extras
 from src.utils.cli_utils import rewrite_dry_run_flag
 from src.utils.launcher_utils import pipeline_launcher

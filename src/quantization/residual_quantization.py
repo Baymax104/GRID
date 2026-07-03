@@ -12,7 +12,7 @@ from torchmetrics import MeanMetric
 
 from src.data.loading.components.interfaces import ItemData
 from src.common.components.model_output import OneKeyPerPredictionOutput
-from quantization.base_clustering_module import BaseClusteringModule
+from src.quantization.base_clustering_module import BaseClusteringModule
 
 
 class ResidualQuantization(LightningModule):

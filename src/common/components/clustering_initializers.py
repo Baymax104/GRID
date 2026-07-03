@@ -187,7 +187,7 @@ class ClusteringModuleInitializer(ClusteringInitializer):
         """
         super().__init__(n_clusters=n_clusters, initialize_on_cpu=initialize_on_cpu)
 
-        from quantization.base_clustering_module import (  # we import here to avoid circular imports
+        from src.quantization.base_clustering_module import (  # we import here to avoid circular imports
             BaseClusteringModule,
         )
 

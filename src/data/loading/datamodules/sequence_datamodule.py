@@ -154,7 +154,6 @@ class SequenceDataModule(LightningDataModule):
             dataset_config=curr_config.dataset_config,
             data_folder=curr_config.data_folder,
             should_shuffle_rows=curr_config.should_shuffle_rows,
-            batch_size=curr_config.batch_size_per_device,
             is_for_training=stage == TrainerFn.FITTING,
             assign_all_files_per_worker=assign_all_files_per_worker,
         )
@@ -184,11 +183,11 @@ class SequenceDataModule(LightningDataModule):
 
         return DataloaderWithIterationRetry(
             dataset=dataset,
-            batch_size=curr_config.batch_size_per_device if curr_config.dataset_config.iterate_per_row else None,
+            batch_size=curr_config.batch_size_per_device,
             num_workers=curr_config.num_workers,  # num workers per GPU
             pin_memory=curr_config.pin_memory,
             persistent_workers=persistent_workers,
-            drop_last=curr_config.drop_last if curr_config.dataset_config.iterate_per_row else False,
+            drop_last=curr_config.drop_last,
             collate_fn=collate_fn_partial,
             timeout=curr_config.timeout,
         )
@@ -325,7 +324,6 @@ class ItemDataModule(SequenceDataModule):
             dataset_config=curr_config.dataset_config,
             data_folder=curr_config.data_folder,
             should_shuffle_rows=curr_config.should_shuffle_rows,
-            batch_size=curr_config.batch_size_per_device,
             is_for_training=stage == TrainerFn.FITTING,
             assign_all_files_per_worker=assign_all_files_per_worker,
         )
@@ -353,11 +351,11 @@ class ItemDataModule(SequenceDataModule):
 
         return DataloaderWithIterationRetry(
             dataset=dataset,
-            batch_size=curr_config.batch_size_per_device if curr_config.dataset_config.iterate_per_row else None,
+            batch_size=curr_config.batch_size_per_device,
             num_workers=curr_config.num_workers,  # num workers per GPU
             pin_memory=curr_config.pin_memory,
             persistent_workers=persistent_workers,
-            drop_last=curr_config.drop_last if curr_config.dataset_config.iterate_per_row else False,
+            drop_last=curr_config.drop_last,
             collate_fn=curr_config.collate_fn,
             timeout=curr_config.timeout,
         )

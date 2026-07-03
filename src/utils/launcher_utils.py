@@ -105,10 +105,10 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
                     cfg.logger[name] = None
 
         cfg.trainer.log_every_n_steps = 1
+        cfg.trainer.max_epochs = 1
         cfg.trainer.limit_predict_batches = 1
 
         if "train" in cfg:
-            cfg.trainer.max_epochs = 1
             cfg.trainer.max_steps = 1
             cfg.trainer.limit_train_batches = 1
             cfg.trainer.limit_val_batches = 0

@@ -47,7 +47,6 @@ data_loading:
       _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
       user_id_field: user_id
       min_sequence_length: 1
-      iterate_per_row: true
       keep_user_id: true
       features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features},
         "name", False, "is_item_ids", "True"}
@@ -104,7 +103,6 @@ data_loading:
         _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
         user_id_field: user_id
         min_sequence_length: 1
-        iterate_per_row: true
         keep_user_id: true
         features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features},
           "name", False, "is_item_ids", "True"}
