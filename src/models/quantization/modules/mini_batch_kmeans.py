@@ -1,5 +1,5 @@
 import functools
-from typing import Callable, Tuple
+from collections.abc import Callable
 
 import torch
 import torch.nn as nn
@@ -20,11 +20,8 @@ class MiniBatchKMeans(BaseClusteringModule):
         n_features: int,
         distance_function: DistanceFunction,
         initializer: ClusteringInitializer = KMeansPlusPlusInitInitializer,
-        loss_function: torch.nn.Module = WeightedSquaredError(),
-        optimizer: Callable[..., torch.optim.Optimizer] = functools.partial(
-            torch.optim.SGD,
-            lr=0.5,
-        ),
+        loss_function: torch.nn.Module | None = None,
+        optimizer: Callable[..., torch.optim.Optimizer] | None = None,
         init_buffer_size: int = 1000,
         update_manually: bool = False,
     ):
@@ -42,6 +39,11 @@ class MiniBatchKMeans(BaseClusteringModule):
             initializer: Initialization method.
             init_buffer_size: Number of points to buffer for initialization.
         """
+        if loss_function is None:
+            loss_function = WeightedSquaredError()
+        if optimizer is None:
+            optimizer = functools.partial(torch.optim.SGD, lr=0.5)
+
         super().__init__(
             n_clusters=n_clusters,
             n_features=n_features,
@@ -54,10 +56,7 @@ class MiniBatchKMeans(BaseClusteringModule):
         )
         self.cluster_counts = torch.zeros(self.n_clusters)
 
-    def forward(
-        self,
-        batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform a forward pass of the K-Means model on the input batch.
 
@@ -76,7 +75,9 @@ class MiniBatchKMeans(BaseClusteringModule):
         # Note that assignments is automatically detached from the computation graph
         # because it results from argmin
         assignments = self.predict_step(batch, return_embeddings=False)  # Shape (batch_size,)
-        assignments_one_hot = nn.functional.one_hot(assignments, self.n_clusters).detach()  # Shape (batch_size, n_clusters)
+        assignments_one_hot = nn.functional.one_hot(
+            assignments, self.n_clusters
+        ).detach()  # Shape (batch_size, n_clusters)
         # Count points in each cluster
         batch_cluster_counts = torch.sum(assignments_one_hot, dim=0)  # Shape (n_clusters,)
         self.cluster_counts += batch_cluster_counts
@@ -85,11 +86,7 @@ class MiniBatchKMeans(BaseClusteringModule):
 
         return assignments, batch_cluster_counts, batch_cluster_sums
 
-    def model_step(
-        self,
-        batch: torch.Tensor,
-        **kwargs
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    def model_step(self, batch: torch.Tensor, **kwargs) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """
         Perform a forward pass of the K-Means model on the batch and compute the loss.
 
@@ -135,7 +132,8 @@ class MiniBatchKMeans(BaseClusteringModule):
 
         if self.update_manually:
             self.centroids[mask] = self.centroids[mask].data - (
-                centroids[mask].data - mask_target) * centroid_weights.unsqueeze(1)
+                centroids[mask].data - mask_target
+            ) * centroid_weights.unsqueeze(1)
             return assignments, centroids[assignments], None
 
         # The MiniBatchKMeans algorithm update above is equivalent to an SGD step

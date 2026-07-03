@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import rich
 import rich.syntax
@@ -10,7 +10,6 @@ from rich.prompt import Prompt
 
 from src.utils import pylogger
 from src.utils.file_utils import open_local_or_remote
-
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -71,9 +70,7 @@ def print_config_tree(
 
     # save config tree to file
     if save_to_file:
-        with open_local_or_remote(
-            f"{cfg.paths.output_dir}/config_tree.log", "w"
-        ) as file:
+        with open_local_or_remote(f"{cfg.paths.output_dir}/config_tree.log", "w") as file:
             rich.print(tree, file=file)
 
 

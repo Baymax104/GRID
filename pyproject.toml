@@ -36,3 +36,27 @@ dev = [
     "ruff>=0.15.20",
     "icecream>=2.2.0",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    "*.ipynb",
+    ".git",
+    ".idea",
+    ".venv",
+    "logs",
+    "openspec",
+    "outputs",
+    "pretrained_models",
+    "data",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

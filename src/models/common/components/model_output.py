@@ -1,4 +1,3 @@
-from typing import List, Union
 
 import torch
 
@@ -14,7 +13,7 @@ class ModelOutput:
         """
         raise NotImplementedError
 
-    def _convert_to_list(self, prediction: Union[torch.Tensor, List]) -> List:
+    def _convert_to_list(self, prediction: torch.Tensor | list) -> list:
         """
         Convert the prediction to a list so it can be serialized.
         """
@@ -51,8 +50,7 @@ class SharedKeyAcrossPredictionsOutput(ModelOutput):
     @property
     def list_of_row_format(self):
         return [
-            {self.key_name: self.key, self.prediction_name: pred}
-            for pred in self._convert_to_list(self.predictions)
+            {self.key_name: self.key, self.prediction_name: pred} for pred in self._convert_to_list(self.predictions)
         ]
 
 
@@ -88,5 +86,5 @@ class OneKeyPerPredictionOutput(ModelOutput):
     def list_of_row_format(self):
         return [
             {self.key_name: key, self.prediction_name: pred}
-            for key, pred in zip(self._convert_to_list(self.keys), self._convert_to_list(self.predictions))
+            for key, pred in zip(self._convert_to_list(self.keys), self._convert_to_list(self.predictions), strict=False)
         ]

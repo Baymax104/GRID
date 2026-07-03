@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
 
 import torch
 import torch.nn.functional as F
@@ -29,15 +28,13 @@ class QuantizationStrategy(ABC):
                 of reconstruction_loss_embeddings in quantize() for more details.
         """
         self.distance_function = distance_function
-        self.compute_reconstruction_loss_embeddings = (
-            compute_reconstruction_loss_embeddings
-        )
+        self.compute_reconstruction_loss_embeddings = compute_reconstruction_loss_embeddings
 
     def get_nearest_neighbors(
         self,
         codebook: torch.Tensor,
         batch: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get the nearest neighbors of the batch in the codebook.
         This is used for the STE and rotation trick quantization strategies.
@@ -52,7 +49,7 @@ class QuantizationStrategy(ABC):
         codebook: torch.Tensor,
         batch: torch.Tensor,
         **kwargs,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Quantize the input batch using the specified quantization strategy.
 
@@ -104,7 +101,7 @@ class GumbelSoftmaxQuantization(QuantizationStrategy):
         codebook: torch.Tensor,
         batch: torch.Tensor,
         **kwargs,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         dists = self.distance_function.compute(batch, codebook)
         weights = gumbel_softmax_sample(-dists, temperature=self.temperature)
         embeddings = weights @ codebook
@@ -119,7 +116,7 @@ class STEQuantization(QuantizationStrategy):
         codebook: torch.Tensor,
         batch: torch.Tensor,
         **kwargs,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Quantizes the input batch using the Straight-Through Estimator (STE).
 
@@ -157,24 +154,14 @@ class RotationTrickQuantization(QuantizationStrategy):
         quantized_embeddings = quantized_embeddings.detach()
         detached_batch = batch.detach()
 
-        quantized_norms = torch.linalg.vector_norm(
-            quantized_embeddings, dim=-1
-        ).unsqueeze(
-            1
-        )  # batch_size x 1
-        batch_norms = torch.linalg.vector_norm(detached_batch, dim=-1).unsqueeze(
-            1
-        )  # batch_size x 1
+        quantized_norms = torch.linalg.vector_norm(quantized_embeddings, dim=-1).unsqueeze(1)  # batch_size x 1
+        batch_norms = torch.linalg.vector_norm(detached_batch, dim=-1).unsqueeze(1)  # batch_size x 1
         lambda_ = quantized_norms / batch_norms  # batch_size x 1
 
         normalized_batch = detached_batch / batch_norms  # batch_size x embedding_dim
-        normalized_embeddings = (
-            quantized_embeddings / quantized_norms
-        )  # batch_size x embedding_dim
+        normalized_embeddings = quantized_embeddings / quantized_norms  # batch_size x embedding_dim
 
-        normalized_sum = F.normalize(
-            normalized_batch + normalized_embeddings, p=2, dim=1
-        )
+        normalized_sum = F.normalize(normalized_batch + normalized_embeddings, p=2, dim=1)
         batch = batch.unsqueeze(1)  # -> batch_size x 1 x embedding_dim
 
         # the following implements equation 4.2 in https://arxiv.org/abs/2410.06424
@@ -184,16 +171,14 @@ class RotationTrickQuantization(QuantizationStrategy):
         rescaled_embeddings = (
             batch @ normalized_batch.unsqueeze(2) @ normalized_embeddings.unsqueeze(1)
         )  # batch_size x 1 x embedding_dim
-        return (
-            lambda_ * (batch - 2 * sum_projection + 2 * rescaled_embeddings).squeeze()
-        )
+        return lambda_ * (batch - 2 * sum_projection + 2 * rescaled_embeddings).squeeze()
 
     def quantize(
         self,
         codebook: torch.Tensor,
         batch: torch.Tensor,
         **kwargs,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Quantizes the input batch using the rotation trick: https://arxiv.org/abs/2410.06424
 
@@ -212,7 +197,5 @@ class RotationTrickQuantization(QuantizationStrategy):
             reconstruction_loss_embeddings: The transformed embeddings using the efficient rotation trick.
         """
         ids, embeddings = self.get_nearest_neighbors(codebook, batch)
-        reconstruction_loss_embeddings = self.rotate_and_scale_batch(
-            batch, embeddings
-        )  # batch_size x embedding_dim
+        reconstruction_loss_embeddings = self.rotate_and_scale_batch(batch, embeddings)  # batch_size x embedding_dim
         return ids, embeddings, reconstruction_loss_embeddings

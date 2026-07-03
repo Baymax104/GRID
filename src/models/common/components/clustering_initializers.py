@@ -191,9 +191,9 @@ class ClusteringModuleInitializer(ClusteringInitializer):
             BaseClusteringModule,
         )
 
-        assert isinstance(
-            clustering_module, BaseClusteringModule
-        ), "clustering_module must be an instance of BaseClusteringModule"
+        assert isinstance(clustering_module, BaseClusteringModule), (
+            "clustering_module must be an instance of BaseClusteringModule"
+        )
 
         self.clustering_module = clustering_module
         self.max_iter = max_iter
@@ -217,9 +217,7 @@ class ClusteringModuleInitializer(ClusteringInitializer):
             new_centroids = self.clustering_module.get_centroids()
 
             # Check for convergence
-            if step > 0 and torch.allclose(
-                cur_centroids, new_centroids, atol=self.atol
-            ):
+            if step > 0 and torch.allclose(cur_centroids, new_centroids, atol=self.atol):
                 print(f"Initialization converged after {step} iterations")
                 break
             cur_centroids = new_centroids.clone()

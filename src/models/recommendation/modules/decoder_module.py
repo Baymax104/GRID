@@ -1,4 +1,3 @@
-from typing import Optional
 
 import torch
 import transformers
@@ -17,8 +16,8 @@ class SemanticIDDecoderModule(torch.nn.Module):
     def __init__(
         self,
         decoder: transformers.PreTrainedModel,
-        decoder_mlp: Optional[torch.nn.Module] = None,
-        bos_token: Optional[torch.nn.Parameter] = None,
+        decoder_mlp: torch.nn.Module | None = None,
+        bos_token: torch.nn.Parameter | None = None,
     ):
         """
         Initialize the SemanticIDDecoderModule.
@@ -53,7 +52,7 @@ class SemanticIDDecoderModule(torch.nn.Module):
         encoder_output: torch.Tensor,
         encoder_attention_mask: torch.Tensor,
         use_cache: bool = False,
-        past_key_values: DynamicCache = DynamicCache(),
+        past_key_values: DynamicCache | None = None,
     ):
         """
         Forward pass for the decoder module.
@@ -72,7 +71,7 @@ class SemanticIDDecoderModule(torch.nn.Module):
             encoder_hidden_states=encoder_output,
             encoder_attention_mask=encoder_attention_mask,
             use_cache=use_cache,
-            past_key_values=past_key_values,
+            past_key_values=past_key_values if past_key_values is not None else DynamicCache(),
         )
 
         embeddings = decoder_outputs.last_hidden_state

@@ -1,4 +1,3 @@
-from typing import Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -13,7 +12,7 @@ class HFLanguageModel(nn.Module):
         self,
         huggingface_model: PreTrainedModel,
         aggregator: EmbeddingAggregator,
-        postprocessor: nn.Module = nn.Identity(),
+        postprocessor: nn.Module | None = None,
         return_last_hidden_states: bool = False,
     ):
         """
@@ -30,17 +29,15 @@ class HFLanguageModel(nn.Module):
                 Defaults to nn.Identity, it means no postprocessor is applied.
             return_last_hidden_states: Whether to return the last hidden states
         """
-        super(HFLanguageModel, self).__init__()
+        super().__init__()
         self.huggingface_model = huggingface_model
         self.aggregator = aggregator
-        self.postprocessor = postprocessor
+        self.postprocessor = postprocessor if postprocessor is not None else nn.Identity()
         self.return_last_hidden_states = return_last_hidden_states
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Forward pass of the HuggingFace language model.
 
         Args:

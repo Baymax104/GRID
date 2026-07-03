@@ -2,7 +2,7 @@ import datetime
 import logging
 import os
 import pickle
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import torch
 from lightning import LightningModule, Trainer
@@ -10,9 +10,8 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 
 from src.models.common.components.model_output import ModelOutput
 from src.utils.decorators import retry
-from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
 from src.utils.file_utils import sync_file
-
+from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +21,8 @@ class BaseBufferedWriter(BasePredictionWriter):
         self,
         flush_frequency: int = 5000,
         write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
-        prediction_key_name: Optional[str] = None,
-        prediction_name: Optional[str] = None,
+        prediction_key_name: str | None = None,
+        prediction_name: str | None = None,
     ):
         """
         Args:
@@ -57,15 +56,15 @@ class BaseBufferedWriter(BasePredictionWriter):
         # TODO (lneves) Deprecate the way folks do and have all inference pipelines to use this.
 
         if (
-                hasattr(pl_module, "prediction_key_name")
-                and pl_module.prediction_key_name is None
-                and self.prediction_key_name is not None
+            hasattr(pl_module, "prediction_key_name")
+            and pl_module.prediction_key_name is None
+            and self.prediction_key_name is not None
         ):
             pl_module.prediction_key_name = self.prediction_key_name
         if (
-                hasattr(pl_module, "prediction_name")
-                and pl_module.prediction_name is None
-                and self.prediction_name is not None
+            hasattr(pl_module, "prediction_name")
+            and pl_module.prediction_name is None
+            and self.prediction_name is not None
         ):
             pl_module.prediction_name = self.prediction_name
 
@@ -89,7 +88,9 @@ class BaseBufferedWriter(BasePredictionWriter):
             model_output: The ModelOutput object containing the predictions.
         """
         if model_output is None:
-            log.warning(f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch.")
+            log.warning(
+                f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch."
+            )
             return
         rows = model_output.list_of_row_format
 
@@ -170,7 +171,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
         should_merge_files_on_main: bool = True,
         should_merge_list_of_keyed_tensors_to_single_tensor: bool = True,
-        post_processing_functions: Optional[list[callable]] = None,
+        post_processing_functions: list[callable] | None = None,
         **kwargs,
     ):
         """
@@ -192,9 +193,9 @@ class LocalPickleWriter(BaseBufferedWriter):
 
     def _create_file_path(self) -> str:
         """Create a file path for the pickle file."""
-        return f"predictions_{self.global_rank}_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%f')[:-3]}.pkl"
+        return f"predictions_{self.global_rank}_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%dT%H%M%S%f')[:-3]}.pkl"
 
-    def _local_file_path(self, file_path: Optional[str] = None) -> str:
+    def _local_file_path(self, file_path: str | None = None) -> str:
         """Create a local file path for the pickle file."""
         return f"{self.output_dir}/{file_path if file_path else self._create_file_path()}"
 
@@ -202,7 +203,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         if torch.distributed.is_available() and torch.distributed.is_initialized():
             torch.distributed.barrier()
         else:
-            log.info(f"Distributed not available, skipping distributed barrier.")
+            log.info("Distributed not available, skipping distributed barrier.")
 
     @retry()
     def _flush_buffer(self):
@@ -212,7 +213,9 @@ class LocalPickleWriter(BaseBufferedWriter):
         with open(self._local_file_path(file_path=file_path), "wb") as f:
             pickle.dump(self.rows_buffer, f)
 
-        log.info(f"Global Rank: {self.global_rank} wrote {len(self.rows_buffer)} rows to {self._local_file_path(file_path=file_path)}.")
+        log.info(
+            f"Global Rank: {self.global_rank} wrote {len(self.rows_buffer)} rows to {self._local_file_path(file_path=file_path)}."
+        )
 
     @retry()
     def on_predict_end(

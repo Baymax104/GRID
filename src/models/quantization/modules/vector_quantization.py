@@ -1,10 +1,9 @@
 import functools
-from typing import Tuple
 
 import torch
 
-from src.models.common.components.distance_functions import DistanceFunction
 from src.models.common.components.clustering_initializers import ClusteringInitializer
+from src.models.common.components.distance_functions import DistanceFunction
 from src.models.common.components.loss_functions import WeightedSquaredError
 from src.models.common.components.quantization_strategies import QuantizationStrategy
 from src.models.quantization.modules.base_clustering_module import BaseClusteringModule
@@ -18,11 +17,8 @@ class VectorQuantization(BaseClusteringModule):
         distance_function: DistanceFunction,
         initializer: ClusteringInitializer,
         quantization_strategy: QuantizationStrategy,
-        loss_function: torch.nn.Module = WeightedSquaredError(),
-        optimizer: torch.optim.Optimizer = functools.partial(
-            torch.optim.SGD,
-            lr=0.5,
-        ),
+        loss_function: torch.nn.Module | None = None,
+        optimizer: torch.optim.Optimizer | None = None,
         init_buffer_size: int = 1000,
     ):
         """
@@ -37,6 +33,10 @@ class VectorQuantization(BaseClusteringModule):
             init_method: Initialization method ("random" or "k-means++").
             init_buffer_size: Number of points to buffer for initialization.
         """
+        if loss_function is None:
+            loss_function = WeightedSquaredError()
+        if optimizer is None:
+            optimizer = functools.partial(torch.optim.SGD, lr=0.5)
 
         super().__init__(
             n_clusters=n_clusters,
@@ -50,9 +50,7 @@ class VectorQuantization(BaseClusteringModule):
 
         self.quantization_strategy = quantization_strategy
 
-    def forward(
-        self, batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform a forward pass of the K-Means model on the input batch.
 
@@ -85,7 +83,7 @@ class VectorQuantization(BaseClusteringModule):
     def model_step(
         self,
         batch: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, bool]:
+    ) -> tuple[torch.Tensor, torch.Tensor, bool]:
         """
         Perform a forward pass of the K-Means model on the batch and compute the loss.
 
@@ -121,8 +119,6 @@ class VectorQuantization(BaseClusteringModule):
         loss = self.loss_function(batch, embeddings)  # quantization loss
         return (
             assignments,
-            reconstruction_loss_embeddings
-            if reconstruction_loss_embeddings is not None
-            else embeddings,
+            reconstruction_loss_embeddings if reconstruction_loss_embeddings is not None else embeddings,
             loss,
         )

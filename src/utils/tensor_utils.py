@@ -1,11 +1,10 @@
-from typing import Optional, Tuple, Union
 
 import torch
 
 from src.utils.file_utils import open_local_or_remote
 
 
-def locations_to_index_tuple(locations: torch.Tensor, num_dims: int = 2) -> Tuple:
+def locations_to_index_tuple(locations: torch.Tensor, num_dims: int = 2) -> tuple:
     """
     Convert a tensor of locations to a tuple of index tensors for advanced indexing.
 
@@ -32,9 +31,7 @@ def locations_to_index_tuple(locations: torch.Tensor, num_dims: int = 2) -> Tupl
     return tuple(locations[:, i] for i in range(num_dims))
 
 
-def extract_locations(
-    data: torch.tensor, locations: torch.tensor, num_dims: int = 2
-) -> torch.tensor:
+def extract_locations(data: torch.tensor, locations: torch.tensor, num_dims: int = 2) -> torch.tensor:
     """
     Extracts the elements from a tensor at the specified indices.
 
@@ -127,8 +124,8 @@ def merge_list_of_keyed_tensors_to_single_tensor(
 
 
 def deduplicate_rows_in_tensor(
-    file_path: Optional[str] = None, return_tensor: bool = False
-) -> Union[None, torch.Tensor]:
+    file_path: str | None = None, return_tensor: bool = False
+) -> None | torch.Tensor:
     """
     Identifies and de-duplicate repeated rows in a PyTorch tensor.
     Rows that are not duplicated will have a new column with value 0,
@@ -148,9 +145,7 @@ def deduplicate_rows_in_tensor(
     assert len(data.size()) == 2, "Input data must be a 2D PyTorch tensor."
 
     # Use torch.unique to get unique rows and their inverse indices
-    unique_rows, inverse_indices, counts = torch.unique(
-        data, dim=0, return_inverse=True, return_counts=True
-    )
+    unique_rows, inverse_indices, counts = torch.unique(data, dim=0, return_inverse=True, return_counts=True)
 
     output_indices = torch.zeros_like(inverse_indices)
 
@@ -181,11 +176,11 @@ def deduplicate_rows_in_tensor(
 
 
 def transpose_tensor_from_file(
-    file_path: Optional[str] = None,
+    file_path: str | None = None,
     return_tensor: bool = False,
     dim1: int = -2,
     dim2: int = -1,
-) -> Union[None, torch.Tensor]:
+) -> None | torch.Tensor:
     """
     Transposes a PyTorch tensor from a file accoridng to designated dimensions.
 
@@ -212,9 +207,7 @@ def transpose_tensor_from_file(
 
 
 def create_last_k_mask(
-    sequence_length: int,
-    last_item_index: torch.Tensor,
-    last_k: Optional[int] = None
+    sequence_length: int, last_item_index: torch.Tensor, last_k: int | None = None
 ) -> torch.tensor:
     """
     Creates a mask to select the last K items of sequences.
@@ -240,9 +233,7 @@ def create_last_k_mask(
         start_index = torch.clamp(last_item_index - last_k + 1, min=0)  # Shape (batch_size,)
 
     indices = (
-        torch.arange(sequence_length, device=last_item_index.device)
-        .unsqueeze(0)
-        .expand(last_item_index.size(0), -1)
+        torch.arange(sequence_length, device=last_item_index.device).unsqueeze(0).expand(last_item_index.size(0), -1)
     )  # shape (batch_size, sequence_length)
 
     # Shape (batch_size, sequence_length)

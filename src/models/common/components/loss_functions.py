@@ -1,7 +1,7 @@
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple, Union, Dict
 
 
 class FullBatchCrossEntropyLoss(nn.Module):
@@ -57,9 +57,7 @@ class FullBatchCrossEntropyLoss(nn.Module):
         # get representation of masked tokens
         # label_locations[:, 0] refers to the index of sequences
         # label_locations[:, 1] refers to the index of tokens in the sequences
-        query_embeddings = query_embeddings[
-            label_locations[:, 0], label_locations[:, 1]
-        ]
+        query_embeddings = query_embeddings[label_locations[:, 0], label_locations[:, 1]]
 
         if self.normalize:
             query_embeddings = F.normalize(query_embeddings, dim=-1)
@@ -77,9 +75,7 @@ class WeightedSquaredError(torch.nn.Module):
         """Initialize the WeightedSquaredError loss function."""
         super().__init__()
 
-    def forward(
-        self, x: torch.Tensor, y: torch.Tensor, weights: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, y: torch.Tensor, weights: torch.Tensor | None = None) -> torch.Tensor:
         """
         Compute the weighted squared error loss.
 
@@ -92,7 +88,7 @@ class WeightedSquaredError(torch.nn.Module):
             A tensor containing the weighted squared error loss of shape (1,)
         """
         error = x - y
-        squared_error = torch.sum(error ** 2, dim=-1)
+        squared_error = torch.sum(error**2, dim=-1)
         # If weights are not provided, use uniform weights
         # This is equivalent to the standard squared error loss
         if weights is None:

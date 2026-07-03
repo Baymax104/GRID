@@ -22,7 +22,6 @@ from src.utils.file_utils import (
 from src.utils.logging_utils import DryRunLogger, finalize_loggers
 from src.utils.utils import has_class_object_inside_list
 
-
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 
 DRY_RUN_DISABLED_CALLBACK_TARGETS = {
@@ -65,11 +64,7 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
 
     ckpt_path = cfg.get("ckpt_path", None)
 
-    if (
-        ckpt_path is not None
-        and has_no_extension(ckpt_path)
-        and cfg.get("should_retrieve_latest_ckpt_path", False)
-    ):
+    if ckpt_path is not None and has_no_extension(ckpt_path) and cfg.get("should_retrieve_latest_ckpt_path", False):
         # If a path to a folder is passed, we assume it contains folders with versions of checkpoints.
         # We expect those folders to be named using a timestamp.
         checkpoint_folders = list_subfolders(ckpt_path)
@@ -81,7 +76,9 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
             last_modified = get_last_modified_file(folder_path=latest_ckpt_folder, suffix="*.ckpt")
             if len(last_modified) > 0:
                 ckpt_path = last_modified
-                command_line_logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
+                command_line_logger.info(
+                    f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint."
+                )
 
     cfg.ckpt_path = ckpt_path
     return cfg
@@ -97,19 +94,13 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
     with open_dict(cfg):
         if cfg.get("callbacks"):
             for name, cb_conf in cfg.callbacks.items():
-                if (
-                    isinstance(cb_conf, DictConfig)
-                    and cb_conf.get("_target_") in DRY_RUN_DISABLED_CALLBACK_TARGETS
-                ):
+                if isinstance(cb_conf, DictConfig) and cb_conf.get("_target_") in DRY_RUN_DISABLED_CALLBACK_TARGETS:
                     command_line_logger.info(f"Disabling callback for dry run: {name} <{cb_conf.get('_target_')}>")
                     cfg.callbacks[name] = None
 
         if cfg.get("logger"):
             for name, lg_conf in cfg.logger.items():
-                if (
-                    isinstance(lg_conf, DictConfig)
-                    and lg_conf.get("_target_") in DRY_RUN_DISABLED_LOGGER_TARGETS
-                ):
+                if isinstance(lg_conf, DictConfig) and lg_conf.get("_target_") in DRY_RUN_DISABLED_LOGGER_TARGETS:
                     command_line_logger.info(f"Disabling logger for dry run: {name} <{lg_conf.get('_target_')}>")
                     cfg.logger[name] = None
 

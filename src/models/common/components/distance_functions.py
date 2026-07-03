@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+
 import torch
 
 
@@ -20,9 +20,7 @@ class DistanceFunction(ABC):
 
 
 class SquaredEuclideanDistance(DistanceFunction):
-    def compute(
-        self, x: torch.Tensor, y: torch.Tensor, batch_size: int = 256
-    ) -> torch.Tensor:
+    def compute(self, x: torch.Tensor, y: torch.Tensor, batch_size: int = 256) -> torch.Tensor:
         """
         Compute squared Euclidean distances between the rows of x and the rows of y,
         with optional batching along the x-axis to manage memory.
@@ -41,7 +39,7 @@ class SquaredEuclideanDistance(DistanceFunction):
         """
         assert x.dim() == 2, f"Data must be 2D, got {x.dim()} dimensions"
         assert y.dim() == 2, f"Data must be 2D, got {y.dim()} dimensions"
-        assert x.size(1) == y.size(1), f"Data must have the same number of columns"
+        assert x.size(1) == y.size(1), "Data must have the same number of columns"
 
         n1, d = x.shape
         n2, _ = y.shape
@@ -64,31 +62,24 @@ class SquaredEuclideanDistance(DistanceFunction):
                 x_batch = x[start_idx:end_idx]  # Shape (current_batch_size, d)
 
                 # Expand and compute for the current batch
-                x_batch_expanded = x_batch.unsqueeze(
-                    1
-                )  # Shape (current_batch_size, 1, d)
+                x_batch_expanded = x_batch.unsqueeze(1)  # Shape (current_batch_size, 1, d)
                 y_expanded = y.unsqueeze(0)  # Shape (1, n2, d) - y remains the same
 
-                sq_diffs_batch = (x_batch_expanded - y_expanded).pow(
-                    2
-                )  # Shape (current_batch_size, n2, d)
-                sq_distances_batch = torch.sum(
-                    sq_diffs_batch, dim=2
-                )  # Shape (current_batch_size, n2)
+                sq_diffs_batch = (x_batch_expanded - y_expanded).pow(2)  # Shape (current_batch_size, n2, d)
+                sq_distances_batch = torch.sum(sq_diffs_batch, dim=2)  # Shape (current_batch_size, n2)
 
                 all_sq_distances.append(sq_distances_batch)
 
             # Concatenate the results from all batches
             return torch.cat(all_sq_distances, dim=0)
 
+
 class WeightedSquaredError(torch.nn.Module):
     def __init__(self):
         """Initialize the WeightedSquaredError loss function."""
         super().__init__()
 
-    def forward(
-        self, x: torch.Tensor, y: torch.Tensor, weights: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, y: torch.Tensor, weights: torch.Tensor | None = None) -> torch.Tensor:
         """
         Compute the weighted squared error loss.
 

@@ -4,16 +4,14 @@ import sys
 import hydra
 import rootutils
 import torch
-
-
-rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+from omegaconf import DictConfig
 
 from src.utils import RankedLogger, extras
 from src.utils.cli_utils import rewrite_dry_run_flag
-from src.utils.custom_hydra_resolvers import *
 from src.utils.launcher_utils import pipeline_launcher
 
+rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 console_logger = RankedLogger(__name__, rank_zero_only=True)
 

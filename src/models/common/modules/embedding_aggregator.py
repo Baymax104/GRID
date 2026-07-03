@@ -14,7 +14,7 @@ class EmbeddingAggregator(nn.Module):
     """
 
     def __init__(self, aggregation_strategy: AggregationStrategy):
-        super(EmbeddingAggregator, self).__init__()
+        super().__init__()
         self.aggregation_strategy = aggregation_strategy
 
     def forward(

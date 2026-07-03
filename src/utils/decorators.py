@@ -2,11 +2,11 @@ import errno
 import os
 import signal
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Optional, Tuple, Type, TypeVar
+from typing import TypeVar
 
 from src.utils.pylogger import RankedLogger
-
 
 T = TypeVar("T")  # return type
 
@@ -27,7 +27,7 @@ class __RetriableTimeoutException(TimedOutException):
 
 def timeout(
     seconds=10,
-    error_message=os.strerror(errno.ETIME),
+    error_message=None,
     timeout_action_func=None,
     exception_thrown_on_timeout=TimedOutException,
     **timeout_action_func_params,
@@ -52,6 +52,8 @@ def timeout(
     - exception_thrown_on_timeout (Exception): Exception to raise on timeout. Defaults to TimedOutException.
     - **timeout_action_func_params: Arbitrary keyword arguments passed to timeout_action_func.
     """
+    if error_message is None:
+        error_message = os.strerror(errno.ETIME)
 
     def decorator(func):
         def _handler(signum, frame):
@@ -78,13 +80,13 @@ def timeout(
 
 
 def retry(
-    exception_to_check: Type = Exception,
+    exception_to_check: type = Exception,
     tries: int = 5,
     delay_s: int = 3,
     backoff: int = 2,
-    max_delay_s: Optional[int] = None,
-    fn_execution_timeout_s: Optional[int] = None,
-    deadline_s: Optional[int] = None,
+    max_delay_s: int | None = None,
+    fn_execution_timeout_s: int | None = None,
+    deadline_s: int | None = None,
     should_throw_original_exception: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
@@ -122,14 +124,10 @@ def retry(
                     return timeout_individual_fn_call_decorator(f)(*args, **kwargs)
                 return f(*args, **kwargs)
 
-            acceptable_exceptions: Tuple[Type[Exception], ...] = (
-                exception_to_check
-                if isinstance(exception_to_check, tuple)
-                else (exception_to_check,)
+            acceptable_exceptions: tuple[type[Exception], ...] = (
+                exception_to_check if isinstance(exception_to_check, tuple) else (exception_to_check,)
             )
-            acceptable_exceptions = acceptable_exceptions + (
-                __RetriableTimeoutException,
-            )
+            acceptable_exceptions = acceptable_exceptions + (__RetriableTimeoutException,)
 
             ret_val: T = None
             while mtries >= 0:
@@ -146,16 +144,12 @@ def retry(
                             raise  # Reraise original exception
                         raise RetriesFailedException(
                             f"Retry failed, permanently failing {f.__module__}:{f.__name__}, see logs for {e}"
-                        )
+                        ) from e
                     msg = f"{e}, Retrying {f.__module__}:{f.__name__} in {mdelay} seconds..."
                     logger.warning(msg)
                     time.sleep(mdelay)
                     mtries -= 1
-                    mdelay = (
-                        min(mdelay * backoff, max_delay_s)
-                        if max_delay_s
-                        else mdelay * backoff
-                    )
+                    mdelay = min(mdelay * backoff, max_delay_s) if max_delay_s else mdelay * backoff
 
             return ret_val
 

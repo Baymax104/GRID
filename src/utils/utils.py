@@ -1,7 +1,7 @@
 import warnings
 from functools import partial
 from time import sleep
-from typing import Any, Optional, Tuple, Union
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -11,7 +11,6 @@ from transformers.cache_utils import DynamicCache
 
 from src.data.loading.components.interfaces import TokenizerConfig
 from src.utils import pylogger, rich_utils
-
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -27,9 +26,7 @@ def print_warnings_for_missing_configs(cfg: DictConfig) -> None:
     has_warnings = False
     for config in _DEFAULT_CONFIGS:
         if not cfg.get(config):
-            log.warning(
-                f"Config {config} was not found in the config tree. Make sure this is expected."
-            )
+            log.warning(f"Config {config} was not found in the config tree. Make sure this is expected.")
             has_warnings = True
     if has_warnings:
         sleep(3)  # wait for 3 seconds to let the user read the warning
@@ -79,13 +76,11 @@ def delete_module(module: torch.nn.Module, module_name: str) -> None:
     if hasattr(module, module_name):
         delattr(module, module_name)
 
-    for name, submodule in module.named_children():
+    for _name, submodule in module.named_children():
         delete_module(submodule, module_name)
 
 
-def find_module_shape(
-    module: torch.nn.Module, module_name: str
-) -> Optional[torch.Size]:
+def find_module_shape(module: torch.nn.Module, module_name: str) -> torch.Size | None:
     """Recursively find a submodule in a module and return its shape.
 
     :param module: the parent module that we want the submodule to be removed from.
@@ -95,7 +90,7 @@ def find_module_shape(
     if hasattr(module, module_name):
         return getattr(module, module_name).weight.shape
 
-    for name, submodule in module.named_children():
+    for _name, submodule in module.named_children():
         shape = find_module_shape(submodule, module_name)
         if shape:
             return shape
@@ -116,7 +111,7 @@ def reset_parameters(module: torch.nn.Module) -> None:
             reset_parameters(layer)
 
 
-def get_var_if_not_none(value: Optional[Any], default_value: Any) -> Any:
+def get_var_if_not_none(value: Any | None, default_value: Any) -> Any:
     """
     :return: value if value is not None, else default_value
     Note that when value is:
@@ -151,9 +146,7 @@ def has_class_object_inside_list(obj_list: list, class_type: Any) -> bool:
     return any(isinstance(obj, class_type) for obj in obj_list)
 
 
-def convert_legacy_kv_cache_to_dynamic(
-    kv_cache: Union[DynamicCache, Tuple[torch.Tensor]]
-) -> DynamicCache:
+def convert_legacy_kv_cache_to_dynamic(kv_cache: DynamicCache | tuple[torch.Tensor]) -> DynamicCache:
     """
     Converts a legacy key-value cache (Tuple of tensors) to a dynamic cache.
 
@@ -169,9 +162,7 @@ def convert_legacy_kv_cache_to_dynamic(
     return DynamicCache.from_legacy_cache(kv_cache)
 
 
-def get_parent_module_and_attr(
-    model: torch.nn.Module, module_name: str
-) -> Tuple[torch.nn.Module, str]:
+def get_parent_module_and_attr(model: torch.nn.Module, module_name: str) -> tuple[torch.nn.Module, str]:
     """
     Get the parent module and attribute name for a given module name.
 
@@ -244,7 +235,7 @@ def load_tokenize(config: TokenizerConfig) -> Any:
     return tokenize
 
 
-def sample_gumbel(shape: Tuple, device: torch.device, eps=1e-20) -> torch.Tensor:
+def sample_gumbel(shape: tuple, device: torch.device, eps=1e-20) -> torch.Tensor:
     """Sample from Gumbel(0, 1)"""
     U = torch.rand(shape, device=device)
     return -torch.log(-torch.log(U + eps) + eps)

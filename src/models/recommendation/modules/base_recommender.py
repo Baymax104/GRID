@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Tuple, Union
 
 import torch
 from torchmetrics.aggregation import BaseAggregator
@@ -66,7 +65,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         attention_mask: torch.Tensor,
         sep_token: torch.Tensor,
         num_hierarchies: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Inject a separator token into the ID embeddings and attention mask.
 
@@ -92,20 +91,12 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         batch_size, seq_len, emb_dim = id_embeddings.size()
         item_count_per_sequence = seq_len // num_hierarchies
 
-        reshaped_id_embeddings = id_embeddings.view(
-            batch_size, item_count_per_sequence, num_hierarchies, -1
-        )
-        reshaped_attention_mask = attention_mask.view(
-            batch_size, item_count_per_sequence, num_hierarchies
-        )
+        reshaped_id_embeddings = id_embeddings.view(batch_size, item_count_per_sequence, num_hierarchies, -1)
+        reshaped_attention_mask = attention_mask.view(batch_size, item_count_per_sequence, num_hierarchies)
         reshaped_sep_token_for_concat = (
-            sep_token.unsqueeze(0)
-            .expand(batch_size, item_count_per_sequence, -1)
-            .unsqueeze(-2)
+            sep_token.unsqueeze(0).expand(batch_size, item_count_per_sequence, -1).unsqueeze(-2)
         )
-        id_embeddings = torch.cat(
-            [reshaped_id_embeddings, reshaped_sep_token_for_concat], dim=-2
-        )
+        id_embeddings = torch.cat([reshaped_id_embeddings, reshaped_sep_token_for_concat], dim=-2)
         attention_mask = torch.cat(
             [reshaped_attention_mask, reshaped_attention_mask[:, :, [-1]]],
             dim=-1,
@@ -132,12 +123,10 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         )
         return table
 
-    def _is_kv_cache_valid(
-        self, kv_cache: Union[Tuple, DynamicCache, EncoderDecoderCache]
-    ) -> bool:
+    def _is_kv_cache_valid(self, kv_cache: tuple | DynamicCache | EncoderDecoderCache) -> bool:
         if isinstance(kv_cache, (EncoderDecoderCache, DynamicCache)):
             return len(kv_cache) > 0
-        elif isinstance(kv_cache, Tuple):
+        elif isinstance(kv_cache, tuple):
             return True
         else:
             return False
@@ -147,7 +136,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         input_sids: torch.Tensor,
         codebook_size: int,
         num_hierarchies: int,
-        attention_mask: Optional[torch.Tensor] = None,
+        attention_mask: torch.Tensor | None = None,
     ):
         """Adds repeating offsets to each element in each row of input_sids.
         we use a single embedding table for multiple code books.
@@ -164,14 +153,12 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
             raise ValueError("Input tensor must be 2-dimensional.")
 
         _, num_cols = input_sids.shape
-        offsets = (
-            torch.arange(num_hierarchies, device=input_sids.device) * codebook_size
-        )
+        offsets = torch.arange(num_hierarchies, device=input_sids.device) * codebook_size
 
         # Calculate how many times the full offset pattern needs to repeat
         num_repeats = (
-                          num_cols + num_hierarchies - 1
-                      ) // num_hierarchies  # Integer division to handle cases where num_cols is not a multiple of num_hierarchies
+            num_cols + num_hierarchies - 1
+        ) // num_hierarchies  # Integer division to handle cases where num_cols is not a multiple of num_hierarchies
 
         # Repeat the offsets and slice to match the number of columns
         repeated_offsets = offsets.repeat(num_repeats)[:num_cols]
@@ -182,9 +169,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
             input_sids_with_offsets = input_sids_with_offsets * attention_mask
         return input_sids_with_offsets
 
-    def _check_valid_prefix(
-        self, prefix: torch.Tensor, batch_size: int = 100000
-    ) -> torch.Tensor:
+    def _check_valid_prefix(self, prefix: torch.Tensor, batch_size: int = 100000) -> torch.Tensor:
         """
         Checks if a given prefix is a valid prefix of the codebooks.
 
@@ -211,9 +196,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
 
         for i in range(0, num_prefixes, batch_size):
             # Get the current batch of prefixes.
-            batch_prefix = prefix[
-                i: i + batch_size
-            ]  # Shape: [batch_size, hierarchy_level]
+            batch_prefix = prefix[i : i + batch_size]  # Shape: [batch_size, hierarchy_level]
 
             # Perform the comparison.  Broadcasting is now limited by batch_size.
             # trimmed_codebooks shape: [C, H] -> unsqueezed [C, 1, H]
@@ -236,9 +219,9 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
     def _beam_search_one_step(
         self,
         candidate_logits: torch.Tensor,
-        generated_ids: Union[torch.Tensor, None],
-        marginal_log_prob: Union[torch.Tensor, None],
-        past_key_values: Union[EncoderDecoderCache, None],
+        generated_ids: torch.Tensor | None,
+        marginal_log_prob: torch.Tensor | None,
+        past_key_values: EncoderDecoderCache | None,
         hierarchy: int,
         batch_size: int,
     ):
@@ -310,27 +293,21 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
                 proba[:, : self.num_embeddings_per_hierarchy],
                 indices[:, : self.num_embeddings_per_hierarchy],
             )
-            proba, indices = proba.reshape(
-                -1, self.top_k_for_generation * self.num_embeddings_per_hierarchy
-            ), indices.reshape(
-                -1, self.top_k_for_generation * self.num_embeddings_per_hierarchy
+            proba, indices = (
+                proba.reshape(-1, self.top_k_for_generation * self.num_embeddings_per_hierarchy),
+                indices.reshape(-1, self.top_k_for_generation * self.num_embeddings_per_hierarchy),
             )
             # calculating the marginal probability
             proba = torch.mul(
-                marginal_log_prob.repeat_interleave(
-                    self.num_embeddings_per_hierarchy, dim=-1
-                ),
+                marginal_log_prob.repeat_interleave(self.num_embeddings_per_hierarchy, dim=-1),
                 proba,
             )
-            topk_results = torch.topk(
-                torch.nan_to_num(proba, nan=-1), k=self.top_k_for_generation, dim=-1
-            )
+            topk_results = torch.topk(torch.nan_to_num(proba, nan=-1), k=self.top_k_for_generation, dim=-1)
             proba_topk, indices_topk = topk_results.values, topk_results.indices
             # getting indices of winning beams in the original beams
             replace_indices = (
                 (indices_topk // self.num_embeddings_per_hierarchy)
-                + torch.arange(indices_topk.size(0), device=proba.device).unsqueeze(1)
-                * self.top_k_for_generation
+                + torch.arange(indices_topk.size(0), device=proba.device).unsqueeze(1) * self.top_k_for_generation
             ).flatten()
             # accordingly update kv cache given the winning beams
             if past_key_values is not None:
@@ -355,7 +332,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
 
     def eval_step(
         self,
-        batch: Tuple[SequentialModelInputData, SequentialModuleLabelData],
+        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
         loss_to_aggregate: BaseAggregator,
     ):
         """Perform a single evaluation step on a batch of data from the validation or test set.
@@ -368,10 +345,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
 
         generated_ids, marginal_probs = self.generate(
             attention_mask=model_input.mask,
-            **{
-                self.feature_to_model_input_map.get(k, k): v
-                for k, v in model_input.transformed_sequences.items()
-            },
+            **{self.feature_to_model_input_map.get(k, k): v for k, v in model_input.transformed_sequences.items()},
         )
 
         self.evaluator(

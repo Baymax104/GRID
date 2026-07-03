@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import torch
 from torch import nn
@@ -11,7 +11,7 @@ class MLP(nn.Module):
         self,
         input_dim: int,
         output_dim: int,
-        hidden_dim_list: Optional[list[int]] = None,
+        hidden_dim_list: list[int] | None = None,
         activation: Callable[..., nn.Module] = nn.ReLU,
         bias: bool = True,
         dropout: float = 0.0,

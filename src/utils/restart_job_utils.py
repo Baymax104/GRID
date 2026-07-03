@@ -1,17 +1,21 @@
-import json
-import sys
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar
-
 """Deprecated restart metadata helpers kept for historical reference and manual opt-in only.
 
 The default train / inference mainline no longer depends on these helpers.
 """
 
+import json
+import sys
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, TypeVar
+
 import psutil
+import torch
+import torch.distributed as dist
 from lightning import Trainer
-from omegaconf import DictConfig
+from lightning.pytorch.strategies.launchers import _SubprocessScriptLauncher
+from lightning.pytorch.trainer.connectors.signal_connector import _get_sigkill_signal
 
 from src.utils.file_utils import (
     file_exists_local_or_remote,
@@ -22,20 +26,6 @@ from src.utils.pylogger import RankedLogger
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 F = TypeVar("F", bound=Callable[..., Any])
-
-import os
-import sys
-from datetime import datetime
-from typing import Any, Callable, TypeVar
-
-import torch
-import torch.distributed as dist
-from lightning import Trainer
-from lightning.pytorch.strategies.launchers import _SubprocessScriptLauncher
-from lightning.pytorch.trainer.connectors.signal_connector import _get_sigkill_signal
-from omegaconf import DictConfig
-
-from src.utils.pylogger import RankedLogger
 
 
 @dataclass
@@ -58,15 +48,15 @@ class JobCheckpointMetadata:
     """
 
     start_time: str = field(default_factory=lambda: datetime.now().isoformat())
-    restarts: List[Dict[str, Any]] = field(default_factory=list)
+    restarts: list[dict[str, Any]] = field(default_factory=list)
     current_run: int = 0
-    used_ports: List[str] = field(default_factory=list)
+    used_ports: list[str] = field(default_factory=list)
     world_size: int = 0
     node_rank: int = 0
     master_addr: str = ""
-    original_args: List[str] = field(default_factory=lambda: sys.argv)
+    original_args: list[str] = field(default_factory=lambda: sys.argv)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "start_time": self.start_time,
             "restarts": self.restarts,
@@ -97,7 +87,7 @@ class RestartMetadata:
     exception: str
     run_number: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "time": self.time,
             "exception": self.exception,
@@ -124,15 +114,11 @@ def load_metadata_from_local_or_remote(metadata_path: str) -> JobCheckpointMetad
         command_line_logger.info(f"Metadata loaded successfully from {metadata_path}")
         return JobCheckpointMetadata(**metadata_dict)
     else:
-        command_line_logger.warning(
-            f"Metadata file not found at {metadata_path}. Creating empty metadata."
-        )
+        command_line_logger.warning(f"Metadata file not found at {metadata_path}. Creating empty metadata.")
         return JobCheckpointMetadata()
 
 
-def save_metadata_to_local_or_remote(
-    metadata: JobCheckpointMetadata, metadata_path: str
-) -> None:
+def save_metadata_to_local_or_remote(metadata: JobCheckpointMetadata, metadata_path: str) -> None:
     """
     Save job checkpoint metadata to a local or remote file.
     This function serializes the metadata object to JSON and writes it to the specified path.
@@ -147,9 +133,7 @@ def save_metadata_to_local_or_remote(
         - Info message indicating where metadata is being saved
     """
 
-    command_line_logger.info(
-        f"Saving metadata to {metadata_path}. {metadata.to_dict()}"
-    )
+    command_line_logger.info(f"Saving metadata to {metadata_path}. {metadata.to_dict()}")
 
     # Convert metadata to JSON string
     json_content = json.dumps(metadata.to_dict(), indent=2)
@@ -183,9 +167,7 @@ def get_attribute_from_metadata_file(metadata_path: str, attribute: str) -> Any:
     """
     metadata = load_metadata_from_local_or_remote(metadata_path)
     attribute_value = getattr(metadata, attribute, None)
-    command_line_logger.info(
-        f"Retrieved {attribute}: {attribute_value} from metadata {metadata_path}"
-    )
+    command_line_logger.info(f"Retrieved {attribute}: {attribute_value} from metadata {metadata_path}")
     return attribute_value
 
 
@@ -209,10 +191,7 @@ def _is_process_running(proc: psutil.Process) -> bool:
     return proc.returncode is None
 
 
-def clean_up_resources(
-    trainer: Optional[Trainer] = None,
-    exception: Optional[BaseException] = None
-) -> None:
+def clean_up_resources(trainer: Trainer | None = None, exception: BaseException | None = None) -> None:
     """Clean up distributed processes and CUDA resources."""
     if dist.is_initialized():
         command_line_logger.info("Cleaning up distributed process group")

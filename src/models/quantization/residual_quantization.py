@@ -1,6 +1,7 @@
 import copy
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import torch
 from lightning import LightningModule
@@ -17,20 +18,20 @@ from src.models.quantization.modules.base_clustering_module import BaseClusterin
 class ResidualQuantization(LightningModule):
     def __init__(
         self,
-        n_layers: Optional[int] = None,
-        normalization_layer: nn.Module = nn.Identity(),
-        encoder: nn.Module = nn.Identity(),
-        decoder: nn.Module = nn.Identity(),
-        quantization_layer: Optional[BaseClusteringModule] = None,
-        quantization_layer_list: Optional[nn.ModuleList] = None,
+        n_layers: int | None = None,
+        normalization_layer: nn.Module | None = None,
+        encoder: nn.Module | None = None,
+        decoder: nn.Module | None = None,
+        quantization_layer: BaseClusteringModule | None = None,
+        quantization_layer_list: nn.ModuleList | None = None,
         init_buffer_size: int = 1000,
         training_loop_function: callable = None,
         quantization_loss_weight: float = 1.0,
-        reconstruction_loss_function: Optional[nn.Module] = None,
+        reconstruction_loss_function: nn.Module | None = None,
         reconstruction_loss_weight: float = 0.0,
         normalize_residuals: bool = True,
-        optimizer: Optional[Callable[..., torch.optim.Optimizer]] = None,
-        scheduler: Optional[Callable[..., torch.optim.lr_scheduler.LRScheduler]] = None,
+        optimizer: Callable[..., torch.optim.Optimizer] | None = None,
+        scheduler: Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
         train_layer_wise: bool = False,
         track_residuals: bool = False,
         verbose: bool = False,
@@ -83,9 +84,9 @@ class ResidualQuantization(LightningModule):
         # We always track residuals if verbose mode is enabled
         self.track_residuals = track_residuals or self.verbose
 
-        self.normalization_layer = normalization_layer
-        self.encoder = encoder
-        self.decoder = decoder
+        self.normalization_layer = normalization_layer if normalization_layer is not None else nn.Identity()
+        self.encoder = encoder if encoder is not None else nn.Identity()
+        self.decoder = decoder if decoder is not None else nn.Identity()
         self.quantization_layer_list = self._instantiate_quantization_layer_list(
             quantization_layer,
             quantization_layer_list,
@@ -142,9 +143,9 @@ class ResidualQuantization(LightningModule):
 
     def _instantiate_quantization_layer_list(
         self,
-        quantization_layer: Optional[BaseClusteringModule] = None,
-        quantization_layer_list: Optional[nn.ModuleList] = None,
-        n_layers: Optional[int] = None,
+        quantization_layer: BaseClusteringModule | None = None,
+        quantization_layer_list: nn.ModuleList | None = None,
+        n_layers: int | None = None,
     ):
         """
         Instantiate the quantization layers. If quantization_layer_list is provided,
@@ -170,7 +171,7 @@ class ResidualQuantization(LightningModule):
                 raise ValueError("Either quantization_layer or quantization_layer_list must be provided.")
             return nn.ModuleList([copy.deepcopy(quantization_layer) for _ in range(n_layers)])
 
-    def forward(self, embeddings: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, embeddings: torch.Tensor):
         """
         Forward pass through the quantization layers.
 
@@ -191,7 +192,7 @@ class ResidualQuantization(LightningModule):
         """
         cluster_ids = []
         current_residuals = embeddings
-        all_residuals = [] if self.track_residuals else None
+        all_residuals = []
         quantized_embeddings = torch.zeros_like(embeddings)
         quantization_loss = torch.tensor(0.0).to(self.device)
 
@@ -280,7 +281,9 @@ class ResidualQuantization(LightningModule):
         ):
             # Compute the reconstruction loss
             reconstructed_embeddings = self.decoder(quantized_embeddings)
-            reconstruction_loss = self.reconstruction_loss_function(reconstructed_embeddings, normalized_input_embeddings)
+            reconstruction_loss = self.reconstruction_loss_function(
+                reconstructed_embeddings, normalized_input_embeddings
+            )
         else:
             reconstruction_loss = torch.tensor(0.0).to(self.device)
 
@@ -327,7 +330,7 @@ class ResidualQuantization(LightningModule):
                 ) = self._compute_output_stats(
                     cluster_ids=cluster_ids,
                     all_residuals=all_residuals,
-                    input_embeddings=model_input.transformed_features["input_embedding"]
+                    input_embeddings=model_input.transformed_features["input_embedding"],
                 )
                 # Update the metrics
                 self.train_first_residuals_norm_ratio(train_first_residuals_norm_ratio)
@@ -354,7 +357,9 @@ class ResidualQuantization(LightningModule):
                 )
                 train_dict_to_log.update(
                     {
-                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(self, f"train_layer_coverages_{layer_idx}")
+                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(
+                            self, f"train_layer_coverages_{layer_idx}"
+                        )
                         for layer_idx in range(self.n_layers)
                     }
                 )
@@ -488,7 +493,7 @@ class ResidualQuantization(LightningModule):
         first_residuals_norm_ratio = torch.linalg.matrix_norm(all_residuals[:, :, 0]) / input_embedding_norm
         last_residuals_norm = torch.linalg.matrix_norm(all_residuals[:, :, -1])
         last_residuals_norm_ratio = last_residuals_norm / input_embedding_norm
-        mse = last_residuals_norm ** 2 / all_residuals[:, :, -1].numel()
+        mse = last_residuals_norm**2 / all_residuals[:, :, -1].numel()
 
         first_centroids_norm = torch.linalg.matrix_norm(self.quantization_layer_list[0].get_centroids())
         last_centroids_norm = torch.linalg.matrix_norm(self.quantization_layer_list[-1].get_centroids())
@@ -579,8 +584,8 @@ class ResidualQuantization(LightningModule):
             "val/last_residuals_norm_ratio": self.val_last_residuals_norm_ratio,
             "val/frac_unique_ids": self.val_frac_unique_ids,
             "val/mse": self.val_mse,
+            "val/loss": self.val_loss
         }
-        val_dict_to_log["val/loss"] = self.val_loss
 
         self.log_dict(
             val_dict_to_log,
@@ -621,8 +626,8 @@ class ResidualQuantization(LightningModule):
             "test/last_residuals_norm_ratio": self.test_last_residuals_norm_ratio,
             "test/frac_unique_ids": self.test_frac_unique_ids,
             "test/mse": self.test_mse,
+            "test/loss": self.test_loss
         }
-        test_dict_to_log["test/loss"] = self.test_loss
 
         self.log_dict(
             test_dict_to_log,
@@ -657,10 +662,8 @@ class ResidualQuantization(LightningModule):
         """
         cluster_ids, _, _, _ = self.model_step(batch)
 
-        item_ids = [
-            item_id.item() if isinstance(item_id, torch.Tensor) else item_id
-            for item_id in batch.item_ids
-        ]
+        assert batch.item_ids is not None, "Item ids not provided."
+        item_ids = [item_id.item() if isinstance(item_id, torch.Tensor) else item_id for item_id in batch.item_ids]
 
         model_output = OneKeyPerPredictionOutput(
             keys=item_ids,
@@ -678,7 +681,9 @@ class ResidualQuantization(LightningModule):
             A dictionary containing the optimizer and learning rate scheduler.
         """
         assert self.optimizer is not None, "Optimizer not initialized."
-        optimizer = self.optimizer(params=self.trainer.model.parameters())
+        model = self.trainer.model
+        assert model is not None, "Trainer not initialized."
+        optimizer = self.optimizer(params=model.parameters())
         if self.scheduler is not None:
             scheduler = self.scheduler(optimizer=optimizer)
             return {
@@ -712,9 +717,7 @@ class ResidualQuantization(LightningModule):
             checkpoint: The checkpoint to save the model state to.
         """
         checkpoint["current_layer"] = self.current_layer
-        checkpoint["layers_initialized"] = [
-            layer.is_initialized for layer in self.quantization_layer_list
-        ]
+        checkpoint["layers_initialized"] = [layer.is_initialized for layer in self.quantization_layer_list]
         # We do not save the input embedding cache as this can be very large
         return super().on_save_checkpoint(checkpoint)
 

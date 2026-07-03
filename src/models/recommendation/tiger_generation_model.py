@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import torch
 import transformers
@@ -28,19 +28,19 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
 
     def __init__(
         self,
+        codebooks: torch.Tensor,
+        embedding_dim: int,
+        num_hierarchies: int,
+        num_embeddings_per_hierarchy: int,
         top_k_for_generation: int = 10,
-        codebooks: torch.Tensor = None,
-        embedding_dim: int = None,
-        num_hierarchies: int = None,
-        num_embeddings_per_hierarchy: int = None,
-        num_user_bins: Optional[int] = None,
-        mlp_layers: Optional[int] = None,
+        num_user_bins: int | None = None,
+        mlp_layers: int | None = None,
         should_check_prefix: bool = False,
         should_add_sep_token: bool = True,
         prediction_key_name: str = "user_id",
         prediction_value_name: str = "semantic_ids",
         **kwargs,
-    ) -> None:
+    ):
         """
         Initialize the SemanticIDEncoderDecoder module.
 
@@ -56,18 +56,10 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         """
 
         if num_hierarchies is None or num_embeddings_per_hierarchy is None:
-            num_hierarchies, num_embeddings_per_hierarchy = (
-                codebooks.shape[0],
-                codebooks.max().item() + 1,
-            )
+            num_hierarchies = codebooks.shape[0]
+            num_embeddings_per_hierarchy = int(codebooks.max().item() + 1)
         if embedding_dim is None:
-            embedding_dim = (
-                kwargs["huggingface_model"]
-                .encoder
-                .block[0]
-                .layer[0]
-                .SelfAttention.q.in_features
-            )
+            embedding_dim = kwargs["huggingface_model"].encoder.block[0].layer[0].SelfAttention.q.in_features
 
         super().__init__(
             codebooks=codebooks,
@@ -84,9 +76,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         )
 
         # bos_token used to prompt the decoder to generate the first token
-        bos_token = torch.nn.Parameter(
-            torch.randn(1, self.embedding_dim), requires_grad=True
-        )
+        bos_token = torch.nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True)
 
         self.decoder = SemanticIDDecoderModule(
             decoder=self.decoder,
@@ -112,9 +102,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
                     setattr(
                         parent_module,
                         attr_name,
-                        T5MultiLayerFF(
-                            config=self.encoder.encoder.config, num_layers=mlp_layers
-                        ),
+                        T5MultiLayerFF(config=self.encoder.encoder.config, num_layers=mlp_layers),
                     )
 
         # generate embedding tables for each hierarchy
@@ -125,7 +113,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         )
 
         # generating user embedding table
-        self.user_embedding: torch.nn.Embedding = (
+        self.user_embedding: torch.nn.Embedding | None = (
             self._spawn_embedding_tables(
                 num_embeddings=num_user_bins,
                 embedding_dim=self.embedding_dim,
@@ -136,9 +124,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
 
         # separation token for the encoder to differentiate between items
         self.sep_token = (
-            torch.nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True)
-            if should_add_sep_token
-            else None
+            torch.nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True) if should_add_sep_token else None
         )
         # the key value names for the prediction output
         self.prediction_key_name = prediction_key_name
@@ -167,9 +153,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
             num_hierarchies=self.num_hierarchies,
             attention_mask=attention_mask,
         )
-        inputs_embeds_for_encoder = self.get_embedding_table(table_name="encoder")(
-            shifted_sids
-        )
+        inputs_embeds_for_encoder = self.get_embedding_table(table_name="encoder")(shifted_sids)
 
         if self.sep_token is not None:
             (
@@ -189,9 +173,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
             user_id = user_id[:, 0]
 
             # TODO (clark): here we assume remainder hashing, which is different from LSH hashing used in TIGER.
-            user_embeds = self.user_embedding(
-                torch.remainder(user_id, self.user_embedding.num_embeddings)
-            )
+            user_embeds = self.user_embedding(torch.remainder(user_id, self.user_embedding.num_embeddings))
 
             # prepending the user_id embedding to the input senquence
             inputs_embeds_for_encoder = torch.cat(
@@ -202,9 +184,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
                 dim=1,
             )
             # prepending 1 to attention mask as we introduce user embedding in the first column
-            user_attention_mask = torch.ones(
-                attention_mask.size(0), 1, device=attention_mask.device
-            )
+            user_attention_mask = torch.ones(attention_mask.size(0), 1, device=attention_mask.device)
             attention_mask_for_encoder = torch.cat(
                 [
                     user_attention_mask,
@@ -223,14 +203,12 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
 
     def decoder_forward_pass(
         self,
-        attention_mask: Optional[
-            torch.Tensor
-        ] = None,  # TODO (clark): in the future we should support variable length semantic id
-        future_ids: Optional[torch.Tensor] = None,
-        encoder_output: Optional[torch.Tensor] = None,
-        attention_mask_for_encoder: Optional[torch.Tensor] = None,
+        attention_mask: torch.Tensor | None = None,  # TODO (clark): in the future we should support variable length semantic id
+        future_ids: torch.Tensor | None = None,
+        encoder_output: torch.Tensor | None = None,
+        attention_mask_for_encoder: torch.Tensor | None = None,
         use_cache: bool = False,
-        past_key_values: Optional[DynamicCache] = None,
+        past_key_values: DynamicCache | None = None,
     ) -> torch.Tensor:
         """
         Forward pass for the decoder module.
@@ -253,18 +231,14 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
                 if attention_mask is None
                 else attention_mask,
             )
-            inputs_embeds_for_decoder = self.get_embedding_table(table_name="decoder")(
-                shifted_future_sids
-            )
+            inputs_embeds_for_decoder = self.get_embedding_table(table_name="decoder")(shifted_future_sids)
 
             # we do not have valid kv cache
             # we need to prepend bos token to the decoder input
             if not self._is_kv_cache_valid(kv_cache=past_key_values):
                 inputs_embeds_for_decoder = torch.cat(
                     [
-                        self.decoder.bos_token.unsqueeze(0).expand(
-                            future_ids.size(0), 1, -1
-                        ),
+                        self.decoder.bos_token.unsqueeze(0).expand(future_ids.size(0), 1, -1),
                         inputs_embeds_for_decoder,
                     ],
                     dim=1,
@@ -283,9 +257,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
                 inputs_embeds_for_decoder = inputs_embeds_for_decoder[:, -1:, :]
         # this is the beginning of generation, we start from bos token
         else:
-            inputs_embeds_for_decoder = self.decoder.bos_token.unsqueeze(0).expand(
-                encoder_output.size(0), 1, -1
-            )
+            inputs_embeds_for_decoder = self.decoder.bos_token.unsqueeze(0).expand(encoder_output.size(0), 1, -1)
 
         decoder_output = self.decoder(
             sequence_embedding=inputs_embeds_for_decoder,
@@ -339,16 +311,12 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
                     encoder_output.device
                 )  # shape: (batch_size * top_k, hierarchy)
 
-                repeated_encoder_output = encoder_output.repeat_interleave(
-                    self.top_k_for_generation, dim=0
-                )
+                repeated_encoder_output = encoder_output.repeat_interleave(self.top_k_for_generation, dim=0)
                 # shape: (batch_size * top_k, seq_len+1, hidden_dim)
                 # +1 because we have user_id token
 
-                repeated_encoder_attention_mask = (
-                    encoder_attention_mask.repeat_interleave(
-                        self.top_k_for_generation, dim=0
-                    )
+                repeated_encoder_attention_mask = encoder_attention_mask.repeat_interleave(
+                    self.top_k_for_generation, dim=0
                 )  # shape: (batch_size * top_k, seq_len+1)
             else:
                 # we haven't generated anything yet!
@@ -393,9 +361,9 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         self,
         attention_mask_encoder: torch.Tensor,
         input_ids: torch.Tensor,
-        user_id: Optional[torch.Tensor] = None,
-        future_ids: Optional[torch.Tensor] = None,
-        attention_mask_decoder: Optional[torch.Tensor] = None,
+        user_id: torch.Tensor | None = None,
+        future_ids: torch.Tensor | None = None,
+        attention_mask_decoder: torch.Tensor | None = None,
         **kwargs: Any,
     ) -> torch.Tensor:
         """
@@ -423,7 +391,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         )
         return decoder_output
 
-    def get_embedding_table(self, table_name: str, hierarchy: Optional[int] = None):
+    def get_embedding_table(self, table_name: str, hierarchy: int | None = None):
         """
         Get the embedding table for the given table name and hierarchy.
         Args:
@@ -448,10 +416,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
 
     def predict_step(self, batch: SequentialModelInputData):
         generated_sids, _ = self.model_step(batch)
-        ids = [
-            id_.item() if isinstance(id, torch.Tensor) else id
-            for id_ in batch.user_id_list
-        ]
+        ids = [id_.item() if isinstance(id, torch.Tensor) else id for id_ in batch.user_id_list]
         model_output = OneKeyPerPredictionOutput(
             keys=ids,
             predictions=generated_sids,
@@ -463,7 +428,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
     def model_step(
         self,
         model_input: SequentialModelInputData,
-        label_data: Optional[SequentialModuleLabelData] = None,
+        label_data: SequentialModuleLabelData | None = None,
     ):
         """
         Perform a forward pass of the model and calculate the loss if label_data is provided.
@@ -478,10 +443,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
             # this is inference stage
             generated_ids, marginal_probs = self.generate(
                 attention_mask=model_input.mask,
-                **{
-                    self.feature_to_model_input_map.get(k, k): v
-                    for k, v in model_input.transformed_sequences.items()
-                },
+                **{self.feature_to_model_input_map.get(k, k): v for k, v in model_input.transformed_sequences.items()},
             )
             return generated_ids, 0  # returning 0 here because we don't have a loss
 
@@ -494,10 +456,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         model_output = self.forward(
             attention_mask_encoder=model_input.mask,
             future_ids=fut_ids,
-            **{
-                self.feature_to_model_input_map.get(k, k): v
-                for k, v in model_input.transformed_sequences.items()
-            },
+            **{self.feature_to_model_input_map.get(k, k): v for k, v in model_input.transformed_sequences.items()},
         )
 
         # we prepended a bos token to the decoder input

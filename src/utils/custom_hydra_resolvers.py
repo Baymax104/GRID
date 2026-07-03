@@ -1,13 +1,11 @@
 import ast
 import operator as op
 from datetime import datetime
-from typing import Optional
 
 import pytz
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-
-""""
+"""
 Hydra allows for custom resolvers, which are functions that can be used to resolve values in the config.
 For example, one can manipulate strings or apply simple python functions to the config values.
 """
@@ -24,12 +22,7 @@ def remove_chars_from_string(s: str, chars: str) -> str:
     return s.translate(str.maketrans("", "", chars))
 
 
-def conditional_expression(
-    condition_expression,
-    value_if_true,
-    value_if_false,
-    **kwargs
-):
+def conditional_expression(condition_expression, value_if_true, value_if_false, **kwargs):
     """
     A generic resolver that evaluates a condition expression based on config values.
     """
@@ -38,9 +31,7 @@ def conditional_expression(
         result = eval(condition_expression, {}, kwargs)
         return value_if_true if result else value_if_false
     except Exception as e:
-        raise ValueError(
-            f"Error evaluating condition: {condition_expression}. Error: {e}"
-        )
+        raise ValueError(f"Error evaluating condition: {condition_expression}. Error: {e}") from e
 
 
 def extract_fields_from_list_of_dicts(
@@ -80,20 +71,14 @@ def extract_fields_from_list_of_dicts(
     :return: A ListConfig of extracted values.
     """
     if filter_key and filter_value:
-        filtered_dicts = [
-            d for d in list_of_dicts if d.get(filter_key) == eval(filter_value)
-        ]
+        filtered_dicts = [d for d in list_of_dicts if d.get(filter_key) == eval(filter_value)]
     else:
         filtered_dicts = list_of_dicts
 
     return ListConfig([d.get(key, default) for d in filtered_dicts])
 
 
-def create_map_from_list_of_dicts(
-    list_of_dicts: ListConfig,
-    key: str,
-    value: Optional[str] = None
-) -> DictConfig:
+def create_map_from_list_of_dicts(list_of_dicts: ListConfig, key: str, value: str | None = None) -> DictConfig:
     """
     Creates a dictionary from a list of dictionaries based on the key and value.
     For example, if a feature has a name and an attribute name dim, this function can be used to create a mapping

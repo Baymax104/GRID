@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
 import torch
 import transformers
@@ -11,11 +11,9 @@ from src.data.loading.components.interfaces import (
     SequentialModuleLabelData,
 )
 from src.models.common.components.eval_metrics import Evaluator
-from src.models.common.components.eval_metrics import RetrievalEvaluator
 from src.models.common.components.model_output import SharedKeyAcrossPredictionsOutput
 from src.models.common.modules.embedding_aggregator import EmbeddingAggregator
 from src.utils.pylogger import RankedLogger
-
 
 console_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -27,13 +25,13 @@ class TransformerBaseModule(LightningModule):
         postprocessor: torch.nn.Module,
         aggregator: EmbeddingAggregator,
         optimizer: torch.optim.Optimizer,
-        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler],
+        scheduler: torch.optim.lr_scheduler._LRScheduler | None,
         loss_function: torch.nn.Module,
         evaluator: Evaluator,
         weight_tying: bool,
         compile: bool,
         training_loop_function: callable = None,
-        feature_to_model_input_map: Dict[str, str] = None,
+        feature_to_model_input_map: dict[str, str] = None,
         decoder: torch.nn.Module = None,
     ) -> None:
 
@@ -83,7 +81,7 @@ class TransformerBaseModule(LightningModule):
         self.feature_to_model_input_map = feature_to_model_input_map if feature_to_model_input_map else {}
 
     @property
-    def prediction_key_name(self) -> Optional[str]:
+    def prediction_key_name(self) -> str | None:
         return self._prediction_key_name
 
     @prediction_key_name.setter
@@ -92,7 +90,7 @@ class TransformerBaseModule(LightningModule):
         self._prediction_key_name = value
 
     @property
-    def prediction_name(self) -> Optional[str]:
+    def prediction_name(self) -> str | None:
         return self._prediction_name
 
     @prediction_name.setter
@@ -102,20 +100,16 @@ class TransformerBaseModule(LightningModule):
 
     def forward(
         self,
-        **kwargs: Dict[str, torch.Tensor],
+        **kwargs: dict[str, torch.Tensor],
     ) -> torch.Tensor:
-        raise NotImplementedError(
-            "Inherit from this class and implement the forward method."
-        )
+        raise NotImplementedError("Inherit from this class and implement the forward method.")
 
     def model_step(
         self,
         model_input: Any,
-        label_data: Optional[Any] = None,
+        label_data: Any | None = None,
     ):
-        raise NotImplementedError(
-            "Inherit from this class and implement the model_step method."
-        )
+        raise NotImplementedError("Inherit from this class and implement the model_step method.")
 
     def get_embedding_table(self):
         if self.hparams.weight_tying:  # type: ignore
@@ -174,9 +168,7 @@ class TransformerBaseModule(LightningModule):
     ):
 
         metrics_dict = {
-            f"{prefix}/{metric_name}": metric_object.compute()
-            if call_compute
-            else metric_object
+            f"{prefix}/{metric_name}": metric_object.compute() if call_compute else metric_object
             for metric_name, metric_object in self.evaluator.metrics.items()
         }
 
@@ -202,7 +194,7 @@ class TransformerBaseModule(LightningModule):
         #     self.net = torch.compile(self.net)
         pass
 
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
 
@@ -227,7 +219,7 @@ class TransformerBaseModule(LightningModule):
 
     def training_step(
         self,
-        batch: Tuple[SequentialModelInputData, SequentialModuleLabelData],
+        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
         batch_idx: int,
     ) -> torch.Tensor:
         """Perform a single training step on a batch of data from the training set.
@@ -242,9 +234,7 @@ class TransformerBaseModule(LightningModule):
         model_input: SequentialModelInputData = batch[0]
         label_data: SequentialModuleLabelData = batch[1]
         # Batch will be a tuple of model inputs and labels. We use the index here to access them.
-        model_output, loss = self.model_step(
-            model_input=model_input, label_data=label_data
-        )
+        model_output, loss = self.model_step(model_input=model_input, label_data=label_data)
 
         # update and log metrics. Will only be logged at the interval specified in the logger config
         self.train_loss(loss)
@@ -268,7 +258,7 @@ class TransformerBaseModule(LightningModule):
 
     def eval_step(
         self,
-        batch: Tuple[SequentialModelInputData, SequentialModuleLabelData],
+        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
         loss_to_aggregate: BaseAggregator,
     ):
         """Perform a single evaluation step on a batch of data from the validation or test set.
@@ -278,13 +268,9 @@ class TransformerBaseModule(LightningModule):
         model_input: SequentialModelInputData = batch[0]
         label_data: SequentialModuleLabelData = batch[1]
 
-        model_output_before_aggregation, loss = self.model_step(
-            model_input=model_input, label_data=label_data
-        )
+        model_output_before_aggregation, loss = self.model_step(model_input=model_input, label_data=label_data)
 
-        model_output_after_aggregation = self.aggregator(
-            model_output_before_aggregation, model_input.mask
-        )
+        model_output_after_aggregation = self.aggregator(model_output_before_aggregation, model_input.mask)
 
         # Updates metrics inside evaluator.
         self.evaluator(
@@ -321,7 +307,7 @@ class TransformerBaseModule(LightningModule):
 
     def predict_step(
         self,
-        batch: Tuple[SequentialModelInputData, SequentialModuleLabelData],
+        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
         batch_idx: int,
     ):
         """
@@ -337,9 +323,7 @@ class TransformerBaseModule(LightningModule):
         model_input: SequentialModelInputData = batch[0]
         model_output_before_aggregation, _ = self.model_step(model_input=model_input)
 
-        model_output_after_aggregation = self.aggregator(
-            model_output_before_aggregation, model_input.mask
-        )
+        model_output_after_aggregation = self.aggregator(model_output_before_aggregation, model_input.mask)
         model_output = SharedKeyAcrossPredictionsOutput(
             key=batch_idx,
             predictions=model_output_after_aggregation,

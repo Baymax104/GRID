@@ -1,4 +1,3 @@
-from typing import Dict, Optional, Union
 
 import torch
 import transformers
@@ -12,8 +11,8 @@ from src.models.common.components.model_output import OneKeyPerPredictionOutput
 class SemanticEmbeddingInferenceModule(LightningModule):
     def __init__(
         self,
-        semantic_embedding_model: Union[nn.Module, transformers.PreTrainedModel],
-        semantic_embedding_model_input_map: Optional[Dict[str, str]] = None,
+        semantic_embedding_model: nn.Module | transformers.PreTrainedModel,
+        semantic_embedding_model_input_map: dict[str, str] | None = None,
         **kwargs,
     ) -> None:
         """
@@ -74,10 +73,7 @@ class SemanticEmbeddingInferenceModule(LightningModule):
                 ids as keys and the semantic embeddings as predictions.
         """
         semantic_embeddings = self.model_step(batch)
-        item_ids = [
-            item_id.item() if isinstance(item_id, torch.Tensor) else item_id
-            for item_id in batch.item_ids
-        ]
+        item_ids = [item_id.item() if isinstance(item_id, torch.Tensor) else item_id for item_id in batch.item_ids]
 
         model_output = OneKeyPerPredictionOutput(
             keys=item_ids,

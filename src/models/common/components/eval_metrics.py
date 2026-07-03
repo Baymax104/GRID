@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import torch
 import torchmetrics
@@ -30,14 +30,12 @@ class CustomMeanReductionMetric(torchmetrics.Metric):
             # Gather all metric values and total values from all GPUs
 
             metric_values_tensor_list = [
-                t.unsqueeze(0) if t.dim() == 0 else t
-                for t in gather_all_tensors(metric_values_tensor)
+                t.unsqueeze(0) if t.dim() == 0 else t for t in gather_all_tensors(metric_values_tensor)
             ]
             metric_values_tensor = torch.cat(metric_values_tensor_list).sum()
 
             total_values_tensor_list = [
-                t.unsqueeze(0) if t.dim() == 0 else t
-                for t in gather_all_tensors(total_values_tensor)
+                t.unsqueeze(0) if t.dim() == 0 else t for t in gather_all_tensors(total_values_tensor)
             ]
 
             total_values_tensor = torch.cat(total_values_tensor_list).sum()
@@ -62,13 +60,7 @@ class CustomRetrievalMetric(CustomMeanReductionMetric):
         super().__init__(**kwargs)
         self.top_k = top_k
 
-    def update(
-        self,
-        preds: torch.Tensor,
-        target: torch.Tensor,
-        indexes: torch.Tensor,
-        **kwargs
-    ) -> None:
+    def update(self, preds: torch.Tensor, target: torch.Tensor, indexes: torch.Tensor, **kwargs) -> None:
         batch_size = int(len(indexes) / (indexes == 0).sum().item())
         preds = preds.reshape(batch_size, -1)
         target = target.reshape(batch_size, -1).int()
@@ -92,10 +84,7 @@ class NDCG(CustomRetrievalMetric):
 
         # Compute DCG
         dcg = torch.sum(
-            topk_true
-            / torch.log2(
-                torch.arange(2, self.top_k + 2, device=target.device).unsqueeze(0)
-            ),
+            topk_true / torch.log2(torch.arange(2, self.top_k + 2, device=target.device).unsqueeze(0)),
             dim=1,
         )
 
@@ -103,9 +92,7 @@ class NDCG(CustomRetrievalMetric):
         ideal_indices = torch.topk(target, self.top_k)[1]
         ideal_dcg = torch.sum(
             target.gather(1, ideal_indices)
-            / torch.log2(
-                torch.arange(2, self.top_k + 2, device=target.device).unsqueeze(0)
-            ),
+            / torch.log2(torch.arange(2, self.top_k + 2, device=target.device).unsqueeze(0)),
             dim=1,
         )
 
@@ -131,7 +118,7 @@ class Recall(CustomRetrievalMetric):
 
 
 class Evaluator:
-    def __init__(self, metrics: Dict[str, Metric], *args, **kwargs):
+    def __init__(self, metrics: dict[str, Metric], *args, **kwargs):
         self.metrics = metrics
 
     def __call__(self, *args, **kwargs):
@@ -154,17 +141,15 @@ class RetrievalEvaluator(Evaluator):
 
     def __init__(
         self,
-        metrics: Dict[str, CustomRetrievalMetric],
-        top_k_list: List[int],
+        metrics: dict[str, CustomRetrievalMetric],
+        top_k_list: list[int],
         should_sample_negatives_from_vocab: bool = True,
         num_negatives: int = 500,
         placeholder_token_buffer: int = 100,
     ):
         super().__init__(metrics)
         self.metrics = {
-            f"{metric_name}@{top_k}": metric_object(
-                top_k=top_k, sync_on_compute=False, compute_with_cache=False
-            )
+            f"{metric_name}@{top_k}": metric_object(top_k=top_k, sync_on_compute=False, compute_with_cache=False)
             for metric_name, metric_object in metrics.items()
             for top_k in top_k_list
         }
@@ -199,9 +184,7 @@ class RetrievalEvaluator(Evaluator):
         # following examples from https://lightning.ai/docs/torchmetrics/stable/retrieval/precision.html
         # indexes refers to the mask of the labels
         indexes = torch.arange(0, query_embeddings.shape[0])
-        expanded_indexes = (
-            indexes.unsqueeze(-1).expand(num_of_samples, num_of_candidates).reshape(-1)
-        )
+        expanded_indexes = indexes.unsqueeze(-1).expand(num_of_samples, num_of_candidates).reshape(-1)
 
         if self.should_sample_negatives_from_vocab:
             preds = (
@@ -259,14 +242,12 @@ class SIDRetrievalEvaluator(Evaluator):
 
     def __init__(
         self,
-        metrics: Dict[str, CustomRetrievalMetric],
-        top_k_list: List[int],
+        metrics: dict[str, CustomRetrievalMetric],
+        top_k_list: list[int],
     ):
         super().__init__(metrics)
         self.metrics = {
-            f"{metric_name}@{top_k}": metric_object(
-                top_k=top_k, sync_on_compute=False, compute_with_cache=False
-            )
+            f"{metric_name}@{top_k}": metric_object(top_k=top_k, sync_on_compute=False, compute_with_cache=False)
             for metric_name, metric_object in metrics.items()
             for top_k in top_k_list
         }
@@ -292,12 +273,7 @@ class SIDRetrievalEvaluator(Evaluator):
         # we set the matched IDs to true if they are in the generated IDs
         target[matched_id_coord[:, 0], matched_id_coord[:, 1]] = True
         target = target.reshape(-1)
-        expanded_indexes = (
-            torch.arange(batch_size)
-            .unsqueeze(-1)
-            .expand(batch_size, num_candidates)
-            .reshape(-1)
-        )
+        expanded_indexes = torch.arange(batch_size).unsqueeze(-1).expand(batch_size, num_candidates).reshape(-1)
 
         for _, metric_object in self.metrics.items():
             metric_object.update(

@@ -42,9 +42,7 @@ class WarmupCosineSchedulerNonzeroMin(torch.optim.lr_scheduler.LambdaLR):
         self.scheduler_steps = scheduler_steps
         self.min_ratio = min_ratio
         self.num_cycles = num_cycles
-        super(WarmupCosineSchedulerNonzeroMin, self).__init__(
-            optimizer, self.lr_lambda, last_epoch=last_epoch
-        )
+        super().__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
 
     def lr_lambda(
         self,
@@ -55,12 +53,8 @@ class WarmupCosineSchedulerNonzeroMin(torch.optim.lr_scheduler.LambdaLR):
             return float(step) / float(max(1, self.warmup_steps))
         if step <= self.scheduler_steps:
             # cosine decay
-            decay_ratio = float(step - self.warmup_steps) / float(
-                max(1, self.scheduler_steps - self.warmup_steps)
-            )
-            coeff = 0.5 * (
-                1.0 + math.cos(math.pi * float(self.num_cycles) * 2.0 * decay_ratio)
-            )
+            decay_ratio = float(step - self.warmup_steps) / float(max(1, self.scheduler_steps - self.warmup_steps))
+            coeff = 0.5 * (1.0 + math.cos(math.pi * float(self.num_cycles) * 2.0 * decay_ratio))
             return max(self.min_ratio, self.min_ratio + coeff * (1 - self.min_ratio))
         else:  # current_step > self.scheduler_steps
             return self.min_ratio

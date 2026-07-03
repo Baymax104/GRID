@@ -11,7 +11,6 @@ from omegaconf import DictConfig, OmegaConf
 
 from src.utils import pylogger
 
-
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 # logging constants
@@ -89,11 +88,7 @@ def finalize_loggers(trainer: Any, status=END_RUN) -> None:
 
 
 @rank_zero_only
-def log_hyperparameters(
-    cfg: DictConfig,
-    model: LightningModule,
-    trainer: Trainer
-) -> None:
+def log_hyperparameters(cfg: DictConfig, model: LightningModule, trainer: Trainer) -> None:
     """
     Controls which config parts are saved by Lightning loggers.
 
@@ -118,12 +113,8 @@ def log_hyperparameters(
 
     # save number of model parameters
     hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
-    hparams["model/params/trainable"] = sum(
-        p.numel() for p in model.parameters() if p.requires_grad
-    )
-    hparams["model/params/non_trainable"] = sum(
-        p.numel() for p in model.parameters() if not p.requires_grad
-    )
+    hparams["model/params/trainable"] = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    hparams["model/params/non_trainable"] = sum(p.numel() for p in model.parameters() if not p.requires_grad)
 
     hparams["data_loading"] = cfg["data_loading"]
     hparams["trainer"] = cfg["trainer"]

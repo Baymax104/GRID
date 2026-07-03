@@ -4,16 +4,14 @@ import sys
 import hydra
 import rootutils
 import torch
-
-
-rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+from omegaconf import DictConfig
 
 from src.utils import RankedLogger, extras
 from src.utils.cli_utils import rewrite_dry_run_flag
-from src.utils.custom_hydra_resolvers import *
 from src.utils.launcher_utils import pipeline_launcher
 
+rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 console_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -33,7 +31,6 @@ def train(cfg: DictConfig):
     # Pipeline launcher initializes the modules needed for the pipeline to run.
     # It also serves as a context manager, so all resources are properly closed after the pipeline is done.
     with pipeline_launcher(cfg) as pipeline_modules:
-
         if cfg.get("train"):
             console_logger.info("Starting training!")
             pipeline_modules.trainer.fit(
@@ -72,7 +69,7 @@ def train(cfg: DictConfig):
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
-def main(cfg: DictConfig) -> Optional[float]:
+def main(cfg: DictConfig) -> float | None:
     """Main entry point for training.
 
     :param cfg: DictConfig configuration composed by Hydra.

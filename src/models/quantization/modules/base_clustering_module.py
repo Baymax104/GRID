@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import torch
 from lightning.pytorch import LightningModule
@@ -20,7 +21,7 @@ class BaseClusteringModule(LightningModule):
         initializer: ClusteringInitializer,
         loss_function: nn.Module,
         optimizer: Callable[..., torch.optim.Optimizer],
-        scheduler: Callable[..., Optional[torch.optim.lr_scheduler._LRScheduler]] = None,
+        scheduler: Callable[..., torch.optim.lr_scheduler._LRScheduler | None] = None,
         init_buffer_size: int = 1000,
         update_manually: bool = False,
     ):
@@ -38,7 +39,7 @@ class BaseClusteringModule(LightningModule):
             init_buffer_size: Number of points to buffer for initialization.
             update_manually: Whether to manually update the centroids without gradients.
         """
-        super(BaseClusteringModule, self).__init__()
+        super().__init__()
 
         self.init_centroids = None
         self.n_clusters = n_clusters
@@ -148,11 +149,7 @@ class BaseClusteringModule(LightningModule):
         """
         raise NotImplementedError("Inherit from this class and implement the forward method.")
 
-    def model_step(
-        self,
-        batch: torch.Tensor,
-        **kwargs
-    ) -> tuple[torch.Tensor, torch.Tensor, bool]:
+    def model_step(self, batch: torch.Tensor, **kwargs) -> tuple[torch.Tensor, torch.Tensor, bool]:
         """
         Update clusters based on the points in `batch`.
 
@@ -196,11 +193,7 @@ class BaseClusteringModule(LightningModule):
         )
         return loss
 
-    def predict_step(
-        self,
-        batch: torch.Tensor,
-        return_embeddings: bool = True
-    ):
+    def predict_step(self, batch: torch.Tensor, return_embeddings: bool = True):
         """
         Predict cluster assignments for input points.
 

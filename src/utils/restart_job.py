@@ -1,3 +1,8 @@
+"""Deprecated restart helpers kept for historical reference and manual opt-in only.
+
+The default train / inference mainline no longer imports or wires this module.
+"""
+
 import os
 import signal
 import subprocess
@@ -5,13 +10,9 @@ import sys
 import tempfile
 import time
 import traceback
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, TypeVar, Union
-
-"""Deprecated restart helpers kept for historical reference and manual opt-in only.
-
-The default train / inference mainline no longer imports or wires this module.
-"""
+from typing import Any, TypeVar
 
 import pytz
 from lightning import Trainer
@@ -29,7 +30,6 @@ from src.utils.restart_job_utils import (
     load_metadata_from_local_or_remote,
     save_metadata_to_local_or_remote,
 )
-
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 F = TypeVar("F", bound=Callable[..., Any])
@@ -67,7 +67,7 @@ class RestartAndLoadCheckpointCallback(Callback):
         ```
     """
 
-    def __init__(self, metadata_dir: Union[str, None] = None):
+    def __init__(self, metadata_dir: str | None = None):
         """
         Initialize the RestartAndLoadCheckpointCallback.
 
@@ -117,9 +117,7 @@ class RestartAndLoadCheckpointCallback(Callback):
 
         command_line_logger.info("Cleaning up and handling restart logic")
 
-        self.metadata.current_run = get_attribute_from_metadata_file(
-            self.metadata_path, "current_run"
-        )
+        self.metadata.current_run = get_attribute_from_metadata_file(self.metadata_path, "current_run")
 
         self.metadata.restarts.append(
             RestartMetadata(
@@ -138,7 +136,7 @@ class RestartAndLoadCheckpointCallback(Callback):
     def _cleanup_resources(self, trainer: Trainer, exception: BaseException) -> None:
         clean_up_resources(trainer, exception)
 
-        command_line_logger.info(f"Resources cleaned up.")
+        command_line_logger.info("Resources cleaned up.")
         os._exit(1)
 
 
@@ -233,8 +231,7 @@ class BaseJobLauncher:
                 save_metadata_to_local_or_remote(metadata, self.metadata_path)
             if self.run_count <= self.max_retries:
                 self.logger.warning(
-                    f"Retrying in {self.retry_delay} seconds. "
-                    f"Attempt {self.run_count + 1}/{self.max_retries + 1}"
+                    f"Retrying in {self.retry_delay} seconds. Attempt {self.run_count + 1}/{self.max_retries + 1}"
                 )
                 time.sleep(self.retry_delay)
             else:
@@ -276,9 +273,7 @@ class BaseJobLauncher:
         sys.exit(return_code if return_code is not None else 1)
 
     def launch(self, function_to_run: callable) -> bool:
-        raise NotImplementedError(
-            "Method not implemented, should be implemented in child classes."
-        )
+        raise NotImplementedError("Method not implemented, should be implemented in child classes.")
 
 
 class LocalJobLauncher(BaseJobLauncher):
@@ -312,12 +307,10 @@ class LocalJobLauncher(BaseJobLauncher):
     def __init__(self, cfg: DictConfig, max_retries: int = 3, retry_delay: int = 5):
         super().__init__(cfg, max_retries, retry_delay)
         self.should_skip_retry = cfg.get("should_skip_retry", False)
-        if (
-            not self.should_skip_retry
-            and cfg.get("trainer")
-            and cfg.trainer.num_nodes > 1
-        ):
-            self.logger.warning("Retry logic is not supported for multi-node training, setting should_skip_retry to True.")
+        if not self.should_skip_retry and cfg.get("trainer") and cfg.trainer.num_nodes > 1:
+            self.logger.warning(
+                "Retry logic is not supported for multi-node training, setting should_skip_retry to True."
+            )
             self.should_skip_retry = True
 
         if self.should_skip_retry:
