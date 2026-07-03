@@ -6,7 +6,7 @@ devices: ???
 
 sequence_length: 200
 
-task_name: tiger_train_flat
+task_name: tiger_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
 - amazon-p5-gr-train

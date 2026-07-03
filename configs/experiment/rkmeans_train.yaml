@@ -6,7 +6,7 @@ num_hierarchies: ???
 codebook_width: ??? 
 devices: ???
 
-task_name: rkmeans_train_flat
+task_name: rkmeans_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
 - amazon-assign-ids-train

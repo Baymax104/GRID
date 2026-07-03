@@ -6,7 +6,7 @@ num_hierarchies: ???
 embedding_dim: ???
 ckpt_path: ???
 
-task_name: rkmeans_inference_flat
+task_name: rkmeans_inference
 
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 

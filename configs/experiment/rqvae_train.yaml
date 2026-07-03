@@ -5,7 +5,7 @@ embedding_dim: ???
 num_hierarchies: ???
 codebook_width: ??? 
 
-task_name: rqvae_train_flat
+task_name: rqvae_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
 - amazon-assign-ids-train

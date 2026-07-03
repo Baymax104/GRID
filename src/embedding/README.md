@@ -1,10 +1,10 @@
 # Embedding 实验数据链路说明
 
-本文记录 `experiment=sem_embeds_inference_flat` 中，数据从原始 TFRecord 到进入 embedding 模型前的数据处理过程。
+本文记录 `experiment=sem_embeds_inference` 中，数据从原始 TFRecord 到进入 embedding 模型前的数据处理过程。
 
 ## 对应入口
 
-- 配置：`configs/experiment/sem_embeds_inference_flat.yaml`
+- 配置：`configs/experiment/sem_embeds_inference.yaml`
 - datamodule：`src.data.loading.datamodules.sequence_datamodule.ItemDataModule`
 - collate：`src.data.loading.components.collate_functions.collate_fn_items`
 - 模型：`src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule`
@@ -25,7 +25,7 @@
 
 ## 预处理顺序
 
-`sem_embeds_inference_flat.yaml` 中的 `preprocessing_functions` 顺序如下：
+`sem_embeds_inference.yaml` 中的 `preprocessing_functions` 顺序如下：
 
 1. `filter_features_to_consider`
 2. `convert_to_dense_numpy_array`
@@ -189,7 +189,7 @@ predictions: torch.Tensor  # shape: (B, hidden_dim)
 
 ## 一句话总结
 
-`sem_embeds_inference_flat` 的链路可以简化为：
+`sem_embeds_inference` 的链路可以简化为：
 
 ```text
 TFRecord(id, text)

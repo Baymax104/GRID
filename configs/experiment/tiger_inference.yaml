@@ -4,7 +4,7 @@ semantic_id_path: ???
 ckpt_path: ???
 num_hierarchies: ???
 
-task_name: tiger_inference_flat
+task_name: tiger_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
   - amazon-p5-gr-train
