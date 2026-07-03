@@ -1,7 +1,6 @@
 from typing import Any, Optional, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from src.data.loading.components.interfaces import BaseDatasetConfig, SemanticIDDatasetConfig, TokenizerConfig
@@ -34,7 +33,7 @@ def is_feature_in_features_to_apply(features_to_apply: list[str], k: str) -> boo
 
 
 def filter_features_to_consider(
-    batch_or_row: dict[str, tf.Tensor],
+    batch_or_row: dict[str, Any],
     dataset_config: BaseDatasetConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
@@ -71,14 +70,17 @@ def filter_features_to_consider(
 
 
 def convert_to_dense_numpy_array(
-    batch_or_row: dict[str, tf.Tensor],
+    batch_or_row: dict[str, Any],
     dataset_config: BaseDatasetConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
     """
-    Transform a tfrecord example to a dictionary of numpy arrays, converting sparse tensors to dense numpy arrays.
-    This function is usually called for converting SparseTensor to dense tensor (common tensor, which can be used in network).
+    Transform a record example to a dictionary of dense numpy arrays.
+
+    The current TFRecord reader already decodes values into Python / numpy values,
+    so this function mainly normalizes scalars and lists into at-least-1D numpy arrays
+    to preserve compatibility with the downstream preprocessing pipeline.
 
     Args:
         batch_or_row: dataset
@@ -91,12 +93,18 @@ def convert_to_dense_numpy_array(
     """
     for k in batch_or_row:
         if is_feature_in_features_to_apply(features_to_apply, k):
-            batch_or_row[k] = tf.sparse.to_dense(batch_or_row[k]).numpy()
+            value = batch_or_row[k]
+            if isinstance(value, np.ndarray):
+                batch_or_row[k] = np.atleast_1d(value)
+            elif isinstance(value, list):
+                batch_or_row[k] = np.asarray(value)
+            else:
+                batch_or_row[k] = np.atleast_1d(value)
     return batch_or_row  # type: ignore
 
 
 def map_feature_names(
-    batch_or_row: dict[str, np.ndarray | torch.Tensor | tf.Tensor],
+    batch_or_row: dict[str, np.ndarray | torch.Tensor | Any],
     dataset_config: BaseDatasetConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,

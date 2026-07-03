@@ -13,7 +13,6 @@ dependencies = [
     "modelscope>=1.38.0",
     "rootutils>=1.0.7",
     "sentencepiece==0.2.1",
-    "tensorflow-cpu==2.21.0",
     "tfrecord==1.14.6",
     "torch==2.9.1",
     "torchaudio==2.9.1",
