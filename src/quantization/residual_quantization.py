@@ -11,8 +11,8 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.data.loading.components.interfaces import ItemData
-from src.models.common.components.model_output import OneKeyPerPredictionOutput
-from src.models.quantization.modules.base_clustering_module import BaseClusteringModule
+from src.common.components.model_output import OneKeyPerPredictionOutput
+from quantization.base_clustering_module import BaseClusteringModule
 
 
 class ResidualQuantization(LightningModule):
@@ -584,7 +584,7 @@ class ResidualQuantization(LightningModule):
             "val/last_residuals_norm_ratio": self.val_last_residuals_norm_ratio,
             "val/frac_unique_ids": self.val_frac_unique_ids,
             "val/mse": self.val_mse,
-            "val/loss": self.val_loss
+            "val/loss": self.val_loss,
         }
 
         self.log_dict(
@@ -626,7 +626,7 @@ class ResidualQuantization(LightningModule):
             "test/last_residuals_norm_ratio": self.test_last_residuals_norm_ratio,
             "test/frac_unique_ids": self.test_frac_unique_ids,
             "test/mse": self.test_mse,
-            "test/loss": self.test_loss
+            "test/loss": self.test_loss,
         }
 
         self.log_dict(

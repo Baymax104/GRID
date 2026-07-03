@@ -8,8 +8,8 @@ from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.models.common.components.model_output import OneKeyPerPredictionOutput
-from src.models.recommendation.modules import (
+from src.common.components.model_output import OneKeyPerPredictionOutput
+from recommendation.modules import (
     SemanticIDDecoderModule,
     SemanticIDEncoderModule,
     SemanticIDGenerativeRecommender,
@@ -203,7 +203,8 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
 
     def decoder_forward_pass(
         self,
-        attention_mask: torch.Tensor | None = None,  # TODO (clark): in the future we should support variable length semantic id
+        attention_mask: torch.Tensor
+        | None = None,  # TODO (clark): in the future we should support variable length semantic id
         future_ids: torch.Tensor | None = None,
         encoder_output: torch.Tensor | None = None,
         attention_mask_for_encoder: torch.Tensor | None = None,

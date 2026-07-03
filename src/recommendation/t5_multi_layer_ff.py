@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from transformers.models.t5.modeling_t5 import T5Config, T5LayerNorm
 
-from src.models.common.modules.mlp import MLP
+from src.common.modules.mlp import MLP
 
 
 # this class is used for bloating the mlp layers in the encoder and decoder

@@ -2,11 +2,11 @@ import functools
 
 import torch
 
-from src.models.common.components.clustering_initializers import ClusteringInitializer
-from src.models.common.components.distance_functions import DistanceFunction
-from src.models.common.components.loss_functions import WeightedSquaredError
-from src.models.common.components.quantization_strategies import QuantizationStrategy
-from src.models.quantization.modules.base_clustering_module import BaseClusteringModule
+from src.common.components.clustering_initializers import ClusteringInitializer
+from src.common.components.distance_functions import DistanceFunction
+from src.common.components.loss_functions import WeightedSquaredError
+from src.common.components.quantization_strategies import QuantizationStrategy
+from quantization.base_clustering_module import BaseClusteringModule
 
 
 class VectorQuantization(BaseClusteringModule):

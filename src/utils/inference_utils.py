@@ -8,7 +8,7 @@ import torch
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
 
-from src.models.common.components.model_output import ModelOutput
+from src.common.components.model_output import ModelOutput
 from src.utils.decorators import retry
 from src.utils.file_utils import sync_file
 from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
@@ -193,7 +193,9 @@ class LocalPickleWriter(BaseBufferedWriter):
 
     def _create_file_path(self) -> str:
         """Create a file path for the pickle file."""
-        return f"predictions_{self.global_rank}_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%dT%H%M%S%f')[:-3]}.pkl"
+        return (
+            f"predictions_{self.global_rank}_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%dT%H%M%S%f')[:-3]}.pkl"
+        )
 
     def _local_file_path(self, file_path: str | None = None) -> str:
         """Create a local file path for the pickle file."""

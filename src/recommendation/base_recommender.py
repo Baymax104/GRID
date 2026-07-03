@@ -8,7 +8,7 @@ from src.data.loading.components.interfaces import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.models.common.modules.transformer_base_module import TransformerBaseModule
+from src.common.modules.transformer_base_module import TransformerBaseModule
 
 
 class SemanticIDGenerativeRecommender(TransformerBaseModule):

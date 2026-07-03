@@ -1,10 +1,9 @@
-
 import torch
 import torch.nn as nn
 from transformers import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutput
 
-from src.models.common.modules.embedding_aggregator import EmbeddingAggregator
+from src.common.modules.embedding_aggregator import EmbeddingAggregator
 
 
 class HFLanguageModel(nn.Module):

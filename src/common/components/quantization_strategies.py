@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 import torch.nn.functional as F
 
-from src.models.common.components.distance_functions import DistanceFunction
+from src.common.components.distance_functions import DistanceFunction
 from src.utils.utils import gumbel_softmax_sample
 
 

@@ -4,13 +4,13 @@ from collections.abc import Callable
 import torch
 import torch.nn as nn
 
-from src.models.common.components.clustering_initializers import (
+from src.common.components.clustering_initializers import (
     ClusteringInitializer,
     KMeansPlusPlusInitInitializer,
 )
-from src.models.common.components.distance_functions import DistanceFunction
-from src.models.common.components.loss_functions import WeightedSquaredError
-from src.models.quantization.modules.base_clustering_module import BaseClusteringModule
+from src.common.components.distance_functions import DistanceFunction
+from src.common.components.loss_functions import WeightedSquaredError
+from quantization.base_clustering_module import BaseClusteringModule
 
 
 class MiniBatchKMeans(BaseClusteringModule):

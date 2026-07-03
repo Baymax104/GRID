@@ -1,4 +1,3 @@
-
 import torch
 
 
@@ -86,5 +85,7 @@ class OneKeyPerPredictionOutput(ModelOutput):
     def list_of_row_format(self):
         return [
             {self.key_name: key, self.prediction_name: pred}
-            for key, pred in zip(self._convert_to_list(self.keys), self._convert_to_list(self.predictions), strict=False)
+            for key, pred in zip(
+                self._convert_to_list(self.keys), self._convert_to_list(self.predictions), strict=False
+            )
         ]
