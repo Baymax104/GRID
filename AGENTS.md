@@ -7,9 +7,9 @@
 - `*.sh`：当前仓库里最接近“可执行真相”的启动命令模板，已经统一成 `uv run torchrun ...`。
 
 ## 运行约定
-- 一律从仓库根目录运行。`src/train.py` 和 `src/inference.py` 依赖 `.project-root` 做 `rootutils.setup_root(...)`。
+- 一律从仓库根目录运行。统一入口 `src/main.py` 依赖 `.project-root` 做 `rootutils.setup_root(...)`。
 - 优先用 `uv run`，不要照抄 `README.md` 里的 `python -m ...`。
-- 多卡训练/推理的标准形态是：`uv run torchrun --nproc_per_node=<N> -m src.train|src.inference ...`。
+- 多卡训练/推理的标准形态是：`uv run torchrun --nproc_per_node=<N> -m src.main experiment=<name> ...`。
 - 现成脚本：
   - `sem_embeds_inference.sh`
   - `rkmeans_train.sh`
@@ -37,12 +37,11 @@
 
 ## 配置行为
 - 默认 `extras.enforce_tags=True`、`print_config=True`。如果你删掉了 `tags`，运行时会触发交互式提示；自动化执行时保留非空 `tags`。
-- `configs/inference.yaml` 的 `ckpt_path` 默认是必填（`???`）；只有像 `sem_embeds_inference` 这种显式覆盖成 `null` 的实验才能无 checkpoint 跑。
-- `src/utils/launcher_utils.py` 是 train / inference 共用装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
+- 推理类 experiment 通常会在 experiment 顶层显式提供 `ckpt_path`；只有像 `sem_embeds_inference` 这种实验才会显式覆盖成 `null`。
+- `src/utils/launcher_utils.py` 是统一入口 `src/main.py` 共用的装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
 
 ## 代码结构（只记最影响判断的）
-- `src/train.py`：只做 Hydra 入口、`extras(cfg)`、然后交给 `pipeline_launcher(cfg)`。
-- `src/inference.py`：同上，但调用 `trainer.predict(...)`。
+- `src/main.py`：统一 Hydra 入口、`extras(cfg)`，再根据 experiment 中的 `run_mode` 分发到 train / inference 链路。
 - `src/data/loading/`：自定义数据管线核心。`SequenceDataModule.setup()` 先按 GPU rank 分文件，再由自定义 iterable dataloader 读 TFRecord。
 - `src/models/embedding/`、`src/models/quantization/`、`src/models/recommendation/`：分别对应三段主 pipeline。
 

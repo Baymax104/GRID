@@ -1,14 +1,26 @@
 # @package _global_
+
+# -----------------------------
+# Manual inputs
+# -----------------------------
 data_dir: ???
 embedding_path: ???
 embedding_dim: ???
 num_hierarchies: ???
-codebook_width: ??? 
+codebook_width: ???
 
+# -----------------------------
+# Runtime metadata
+# -----------------------------
+run_mode: train
 task_name: rvq_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
-- amazon-assign-ids-train
+  - amazon-assign-ids-train
+
+# -----------------------------
+# Runtime switches
+# -----------------------------
 train: true
 test: false
 ckpt_path: null

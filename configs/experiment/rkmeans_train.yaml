@@ -1,20 +1,35 @@
 # @package _global_
+
+# -----------------------------
+# Manual inputs
+# -----------------------------
 data_dir: ???
 embedding_path: ???
 embedding_dim: ???
 num_hierarchies: ???
-codebook_width: ??? 
+codebook_width: ???
 devices: ???
 
+# -----------------------------
+# Runtime metadata
+# -----------------------------
+run_mode: train
 task_name: rkmeans_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
-- amazon-assign-ids-train
+  - amazon-assign-ids-train
+
+# -----------------------------
+# Runtime switches
+# -----------------------------
 train: true
 test: false
 ckpt_path: null
 seed: 42
 
+# -----------------------------
+# Data loading
+# -----------------------------
 data_loading:
   features_config:
     features:
@@ -133,6 +148,9 @@ data_loading:
       dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
 
+# -----------------------------
+# Model
+# -----------------------------
 model:
   _target_: src.quantization.residual_quantization.ResidualQuantization
   track_residuals: true
@@ -170,6 +188,9 @@ model:
     _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
     _partial_: true
 
+# -----------------------------
+# Callbacks and logging
+# -----------------------------
 callbacks:
   model_checkpoint:
     _target_: lightning.pytorch.callbacks.ModelCheckpoint
@@ -202,6 +223,9 @@ logger:
     project: GRID
     group: rkmeans
 
+# -----------------------------
+# Trainer
+# -----------------------------
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
@@ -221,6 +245,9 @@ trainer:
   sync_batchnorm: true
   num_sanity_val_steps: 0
 
+# -----------------------------
+# Paths and extras
+# -----------------------------
 paths:
   root_dir: .
   data_dir: ${data_dir}

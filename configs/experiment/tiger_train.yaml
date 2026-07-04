@@ -1,47 +1,65 @@
 # @package _global_
+
+# -----------------------------
+# Manual inputs
+# -----------------------------
 data_dir: ???
 semantic_id_path: ???
 num_hierarchies: ???
 devices: ???
 
+# -----------------------------
+# Static experiment inputs
+# -----------------------------
 sequence_length: 200
 
+# -----------------------------
+# Runtime metadata
+# -----------------------------
+run_mode: train
 task_name: tiger_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
-- amazon-p5-gr-train
+  - amazon-p5-gr-train
+
+# -----------------------------
+# Runtime switches
+# -----------------------------
 train: true
 test: true
 ckpt_path: null
 seed: 42
 
+# -----------------------------
+# Data loading
+# -----------------------------
 data_loading:
   features_config:
     features:
-    - name: sequence_data
-      num_placeholder_tokens: 0
-      semantic_ids: ???
-      is_item_ids: true
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - int32
-    - name: embedding
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - float32
-    - name: text
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - bytes
-    - name: user_id
-      is_item_ids: true
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - int32
+      - name: sequence_data
+        num_placeholder_tokens: 0
+        semantic_ids: ${semantic_id_path}
+        is_item_ids: true
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - int32
+      - name: embedding
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - float32
+      - name: text
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - bytes
+      - name: user_id
+        is_item_ids: true
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - int32
   dataset_config:
     dataset:
       _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
@@ -241,10 +259,13 @@ model:
   num_hierarchies: ${num_hierarchies}
   should_check_prefix: true
 
-  # SemanticIDEncoderDecoder
+   # SemanticIDEncoderDecoder
   num_user_bins: null
   mlp_layers: 2
 
+# -----------------------------
+# Callbacks and logging
+# -----------------------------
 callbacks:
   model_checkpoint:
     _target_: lightning.pytorch.callbacks.ModelCheckpoint
@@ -292,6 +313,9 @@ logger:
     project: GRID
     group: tiger
 
+# -----------------------------
+# Trainer
+# -----------------------------
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
@@ -313,6 +337,9 @@ trainer:
   sync_batchnorm: false
   num_sanity_val_steps: 0
 
+# -----------------------------
+# Paths and extras
+# -----------------------------
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -328,6 +355,9 @@ extras:
   print_config_warnings: true
   print_config: true
 
+# -----------------------------
+# Loss, optimizer and evaluation
+# -----------------------------
 loss:
   loss_function:
     _target_: torch.nn.CrossEntropyLoss

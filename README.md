@@ -53,7 +53,7 @@ We provide pre-processed Amazon data explored in the [P5 paper](https://arxiv.or
 Generate embeddings from LLMs, which later will be transformed into semantic IDs. 
 
 ```bash
-python -m src.inference experiment=sem_embeds_inference data_dir=data/amazon_data/beauty # avaiable data includes 'beauty', 'sports', and 'toys'
+python -m src.main experiment=sem_embeds_inference data_dir=data/amazon_data/beauty # avaiable data includes 'beauty', 'sports', and 'toys'
 ```
 
 ### 3. Train and Generate Semantic IDs
@@ -61,7 +61,7 @@ python -m src.inference experiment=sem_embeds_inference data_dir=data/amazon_dat
 Learn semantic ID centroids for embeddings generated in step 2:
 
 ```bash
-python -m src.train experiment=rkmeans_train \
+python -m src.main experiment=rkmeans_train \
     data_dir=data/amazon_data/beauty \
     embedding_path=<output_path_from_step_2>/merged_predictions_tensor.pt \ # this can be found in the log dirs in step2
     embedding_dim=2048 \ # the model dimension of the LLMs you use in step 2. 2048 for flan-t5-xl as used in this example.
@@ -72,7 +72,7 @@ python -m src.train experiment=rkmeans_train \
 Generate SIDs:
 
 ```bash
-python -m src.inference experiment=rkmeans_inference \
+python -m src.main experiment=rkmeans_inference \
     data_dir=data/amazon_data/beauty \
     embedding_path=<output_path_from_step_2>/merged_predictions_tensor.pt \ 
     embedding_dim=2048 \ 
@@ -87,7 +87,7 @@ python -m src.inference experiment=rkmeans_inference \
 Train the recommendation model using the learned semantic IDs:
 
 ```bash
-python -m src.train experiment=tiger_train \
+python -m src.main experiment=tiger_train \
     data_dir=data/amazon_data/beauty \ 
     semantic_id_path=<output_path_from_step_3>/pickle/merged_predictions_tensor.pt \
     num_hierarchies=4 # Please note that we add 1 for num_hierarchies because in the previous step we appended one additional digit to de-duplicate the semantic IDs we generate.
@@ -98,7 +98,7 @@ python -m src.train experiment=tiger_train \
 Run inference to generate recommendations:
 
 ```bash
-python -m src.inference experiment=tiger_inference \
+python -m src.main experiment=tiger_inference \
     data_dir=data/amazon_data/beauty \ 
     semantic_id_path=<output_path_from_step_3>/pickle/merged_predictions_tensor.pt \
     ckpt_path=<the_checkpoint_you_just_get_above> \ # this can be found in the log dir for training GR models

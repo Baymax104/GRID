@@ -1,13 +1,34 @@
 # @package _global_
+
+# -----------------------------
+# Manual inputs
+# -----------------------------
 data_dir: ???
+
+# -----------------------------
+# Static experiment inputs
+# -----------------------------
 embedding_model: ${paths.pretrained_models_dir}/flan-t5-base
 
+# -----------------------------
+# Runtime metadata
+# -----------------------------
+run_mode: inference
 task_name: sem_embeds_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 tags:
-- amazon
-- semantic-embeddings-inference
+  - amazon
+  - semantic-embeddings-inference
 
+# -----------------------------
+# Runtime switches
+# -----------------------------
+ckpt_path: null
+seed: 42
+
+# -----------------------------
+# Model
+# -----------------------------
 model:
   _target_: src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
   semantic_embedding_model_input_map:
@@ -23,6 +44,9 @@ model:
       aggregation_strategy:
         _target_: src.common.components.aggregation_strategy.MeanAggregation
 
+# -----------------------------
+# Callbacks and logging
+# -----------------------------
 callbacks:
   pickle_writer:
     _target_: src.utils.inference_utils.LocalPickleWriter
@@ -34,19 +58,11 @@ callbacks:
     prediction_name: embedding
     should_merge_list_of_keyed_tensors_to_single_tensor: true
 
-ckpt_path: null
-
-paths:
-  root_dir: .
-  data_dir: ${data_dir}
-  log_dir: ${paths.root_dir}/logs
-  output_dir: ${hydra:runtime.output_dir}
-  work_dir: ${hydra:runtime.cwd}
-  profile_dir: ${hydra:run.dir}/profile_output
-  metadata_dir: ${paths.output_dir}/metadata
-
 logger: {}
 
+# -----------------------------
+# Trainer
+# -----------------------------
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
@@ -64,6 +80,9 @@ trainer:
   profiler:
     _target_: lightning.pytorch.profilers.PassThroughProfiler
 
+# -----------------------------
+# Data loading
+# -----------------------------
 data_loading:
   tokenizer_config:
     max_length: 128
@@ -76,26 +95,25 @@ data_loading:
       pretrained_model_name_or_path: ${embedding_model}
   features_config:
     features:
-    - name: id
-      num_placeholder_tokens: 0
-      is_item_ids: true
-      embeddings: ???
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - int32
-    - name: text
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - bytes
-      is_text: true
-    - name: embedding
-      type:
-        _target_: torch.__dict__.get
-        _args_:
-        - float32
-      is_embedding: true
+      - name: id
+        num_placeholder_tokens: 0
+        is_item_ids: true
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - int32
+      - name: text
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - bytes
+        is_text: true
+      - name: embedding
+        type:
+          _target_: torch.__dict__.get
+          _args_:
+            - float32
+        is_embedding: true
   dataset_config:
     dataset:
       _target_: src.data.loading.components.interfaces.ItemDatasetConfig
@@ -164,10 +182,20 @@ data_loading:
       dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
 
+# -----------------------------
+# Paths and extras
+# -----------------------------
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
+  profile_dir: ${hydra:run.dir}/profile_output
+  metadata_dir: ${paths.output_dir}/metadata
+
 extras:
   ignore_warnings: false
   enforce_tags: true
   print_config_warnings: true
   print_config: true
-
-seed: 42

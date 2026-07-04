@@ -1,0 +1,21 @@
+# @package _global_
+
+# -----------------------------
+# Defaults
+# -----------------------------
+defaults:
+  - _self_
+  - callbacks: default
+  - logger: default
+  - trainer: default
+  - paths: default
+  - extras: default
+  - hydra: default
+  - experiment: null
+
+# -----------------------------
+# Runtime switches
+# -----------------------------
+# Experiment-level fields such as `run_mode`, `task_name`, `data_dir`,
+# `ckpt_path`, and train/test behavior are owned by `configs/experiment/*.yaml`.
+dry_run: false
