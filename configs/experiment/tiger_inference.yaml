@@ -42,8 +42,6 @@ model:
     user_id: user_id
   postprocessor: null
   aggregator: null
-  weight_tying: true
-  compile: false
   decoder:
     _target_: transformers.models.t5.modeling_t5.T5Stack
     config:

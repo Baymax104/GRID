@@ -232,8 +232,6 @@ model:
   scheduler: ${optim.scheduler}
   loss_function: ${loss.loss_function}
   evaluator: ${eval.evaluator}
-  weight_tying: true
-  compile: false
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id

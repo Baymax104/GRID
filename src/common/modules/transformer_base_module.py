@@ -28,8 +28,6 @@ class TransformerBaseModule(LightningModule):
         scheduler: torch.optim.lr_scheduler._LRScheduler | None,
         loss_function: torch.nn.Module,
         evaluator: Evaluator,
-        weight_tying: bool,
-        compile: bool,
         training_loop_function: callable = None,
         feature_to_model_input_map: dict[str, str] = None,
         decoder: torch.nn.Module = None,
@@ -112,10 +110,7 @@ class TransformerBaseModule(LightningModule):
         raise NotImplementedError("Inherit from this class and implement the model_step method.")
 
     def get_embedding_table(self):
-        if self.hparams.weight_tying:  # type: ignore
-            return self.encoder.get_input_embeddings().weight
-        else:
-            return self.decoder.weight
+        return self.encoder.get_input_embeddings().weight
 
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""
@@ -190,8 +185,6 @@ class TransformerBaseModule(LightningModule):
 
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
-        # if self.hparams.compile and stage == "fit":
-        #     self.net = torch.compile(self.net)
         pass
 
     def configure_optimizers(self) -> dict[str, Any]:
