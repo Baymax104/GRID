@@ -15,8 +15,6 @@ codebook_width: ???
 run_mode: train
 task_name: rvq_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-tags:
-  - amazon-assign-ids-train
 
 # -----------------------------
 # Runtime switches
@@ -233,7 +231,6 @@ paths:
   metadata_dir: ${paths.output_dir}/metadata
 extras:
   ignore_warnings: false
-  enforce_tags: true
   print_config_warnings: true
   print_config: true
 optim:

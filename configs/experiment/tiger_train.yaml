@@ -19,8 +19,6 @@ sequence_length: 200
 run_mode: train
 task_name: tiger_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-tags:
-  - amazon-p5-gr-train
 
 # -----------------------------
 # Runtime switches
@@ -350,7 +348,6 @@ paths:
 
 extras:
   ignore_warnings: false
-  enforce_tags: true
   print_config_warnings: true
   print_config: true
 

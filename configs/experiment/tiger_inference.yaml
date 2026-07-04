@@ -14,8 +14,6 @@ num_hierarchies: ???
 run_mode: inference
 task_name: tiger_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-tags:
-  - amazon-p5-gr-train
 
 # -----------------------------
 # Static experiment inputs
@@ -236,6 +234,5 @@ data_loading:
 # -----------------------------
 extras:
   ignore_warnings: false
-  enforce_tags: true
   print_config_warnings: true
   print_config: true

@@ -16,9 +16,6 @@ embedding_model: ${paths.pretrained_models_dir}/flan-t5-base
 run_mode: inference
 task_name: sem_embeds_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-tags:
-  - amazon
-  - semantic-embeddings-inference
 
 # -----------------------------
 # Runtime switches
@@ -196,6 +193,5 @@ paths:
 
 extras:
   ignore_warnings: false
-  enforce_tags: true
   print_config_warnings: true
   print_config: true

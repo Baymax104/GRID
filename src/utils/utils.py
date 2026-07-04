@@ -37,7 +37,6 @@ def extras(cfg: DictConfig) -> None:
 
     Utilities:
         - Ignoring python warnings
-        - Setting tags from command line
         - Rich config printing
 
     :param cfg: A DictConfig object containing the config tree.
@@ -51,11 +50,6 @@ def extras(cfg: DictConfig) -> None:
     if cfg.extras.get("ignore_warnings"):
         log.info("Disabling python warnings! <cfg.extras.ignore_warnings=True>")
         warnings.filterwarnings("ignore")
-
-    # prompt user to input tags from command line if none are provided in the config
-    if cfg.extras.get("enforce_tags"):
-        log.info("Enforcing tags! <cfg.extras.enforce_tags=True>")
-        rich_utils.enforce_tags(cfg, save_to_file=True)
 
     if cfg.extras.get("print_config_warnings"):
         print_warnings_for_missing_configs(cfg)

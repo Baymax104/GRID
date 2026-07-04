@@ -16,8 +16,6 @@ ckpt_path: ???
 run_mode: inference
 task_name: rkmeans_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-tags:
-  - amazon-assign-ids-inference
 
 # -----------------------------
 # Runtime switches
@@ -175,6 +173,5 @@ data_loading:
 
 extras:
   ignore_warnings: false
-  enforce_tags: true
   print_config_warnings: true
   print_config: true

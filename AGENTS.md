@@ -36,7 +36,7 @@
   - `merged_predictions_tensor.pt`
 
 ## 配置行为
-- 默认 `extras.enforce_tags=True`、`print_config=True`。如果你删掉了 `tags`，运行时会触发交互式提示；自动化执行时保留非空 `tags`。
+- 默认 `print_config=True`。若不想在启动时打印完整配置树，可在 experiment 的 `extras.print_config` 中关闭。
 - 推理类 experiment 通常会在 experiment 顶层显式提供 `ckpt_path`；只有像 `sem_embeds_inference` 这种实验才会显式覆盖成 `null`。
 - `src/utils/launcher_utils.py` 是统一入口 `src/main.py` 共用的装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
 

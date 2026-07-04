@@ -3,7 +3,6 @@ from importlib import import_module
 
 _EXPORTS = {
     "RankedLogger": ("src.utils.pylogger", "RankedLogger"),
-    "enforce_tags": ("src.utils.rich_utils", "enforce_tags"),
     "extras": ("src.utils.utils", "extras"),
     "finalize_loggers": ("src.utils.logging_utils", "finalize_loggers"),
     "instantiate_callbacks": ("src.utils.instantiators", "instantiate_callbacks"),
@@ -23,7 +22,6 @@ def __getattr__(name: str):
 
 __all__ = [
     "RankedLogger",
-    "enforce_tags",
     "extras",
     "finalize_loggers",
     "instantiate_callbacks",

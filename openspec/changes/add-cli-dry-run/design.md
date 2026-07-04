@@ -1,6 +1,6 @@
 ## Context
 
-当前 train / inference 入口完全依赖 Hydra + Lightning 装配。主链路默认会实例化 logger、checkpoint callback 和推理写入 callback，因此即使只是想做一次冒烟验证，也会生成 checkpoint、pickle、tensor、CSV 和 W&B 记录等业务产物。与此同时，Hydra 输出目录、运行日志、`config_tree.log` 与 `tags.log` 已深度绑定到默认运行流程，不适合作为第一版 dry run 的禁写目标。
+当前 train / inference 入口完全依赖 Hydra + Lightning 装配。主链路默认会实例化 logger、checkpoint callback 和推理写入 callback，因此即使只是想做一次冒烟验证，也会生成 checkpoint、pickle、tensor、CSV 和 W&B 记录等业务产物。与此同时，Hydra 输出目录、运行日志与 `config_tree.log` 已深度绑定到默认运行流程，不适合作为第一版 dry run 的禁写目标。
 
 用户希望通过命令行参数 `--dry-run` 启动一个最小规模的真实运行：主链路要真实执行，但只跑单 batch / 单 step，并且不写业务结果。
 

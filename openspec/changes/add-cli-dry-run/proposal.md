@@ -10,7 +10,7 @@
 - 将 `--dry-run` 转换为统一的内部配置开关，例如 `dry_run=true`，避免与 Hydra CLI 冲突。
 - 在 dry run 下保留真实主链路执行，但将运行规模压缩为单 batch / 单 step smoke。
 - 在 dry run 下禁止写入业务结果，包括 checkpoint、prediction pickle/tensor、CSV logger、W&B logger。
-- 保留 Hydra 输出目录、普通日志、`config_tree.log` 与 `tags.log` 等运行元信息写入。
+- 保留 Hydra 输出目录、普通日志与 `config_tree.log` 等运行元信息写入。
 
 ## Capabilities
 
