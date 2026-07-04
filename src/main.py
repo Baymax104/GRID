@@ -21,17 +21,16 @@ torch.set_float32_matmul_precision("medium")
 
 def run_training(cfg: DictConfig) -> None:
     with pipeline_launcher(cfg) as pipeline_modules:
-        if cfg.get("train"):
-            console_logger.info("Starting training!")
-            pipeline_modules.trainer.fit(
-                model=pipeline_modules.model,
-                datamodule=pipeline_modules.datamodule,
-                ckpt_path=cfg.get("ckpt_path"),
-            )
+        console_logger.info("Starting training!")
+        pipeline_modules.trainer.fit(
+            model=pipeline_modules.model,
+            datamodule=pipeline_modules.datamodule,
+            ckpt_path=cfg.get("ckpt_path"),
+        )
 
         train_metrics = pipeline_modules.trainer.callback_metrics
 
-        if cfg.get("test"):
+        if cfg.get("run_test_after_training", False):
             console_logger.info("Starting testing!")
             ckpt_path = None
             checkpoint_callback = getattr(pipeline_modules.trainer, "checkpoint_callback", None)

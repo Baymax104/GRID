@@ -108,7 +108,7 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
         cfg.trainer.max_epochs = 1
         cfg.trainer.limit_predict_batches = 1
 
-        if "train" in cfg:
+        if cfg.get("run_mode") == "train":
             cfg.trainer.max_steps = 1
             cfg.trainer.limit_train_batches = 1
             cfg.trainer.limit_val_batches = 0
@@ -118,8 +118,8 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
             if cfg.get("model") and "train_layer_wise" in cfg.model:
                 cfg.model.train_layer_wise = False
 
-        if "test" in cfg:
-            cfg.test = False
+        if "run_test_after_training" in cfg:
+            cfg.run_test_after_training = False
 
     return cfg
 

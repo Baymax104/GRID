@@ -21,8 +21,7 @@ tags:
 # -----------------------------
 # Runtime switches
 # -----------------------------
-train: true
-test: false
+run_test_after_training: false
 ckpt_path: null
 seed: 42
 
