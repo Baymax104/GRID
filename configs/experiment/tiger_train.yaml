@@ -1,265 +1,270 @@
 # @package _global_
 
-# -----------------------------
-# Manual inputs
-# -----------------------------
 data_dir: ???
 semantic_id_path: ???
 num_hierarchies: ???
 devices: ???
 
-# -----------------------------
-# Static experiment inputs
-# -----------------------------
 sequence_length: 200
 
-# -----------------------------
-# Runtime metadata
-# -----------------------------
 run_mode: train
 task_name: tiger_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 
-# -----------------------------
-# Runtime switches
-# -----------------------------
 run_test_after_training: true
 ckpt_path: null
 seed: 42
 
-# -----------------------------
-# Data loading
-# -----------------------------
-data_loading:
-  features_config:
-    features:
-      - name: sequence_data
-        num_placeholder_tokens: 0
-        semantic_ids: ${semantic_id_path}
-        is_item_ids: true
-        type:
-          _target_: torch.__dict__.get
-          _args_:
-            - int32
-      - name: embedding
-        type:
-          _target_: torch.__dict__.get
-          _args_:
-            - float32
-      - name: text
-        type:
-          _target_: torch.__dict__.get
-          _args_:
-            - bytes
-      - name: user_id
-        is_item_ids: true
-        type:
-          _target_: torch.__dict__.get
-          _args_:
-            - int32
-  dataset_config:
-    dataset:
-      _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
-      user_id_field: user_id
-      min_sequence_length: 1
-      keep_user_id: true
-      features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features},
-        "name", False, "is_item_ids", "True"}
-      num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features},
-        "name", "num_placeholder_tokens"}
-      semantic_id_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features},
-        "name", "semantic_ids"}
-      data_iterator:
-        _target_: src.data.loading.components.iterators.TFRecordIterator
-      preprocessing_functions:
-      - _target_: src.data.loading.components.pre_processing.filter_features_to_consider
+components:
+  data_loading:
+    data_iterator:
+      _target_: src.data.loading.components.iterators.TFRecordIterator
+    dataset_class:
+      _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
+      _partial_: true
+    train_label:
+      sequence_data:
+        transform:
+          _target_: src.data.loading.components.label_function.NextKTokenMasking
+          next_k: ${model.num_hierarchies}
+    eval_label:
+      sequence_data:
+        transform:
+          _target_: src.data.loading.components.label_function.NextKTokenMasking
+          next_k: ${model.num_hierarchies}
+    preprocessing:
+      filter_features: {_target_: src.data.loading.components.pre_processing.filter_features_to_consider, _partial_: true}
+      dense_array: {_target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array, _partial_: true}
+      convert_fields: {_target_: src.data.loading.components.pre_processing.convert_fields_to_tensors, _partial_: true}
+      sparse_to_semantic_id:
+        _target_: src.data.loading.components.pre_processing.map_sparse_id_to_semantic_id
         _partial_: true
-      - _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
-        _partial_: true
-      - _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
-        _partial_: true
-      - _target_: src.data.loading.components.pre_processing.map_sparse_id_to_semantic_id
-        _partial_: true
-        features_to_apply:
-        - sequence_data
+        features_to_apply: [sequence_data]
         num_hierarchies: ${model.num_hierarchies}
-  train_dataloader_config:
-    dataloader:
-      _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
-      dataset_class:
-        _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-        _partial_: true
-      data_folder: ${paths.data_dir}/training
-      should_shuffle_rows: true
-      labels:
+    train_collate:
+      _target_: src.data.loading.components.collate_functions.collate_with_sid_causal_duplicate
+      _partial_: true
+      sequence_length: ${data_loading.train_dataloader.sequence_length}
+      padding_token: ${data_loading.train_dataloader.padding_token}
+      sequence_field_name: sequence_data
+      sid_hierarchy: ${model.num_hierarchies}
+      max_batch_size: 32
+    eval_collate:
+      _target_: src.data.loading.components.collate_functions.collate_fn_train
+      _partial_: true
+      sequence_length: ${data_loading.val_dataloader.sequence_length}
+      padding_token: ${data_loading.val_dataloader.padding_token}
+    train_dataset:
+      _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
+      user_id_field: ${data_loading.dataset.user_id_field}
+      min_sequence_length: ${data_loading.dataset.min_sequence_length}
+      keep_user_id: ${data_loading.dataset.keep_user_id}
+      features_to_consider: ${data_loading.dataset.features_to_consider}
+      num_placeholder_tokens_map: ${data_loading.dataset.num_placeholder_tokens_map}
+      semantic_id_map:
         sequence_data:
-          transform:
-            _target_: src.data.loading.components.label_function.NextKTokenMasking
-            next_k: ${model.num_hierarchies}
-      batch_size_per_device: 32
-      num_workers: 16
-      timeout: 60
-      assign_files_by_size: false
-      oov_token: null
-      masking_token: 0
-      sequence_length: ${sequence_length}
-      padding_token: -1
-      drop_last: true
-      persistent_workers: true
-      collate_fn:
-        _target_: src.data.loading.components.collate_functions.collate_with_sid_causal_duplicate
-        _partial_: true
-        sequence_length: ${data_loading.train_dataloader_config.dataloader.sequence_length}
-        padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
-        sequence_field_name: sequence_data
-        sid_hierarchy: ${model.num_hierarchies}
-        max_batch_size: 32
-      dataset_config:
-        _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
-        user_id_field: user_id
-        min_sequence_length: 1
-        keep_user_id: true
-        features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features},
-          "name", False, "is_item_ids", "True"}
-        num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features},
-          "name", "num_placeholder_tokens"}
-        semantic_id_map:
-          sequence_data:
-            _target_: torch.load
-            _args_:
+          _target_: torch.load
+          _args_:
             - _target_: src.utils.file_utils.open_local_or_remote
               file_path: ${semantic_id_path}
               mode: rb
-        data_iterator:
-          _target_: src.data.loading.components.iterators.TFRecordIterator
-        preprocessing_functions:
-        - _target_: src.data.loading.components.pre_processing.filter_features_to_consider
-          _partial_: true
-        - _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
-          _partial_: true
-        - _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
-          _partial_: true
-        - _target_: src.data.loading.components.pre_processing.map_sparse_id_to_semantic_id
-          _partial_: true
-          features_to_apply:
-          - sequence_data
-          num_hierarchies: ${model.num_hierarchies}
-  val_dataloader_config:
-    dataloader:
+      data_iterator: ${components.data_loading.data_iterator}
+      preprocessing_functions:
+        - ${components.data_loading.preprocessing.filter_features}
+        - ${components.data_loading.preprocessing.dense_array}
+        - ${components.data_loading.preprocessing.convert_fields}
+        - ${components.data_loading.preprocessing.sparse_to_semantic_id}
+    train_dataloader:
       _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
-      dataset_class:
-        _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-        _partial_: true
-      data_folder: ${paths.data_dir}/evaluation
-      should_shuffle_rows: false
-      labels:
-        sequence_data:
-          transform:
-            _target_: src.data.loading.components.label_function.NextKTokenMasking
-            next_k: ${model.num_hierarchies}
-      batch_size_per_device: 8
-      num_workers: 8
-      timeout: 60
-      assign_files_by_size: true
-      oov_token: ${data_loading.train_dataloader_config.dataloader.oov_token}
-      masking_token: ${data_loading.train_dataloader_config.dataloader.masking_token}
-      sequence_length: ${data_loading.train_dataloader_config.dataloader.sequence_length}
-      padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
-      drop_last: false
-      persistent_workers: false
-      collate_fn:
-        _target_: src.data.loading.components.collate_functions.collate_fn_train
-        _partial_: true
-        sequence_length: ${data_loading.train_dataloader_config.dataloader.sequence_length}
-        padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
-      dataset_config: ${data_loading.train_dataloader_config.dataloader.dataset_config}
-      pin_memory: false
-  test_dataloader_config:
-    dataloader:
+      dataset_class: ${components.data_loading.dataset_class}
+      data_folder: ${data_loading.train_dataloader.data_folder}
+      should_shuffle_rows: ${data_loading.train_dataloader.should_shuffle_rows}
+      labels: ${components.data_loading.train_label}
+      batch_size_per_device: ${data_loading.train_dataloader.batch_size_per_device}
+      num_workers: ${data_loading.train_dataloader.num_workers}
+      timeout: ${data_loading.train_dataloader.timeout}
+      assign_files_by_size: ${data_loading.train_dataloader.assign_files_by_size}
+      oov_token: ${data_loading.train_dataloader.oov_token}
+      masking_token: ${data_loading.train_dataloader.masking_token}
+      sequence_length: ${data_loading.train_dataloader.sequence_length}
+      padding_token: ${data_loading.train_dataloader.padding_token}
+      drop_last: ${data_loading.train_dataloader.drop_last}
+      persistent_workers: ${data_loading.train_dataloader.persistent_workers}
+      collate_fn: ${components.data_loading.train_collate}
+      dataset_config: ${components.data_loading.train_dataset}
+      pin_memory: ${data_loading.train_dataloader.pin_memory}
+    val_dataloader:
       _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
-      dataset_class:
-        _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-        _partial_: true
-      data_folder: ${paths.data_dir}/testing
-      should_shuffle_rows: false
-      labels:
-        sequence_data:
-          transform:
-            _target_: src.data.loading.components.label_function.NextKTokenMasking
-            next_k: ${model.num_hierarchies}
-      batch_size_per_device: 8
-      num_workers: 8
-      timeout: 60
-      assign_files_by_size: true
-      oov_token: ${data_loading.train_dataloader_config.dataloader.oov_token}
-      masking_token: ${data_loading.train_dataloader_config.dataloader.masking_token}
-      sequence_length: ${data_loading.train_dataloader_config.dataloader.sequence_length}
-      padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
-      drop_last: false
-      persistent_workers: false
-      collate_fn:
-        _target_: src.data.loading.components.collate_functions.collate_fn_train
-        _partial_: true
-        sequence_length: ${data_loading.train_dataloader_config.dataloader.sequence_length}
-        padding_token: ${data_loading.train_dataloader_config.dataloader.padding_token}
-      dataset_config: ${data_loading.train_dataloader_config.dataloader.dataset_config}
-      pin_memory: false
-  datamodule:
-    _target_: src.data.loading.datamodules.sequence.SequenceDataModule
-    train_dataloader_config: ${..train_dataloader_config.dataloader}
-    val_dataloader_config: ${..val_dataloader_config.dataloader}
-    test_dataloader_config: ${..test_dataloader_config.dataloader}
+      dataset_class: ${components.data_loading.dataset_class}
+      data_folder: ${data_loading.val_dataloader.data_folder}
+      should_shuffle_rows: ${data_loading.val_dataloader.should_shuffle_rows}
+      labels: ${components.data_loading.eval_label}
+      batch_size_per_device: ${data_loading.val_dataloader.batch_size_per_device}
+      num_workers: ${data_loading.val_dataloader.num_workers}
+      timeout: ${data_loading.val_dataloader.timeout}
+      assign_files_by_size: ${data_loading.val_dataloader.assign_files_by_size}
+      oov_token: ${data_loading.val_dataloader.oov_token}
+      masking_token: ${data_loading.val_dataloader.masking_token}
+      sequence_length: ${data_loading.val_dataloader.sequence_length}
+      padding_token: ${data_loading.val_dataloader.padding_token}
+      drop_last: ${data_loading.val_dataloader.drop_last}
+      persistent_workers: ${data_loading.val_dataloader.persistent_workers}
+      collate_fn: ${components.data_loading.eval_collate}
+      dataset_config: ${components.data_loading.train_dataset}
+      pin_memory: ${data_loading.val_dataloader.pin_memory}
+    test_dataloader:
+      _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
+      dataset_class: ${components.data_loading.dataset_class}
+      data_folder: ${data_loading.test_dataloader.data_folder}
+      should_shuffle_rows: ${data_loading.test_dataloader.should_shuffle_rows}
+      labels: ${components.data_loading.eval_label}
+      batch_size_per_device: ${data_loading.test_dataloader.batch_size_per_device}
+      num_workers: ${data_loading.test_dataloader.num_workers}
+      timeout: ${data_loading.test_dataloader.timeout}
+      assign_files_by_size: ${data_loading.test_dataloader.assign_files_by_size}
+      oov_token: ${data_loading.test_dataloader.oov_token}
+      masking_token: ${data_loading.test_dataloader.masking_token}
+      sequence_length: ${data_loading.test_dataloader.sequence_length}
+      padding_token: ${data_loading.test_dataloader.padding_token}
+      drop_last: ${data_loading.test_dataloader.drop_last}
+      persistent_workers: ${data_loading.test_dataloader.persistent_workers}
+      collate_fn: ${components.data_loading.eval_collate}
+      dataset_config: ${components.data_loading.train_dataset}
+      pin_memory: ${data_loading.test_dataloader.pin_memory}
+    datamodule:
+      _target_: src.data.loading.datamodules.sequence.SequenceDataModule
+      train_dataloader_config: ${components.data_loading.train_dataloader}
+      val_dataloader_config: ${components.data_loading.val_dataloader}
+      test_dataloader_config: ${components.data_loading.test_dataloader}
+  model:
+    huggingface_model:
+      _target_: transformers.T5EncoderModel
+      config:
+        _target_: transformers.T5Config
+        vocab_size: 256
+        d_model: 128
+        num_heads: 6
+        dropout_rate: 0.1
+        d_ff: 1024
+        d_kv: 64
+        num_layers: 4
+    decoder:
+      _target_: transformers.models.t5.modeling_t5.T5Stack
+      config:
+        _target_: transformers.models.t5.configuration_t5.T5Config
+        vocab_size: ${components.model.huggingface_model.config.vocab_size}
+        d_model: ${components.model.huggingface_model.config.d_model}
+        num_heads: ${components.model.huggingface_model.config.num_heads}
+        dropout_rate: 0.1
+        d_ff: ${components.model.huggingface_model.config.d_ff}
+        d_kv: ${components.model.huggingface_model.config.d_kv}
+        num_layers: 4
+        is_decoder: true
+        is_encoder_decoder: false
+    loss_function:
+      _target_: torch.nn.CrossEntropyLoss
+      ignore_index: -1
+    optimizer:
+      _target_: torch.optim.AdamW
+      _partial_: true
+      lr: 3.0e-4
+      weight_decay: 0.001
+    scheduler:
+      _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
+      _partial_: true
+      warmup_steps: 1000
+      min_ratio: 0.05
+      scheduler_steps: ${trainer.max_steps}
+    evaluator:
+      _target_: src.common.components.eval_metrics.SIDRetrievalEvaluator
+      top_k_list: [5, 10]
+      metrics:
+        ndcg: {_target_: src.common.components.eval_metrics.NDCG, _partial_: true}
+        recall: {_target_: src.common.components.eval_metrics.Recall, _partial_: true}
+
+data_loading:
+  features:
+    - name: sequence_data
+      num_placeholder_tokens: 0
+      semantic_ids: ${semantic_id_path}
+      is_item_ids: true
+      type: {_target_: torch.__dict__.get, _args_: [int32]}
+    - name: embedding
+      type: {_target_: torch.__dict__.get, _args_: [float32]}
+    - name: text
+      type: {_target_: torch.__dict__.get, _args_: [bytes]}
+    - name: user_id
+      is_item_ids: true
+      type: {_target_: torch.__dict__.get, _args_: [int32]}
+  dataset:
+    user_id_field: user_id
+    min_sequence_length: 1
+    keep_user_id: true
+    features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features}, "name", False, "is_item_ids", "True"}
+    num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name", "num_placeholder_tokens"}
+  train_dataloader:
+    data_folder: ${paths.data_dir}/training
+    should_shuffle_rows: true
+    batch_size_per_device: 32
+    num_workers: 16
+    timeout: 60
+    assign_files_by_size: false
+    oov_token: null
+    masking_token: 0
+    sequence_length: ${sequence_length}
+    padding_token: -1
+    drop_last: true
+    persistent_workers: true
+    pin_memory: true
+  val_dataloader:
+    data_folder: ${paths.data_dir}/evaluation
+    should_shuffle_rows: false
+    batch_size_per_device: 8
+    num_workers: 8
+    timeout: 60
+    assign_files_by_size: true
+    oov_token: ${data_loading.train_dataloader.oov_token}
+    masking_token: ${data_loading.train_dataloader.masking_token}
+    sequence_length: ${data_loading.train_dataloader.sequence_length}
+    padding_token: ${data_loading.train_dataloader.padding_token}
+    drop_last: false
+    persistent_workers: false
+    pin_memory: false
+  test_dataloader:
+    data_folder: ${paths.data_dir}/testing
+    should_shuffle_rows: false
+    batch_size_per_device: 8
+    num_workers: 8
+    timeout: 60
+    assign_files_by_size: true
+    oov_token: ${data_loading.train_dataloader.oov_token}
+    masking_token: ${data_loading.train_dataloader.masking_token}
+    sequence_length: ${data_loading.train_dataloader.sequence_length}
+    padding_token: ${data_loading.train_dataloader.padding_token}
+    drop_last: false
+    persistent_workers: false
+    pin_memory: false
+  datamodule: ${components.data_loading.datamodule}
 
 model:
   _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
-
-  # TransformerBaseModule
-  huggingface_model:
-    _target_: transformers.T5EncoderModel
-    config:
-      _target_: transformers.T5Config
-      vocab_size: 256  # it corresponds to codebook width
-      d_model: 128
-      num_heads: 6
-      dropout_rate: 0.1
-      d_ff: 1024
-      d_kv: 64
-      num_layers: 4
+  huggingface_model: ${components.model.huggingface_model}
   postprocessor: null
   aggregator: null
-  optimizer: ${optim.optimizer}
-  scheduler: ${optim.scheduler}
-  loss_function: ${loss.loss_function}
-  evaluator: ${eval.evaluator}
+  optimizer: ${components.model.optimizer}
+  scheduler: ${components.model.scheduler}
+  loss_function: ${components.model.loss_function}
+  evaluator: ${components.model.evaluator}
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id
-  decoder:
-    _target_: transformers.models.t5.modeling_t5.T5Stack
-    config:
-      _target_: transformers.models.t5.configuration_t5.T5Config
-      vocab_size: ${model.huggingface_model.config.vocab_size}
-      d_model: ${model.huggingface_model.config.d_model}
-      num_heads: ${model.huggingface_model.config.num_heads}
-      dropout_rate: 0.1
-      d_ff: ${model.huggingface_model.config.d_ff}
-      d_kv: ${model.huggingface_model.config.d_kv}
-      num_layers: 4
-      is_decoder: true
-      is_encoder_decoder: false
-
-  # SemanticIDGenerativeRecommender
-  codebooks: ${data_loading.train_dataloader_config.dataloader.dataset_config.semantic_id_map.sequence_data}
+  decoder: ${components.model.decoder}
+  codebooks: ${components.data_loading.train_dataset.semantic_id_map.sequence_data}
   num_hierarchies: ${num_hierarchies}
   should_check_prefix: true
-
-   # SemanticIDEncoderDecoder
   num_user_bins: null
   mlp_layers: 2
 
-# -----------------------------
-# Callbacks and logging
-# -----------------------------
 callbacks:
   model_checkpoint:
     _target_: lightning.pytorch.callbacks.ModelCheckpoint
@@ -276,7 +281,6 @@ callbacks:
     train_time_interval: null
     every_n_epochs: null
     save_on_train_epoch_end: false
-
   early_stopping:
     _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: ${callbacks.model_checkpoint.monitor}
@@ -290,9 +294,6 @@ callbacks:
     divergence_threshold: null
     check_on_train_epoch_end: false
   model_summary: null
-  # restart_job:
-  #   _target_: src.utils.restart_job.RestartAndLoadCheckpointCallback
-  #   metadata_dir: ${paths.metadata_dir}
 
 logger:
   csv:
@@ -307,9 +308,6 @@ logger:
     project: GRID
     group: tiger
 
-# -----------------------------
-# Trainer
-# -----------------------------
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
@@ -325,15 +323,11 @@ trainer:
   val_check_interval: 500
   deterministic: false
   accumulate_grad_batches: 1
-  profiler:
-    _target_: lightning.pytorch.profilers.PassThroughProfiler
+  profiler: {_target_: lightning.pytorch.profilers.PassThroughProfiler}
   strategy: ddp
   sync_batchnorm: false
   num_sanity_val_steps: 0
 
-# -----------------------------
-# Paths and extras
-# -----------------------------
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -347,38 +341,3 @@ extras:
   ignore_warnings: false
   print_config_warnings: true
   print_config: true
-
-# -----------------------------
-# Loss, optimizer and evaluation
-# -----------------------------
-loss:
-  loss_function:
-    _target_: torch.nn.CrossEntropyLoss
-    ignore_index: -1
-
-optim:
-  optimizer:
-    _target_: torch.optim.AdamW
-    _partial_: true
-    lr: 3.0e-4
-    weight_decay: 0.001
-  scheduler:
-    _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
-    _partial_: true
-    warmup_steps: 1000
-    min_ratio: 0.05
-    scheduler_steps: ${trainer.max_steps}
-
-eval:
-  evaluator:
-    _target_: src.common.components.eval_metrics.SIDRetrievalEvaluator
-    top_k_list:
-    - 5
-    - 10
-    metrics:
-      ndcg:
-        _target_: src.common.components.eval_metrics.NDCG
-        _partial_: true
-      recall:
-        _target_: src.common.components.eval_metrics.Recall
-        _partial_: true

@@ -1,8 +1,5 @@
 # @package _global_
 
-# -----------------------------
-# Manual inputs
-# -----------------------------
 data_dir: ???
 embedding_path: ???
 embedding_dim: ???
@@ -10,69 +7,162 @@ num_hierarchies: ???
 codebook_width: ???
 devices: ???
 
-# -----------------------------
-# Runtime metadata
-# -----------------------------
 run_mode: train
 task_name: rkmeans_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 
-# -----------------------------
-# Runtime switches
-# -----------------------------
 run_test_after_training: false
 ckpt_path: null
 seed: 42
 
-# -----------------------------
-# Data loading
-# -----------------------------
+components:
+  data_loading:
+    data_iterator:
+      _target_: src.data.loading.components.iterators.TFRecordIterator
+    dataset_class:
+      _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
+      _partial_: true
+    collate:
+      _target_: src.data.loading.components.collate_functions.collate_fn_items
+      _partial_: true
+      item_id_field: ${data_loading.dataset.item_id_field}
+      feature_to_input_name: ${data_loading.dataloaders.feature_to_input_name}
+    preprocessing:
+      filter_features:
+        _target_: src.data.loading.components.pre_processing.filter_features_to_consider
+        _partial_: true
+      dense_array:
+        _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
+        _partial_: true
+      convert_fields:
+        _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
+        _partial_: true
+      sparse_to_embedding:
+        _target_: src.data.loading.components.pre_processing.map_sparse_id_to_embedding
+        _partial_: true
+        sparse_id_field: id
+        embedding_field_to_add: embedding
+    dataset:
+      _target_: src.data.loading.components.interfaces.ItemDatasetConfig
+      item_id_field: ${data_loading.dataset.item_id_field}
+      keep_item_id: ${data_loading.dataset.keep_item_id}
+      data_iterator: ${components.data_loading.data_iterator}
+      features_to_consider: ${data_loading.dataset.features_to_consider}
+      embedding_map: ${data_loading.dataset.embedding_map}
+      num_placeholder_tokens_map: ${data_loading.dataset.num_placeholder_tokens_map}
+      preprocessing_functions:
+        - ${components.data_loading.preprocessing.filter_features}
+        - ${components.data_loading.preprocessing.dense_array}
+        - ${components.data_loading.preprocessing.convert_fields}
+        - ${components.data_loading.preprocessing.sparse_to_embedding}
+      field_type_map: ${data_loading.dataset.field_type_map}
+    train_dataloader:
+      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+      dataset_class: ${components.data_loading.dataset_class}
+      data_folder: ${data_loading.dataloaders.train.data_folder}
+      should_shuffle_rows: ${data_loading.dataloaders.train.should_shuffle_rows}
+      batch_size_per_device: ${data_loading.dataloaders.train.batch_size_per_device}
+      num_workers: ${data_loading.dataloaders.train.num_workers}
+      assign_files_by_size: ${data_loading.dataloaders.train.assign_files_by_size}
+      timeout: ${data_loading.dataloaders.train.timeout}
+      drop_last: ${data_loading.dataloaders.train.drop_last}
+      pin_memory: ${data_loading.dataloaders.train.pin_memory}
+      persistent_workers: ${data_loading.dataloaders.train.persistent_workers}
+      collate_fn: ${components.data_loading.collate}
+      dataset_config: ${components.data_loading.dataset}
+      limit_files: ${data_loading.dataloaders.train.limit_files}
+    val_dataloader:
+      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+      dataset_class: ${components.data_loading.dataset_class}
+      data_folder: ${data_loading.dataloaders.val.data_folder}
+      should_shuffle_rows: ${data_loading.dataloaders.val.should_shuffle_rows}
+      batch_size_per_device: ${data_loading.dataloaders.val.batch_size_per_device}
+      num_workers: ${data_loading.dataloaders.val.num_workers}
+      assign_files_by_size: ${data_loading.dataloaders.val.assign_files_by_size}
+      timeout: ${data_loading.dataloaders.val.timeout}
+      drop_last: ${data_loading.dataloaders.val.drop_last}
+      pin_memory: ${data_loading.dataloaders.val.pin_memory}
+      persistent_workers: ${data_loading.dataloaders.val.persistent_workers}
+      collate_fn: ${components.data_loading.collate}
+      dataset_config: ${components.data_loading.dataset}
+      limit_files: ${data_loading.dataloaders.val.limit_files}
+    test_dataloader:
+      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+      dataset_class: ${components.data_loading.dataset_class}
+      data_folder: ${data_loading.dataloaders.test.data_folder}
+      should_shuffle_rows: ${data_loading.dataloaders.test.should_shuffle_rows}
+      batch_size_per_device: ${data_loading.dataloaders.test.batch_size_per_device}
+      num_workers: ${data_loading.dataloaders.test.num_workers}
+      assign_files_by_size: ${data_loading.dataloaders.test.assign_files_by_size}
+      timeout: ${data_loading.dataloaders.test.timeout}
+      drop_last: ${data_loading.dataloaders.test.drop_last}
+      pin_memory: ${data_loading.dataloaders.test.pin_memory}
+      persistent_workers: ${data_loading.dataloaders.test.persistent_workers}
+      collate_fn: ${components.data_loading.collate}
+      dataset_config: ${components.data_loading.dataset}
+      limit_files: ${data_loading.dataloaders.test.limit_files}
+    datamodule:
+      _target_: src.data.loading.datamodules.item.ItemDataModule
+      train_dataloader_config: ${components.data_loading.train_dataloader}
+      val_dataloader_config: ${components.data_loading.val_dataloader}
+      test_dataloader_config: ${components.data_loading.test_dataloader}
+  model:
+    quantization_layer:
+      _target_: src.quantization.mini_batch_kmeans.MiniBatchKMeans
+      n_clusters: ${codebook_width}
+      n_features: ${model.input_dim}
+      distance_function:
+        _target_: src.common.components.distance_functions.SquaredEuclideanDistance
+      initializer:
+        _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
+        n_clusters: ${codebook_width}
+        distance_function: ${components.model.quantization_layer.distance_function}
+        initialize_on_cpu: false
+      init_buffer_size: ${model.init_buffer_size}
+      optimizer: null
+    optimizer:
+      _target_: torch.optim.SGD
+      _partial_: true
+      lr: 0.5
+    scheduler:
+      _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
+      _partial_: true
+      warmup_steps: 100
+      min_ratio: 0.3
+      scheduler_steps: ${trainer.max_steps}
+    training_loop_function:
+      _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
+      _partial_: true
+
 data_loading:
-  features_config:
-    features:
+  features:
     - name: id
       num_placeholder_tokens: 0
       is_item_ids: true
       embeddings:
         _target_: torch.load
         _args_:
-        - _target_: src.utils.file_utils.open_local_or_remote
-          file_path: ${embedding_path}
-          mode: rb
+          - _target_: src.utils.file_utils.open_local_or_remote
+            file_path: ${embedding_path}
+            mode: rb
       type:
         _target_: torch.__dict__.get
-        _args_:
-        - int32
-  dataset_config:
-    dataset:
-      _target_: src.data.loading.components.interfaces.ItemDatasetConfig
-      item_id_field: id
-      keep_item_id: true
-      data_iterator:
-        _target_: src.data.loading.components.iterators.TFRecordIterator
-      features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features_config.features}, "name", False, "is_item_ids", "True"}
-      embedding_map:
-        id: ${data_loading.features_config.features[0].embeddings}
-      num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features}, "name", "num_placeholder_tokens"}
-      preprocessing_functions:
-      - _target_: src.data.loading.components.pre_processing.filter_features_to_consider
-        _partial_: true
-      - _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
-        _partial_: true
-      - _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
-        _partial_: true
-      - _target_: src.data.loading.components.pre_processing.map_sparse_id_to_embedding
-        _partial_: true
-        sparse_id_field: id
-        embedding_field_to_add: embedding
-      field_type_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features}, "name", "type"}
-  datamodule:
-    _target_: src.data.loading.datamodules.item.ItemDataModule
-    train_dataloader_config:
-      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
-      dataset_class:
-        _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-        _partial_: true
+        _args_: [int32]
+  dataset:
+    item_id_field: id
+    keep_item_id: true
+    features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features}, "name", False, "is_item_ids", "True"}
+    embedding_map:
+      id: ${data_loading.features[0].embeddings}
+    num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name", "num_placeholder_tokens"}
+    field_type_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name", "type"}
+  dataloaders:
+    feature_to_input_name:
+      id: item_ids
+      text: text_tokens
+      text_mask: text_mask
+      embedding: input_embedding
+    train:
       data_folder: ${paths.data_dir}/items
       should_shuffle_rows: true
       batch_size_per_device: 2048
@@ -82,22 +172,8 @@ data_loading:
       drop_last: false
       pin_memory: true
       persistent_workers: true
-      collate_fn:
-        _target_: src.data.loading.components.collate_functions.collate_fn_items
-        _partial_: true
-        item_id_field: ${data_loading.dataset_config.dataset.item_id_field}
-        feature_to_input_name:
-          id: item_ids
-          text: text_tokens
-          text_mask: text_mask
-          embedding: input_embedding
-      dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
-    val_dataloader_config:
-      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
-      dataset_class:
-        _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-        _partial_: true
+    val:
       data_folder: ${paths.data_dir}/items
       should_shuffle_rows: false
       batch_size_per_device: 256
@@ -107,22 +183,8 @@ data_loading:
       drop_last: false
       pin_memory: false
       persistent_workers: true
-      collate_fn:
-        _target_: src.data.loading.components.collate_functions.collate_fn_items
-        _partial_: true
-        item_id_field: ${data_loading.dataset_config.dataset.item_id_field}
-        feature_to_input_name:
-          id: item_ids
-          text: text_tokens
-          text_mask: text_mask
-          embedding: input_embedding
-      dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
-    test_dataloader_config:
-      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
-      dataset_class:
-        _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-        _partial_: true
+    test:
       data_folder: ${paths.data_dir}/items
       should_shuffle_rows: false
       batch_size_per_device: 256
@@ -132,21 +194,9 @@ data_loading:
       drop_last: false
       pin_memory: false
       persistent_workers: true
-      collate_fn:
-        _target_: src.data.loading.components.collate_functions.collate_fn_items
-        _partial_: true
-        item_id_field: ${data_loading.dataset_config.dataset.item_id_field}
-        feature_to_input_name:
-          id: item_ids
-          text: text_tokens
-          text_mask: text_mask
-          embedding: input_embedding
-      dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
+  datamodule: ${components.data_loading.datamodule}
 
-# -----------------------------
-# Model
-# -----------------------------
 model:
   _target_: src.quantization.residual_quantization.ResidualQuantization
   track_residuals: true
@@ -156,37 +206,12 @@ model:
   input_dim: ${embedding_dim}
   n_layers: ${num_hierarchies}
   init_buffer_size: 3072
-  quantization_layer:
-    _target_: src.quantization.mini_batch_kmeans.MiniBatchKMeans
-    n_clusters: ${codebook_width}
-    n_features: ${model.input_dim}
-    distance_function:
-      _target_: src.common.components.distance_functions.SquaredEuclideanDistance
-    initializer:
-      _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
-      n_clusters: ${model.quantization_layer.n_clusters}
-      distance_function: ${model.quantization_layer.distance_function}
-      initialize_on_cpu: false
-    init_buffer_size: ${model.init_buffer_size}
-    optimizer: null
-  optimizer:
-    _target_: torch.optim.SGD
-    _partial_: true
-    lr: 0.5
-  scheduler:
-    _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
-    _partial_: true
-    warmup_steps: 100
-    min_ratio: 0.3
-    scheduler_steps: ${trainer.max_steps}
+  quantization_layer: ${components.model.quantization_layer}
+  optimizer: ${components.model.optimizer}
+  scheduler: ${components.model.scheduler}
   quantization_layer_list: null
-  training_loop_function:
-    _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
-    _partial_: true
+  training_loop_function: ${components.model.training_loop_function}
 
-# -----------------------------
-# Callbacks and logging
-# -----------------------------
 callbacks:
   model_checkpoint:
     _target_: lightning.pytorch.callbacks.ModelCheckpoint
@@ -219,9 +244,6 @@ logger:
     project: GRID
     group: rkmeans
 
-# -----------------------------
-# Trainer
-# -----------------------------
 trainer:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
@@ -241,9 +263,6 @@ trainer:
   sync_batchnorm: true
   num_sanity_val_steps: 0
 
-# -----------------------------
-# Paths and extras
-# -----------------------------
 paths:
   root_dir: .
   data_dir: ${data_dir}
