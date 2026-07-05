@@ -23,6 +23,7 @@ dependencies = [
     # 仅 Linux 安装
     "torchrec==1.4.0; sys_platform == 'linux'",
     "pytz>=2026.2",
+    "omegaconf>=2.3.1",
 ]
 
 [[tool.uv.index]]
