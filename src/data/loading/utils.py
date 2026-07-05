@@ -15,9 +15,8 @@ def assign_files_to_workers(
     total_workers: int,
     assign_by_size: bool,
     should_shuffle_rows: bool,
-    assign_all_files_per_worker: bool,
 ) -> tuple[Dict[int, List[str]], bool]:
-    """Assign each file path in `list_of_files` to either one or all workers.
+    """Assign each file path in `list_of_files` across workers.
 
     - If `total_workers == 0`, then the function returns a single-key dict
       mapping 0 to `list_of_files` as well as a boolean indicating that the
@@ -37,22 +36,20 @@ def assign_files_to_workers(
     :param total_workers: The number of workers among which to assign files.
     :param assign_by_size: Whether to assign files to balance size (if True),
         or to assign randomly.
-    :param assign_all_files_per_worker: Whether to assign all files to each
-        worker.
     :param should_shuffle_rows: Whether to shuffle rows when assigning files.
 
     :return: A dictionary mapping worker indices to file paths and a boolean
         indicating whether files have been assigned to all workers (i.e. each
         file is shared among all workers).
-    NOTE: The second returned parameter is currently ignored by
-    `sequence_datamodule.py` but it will be used after an upcoming PR.
+    NOTE: The second returned parameter is currently ignored by the datamodule
+    layer but it will be used after an upcoming PR.
     """
     if total_workers == 0:
         return {0: list_of_files}, True
 
     # If more workers than files, then each worker gets all files, but reads
     # only a fraction of the rows
-    if len(list_of_files) < total_workers or assign_all_files_per_worker:
+    if len(list_of_files) < total_workers:
         return {worker: list_of_files.copy() for worker in range(total_workers)}, True
 
     if not assign_by_size:

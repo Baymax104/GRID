@@ -16,7 +16,6 @@ class BaseDataset:
         data_folder: str,
         should_shuffle_rows: bool = False,
         is_for_training: bool = True,
-        assign_all_files_per_worker: bool = False,
     ):
         """
         Base class for all datasets. This class is used to set up the dataset and provide the list of files to be used.
@@ -25,10 +24,6 @@ class BaseDataset:
             data_folder (str): Path to the folder where the data is stored.
             should_shuffle_rows (bool): Whether to shuffle the rows of the dataset.
             is_for_training (bool): Whether the dataset is for training or not.
-            assign_all_files_per_worker (bool): Whether to assign all files to each worker or not.
-                This will enable each worker to access all files. Each worker will locally shuffle the files.
-                This would be useful for small datasets. In smaller datasets, if each worker only observes a subset of the files,
-                it may not be able to learn the distribution of the data.
         """
         self.global_worker_id = None
         self.total_workers = None
@@ -38,7 +33,6 @@ class BaseDataset:
         self.data_folder = data_folder
         self.list_of_file_paths = []
         self.is_for_training = is_for_training
-        self.assign_all_files_per_worker = assign_all_files_per_worker
 
     def set_list_of_files(self, list_of_files: List[str]):
         self.list_of_file_paths = list_of_files
@@ -74,10 +68,7 @@ class BaseDataset:
     def get_list_of_worker_files(self):
         # Get information about worker and then separate only files that belong to this worker
         worker_id, num_workers = self.get_worker_id_and_num_workers()
-        if self.assign_all_files_per_worker:
-            worker_files = self.list_of_file_paths
-        else:
-            worker_files = self.list_of_file_paths[worker_id::num_workers]
+        worker_files = self.list_of_file_paths[worker_id::num_workers]
         command_line_logger.debug(f"GPU Worker: {self.global_worker_id}/{self.total_workers} CPU Worker {worker_id} has {len(worker_files)} files")
         return worker_files
 
@@ -98,14 +89,12 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         data_folder: str,
         should_shuffle_rows: bool = False,
         is_for_training: bool = True,
-        assign_all_files_per_worker: bool = False,
     ):
         super().__init__(
             dataset_config=dataset_config,
             data_folder=data_folder,
             should_shuffle_rows=should_shuffle_rows,
             is_for_training=is_for_training,
-            assign_all_files_per_worker=assign_all_files_per_worker,
         )
         self.data_iterator = dataset_config.data_iterator
         self.dataset_to_iterate = None
@@ -122,10 +111,7 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         self.data_iterator.update_list_of_file_paths(current_worker_files)
 
         # here we use global_dataloader_worker_id as the seed for shuffling
-        # this doesn't matter for the case where workers have non-overlapping files
-        # but it does matter for the case where workers have all files
-        # (e.g. when using assign_all_files_per_worker)
-        # the same seed is used for all workers would cause duplicated examples returned by different workers
+        # this keeps file and row shuffling stable across worker processes.
         if self.should_shuffle_rows:
             self.data_iterator = self.data_iterator.shuffle(seed=self.global_dataloader_worker_id)
 

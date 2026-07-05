@@ -93,7 +93,6 @@ data_loading:
           embedding: input_embedding
       dataset_config: ${data_loading.dataset_config.dataset}
       limit_files: null
-      assign_all_files_per_worker: true
     val_dataloader_config:
       _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
       dataset_class:

@@ -121,10 +121,6 @@ class SequenceDataloaderConfig(BaseDataloaderConfig):
         Whether to shuffle rows between epochs.
     persistent_workers: bool = False
         Whether to maintain worker processes across epochs.
-    assign_all_files_per_worker: bool = False
-        Whether to assign all files to each worker.
-        (NOTE: this should only be activated for training, not for evaluation,
-        as it will cause the workers to have overlapping files.)
     """
 
     dataset_class: IterableDataset
@@ -144,7 +140,6 @@ class SequenceDataloaderConfig(BaseDataloaderConfig):
     should_shuffle_rows: bool = False
     persistent_workers: bool = False
     timeout: int = 0
-    assign_all_files_per_worker: bool = False
 
 
 @dataclass
@@ -322,7 +317,6 @@ class ItemDataloaderConfig(BaseDataloaderConfig):
     timeout: int = 0
     oov_token: Optional[int] = 0
     limit_files: Optional[int] = None
-    assign_all_files_per_worker: bool = False
 
 
 @dataclass
