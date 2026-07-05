@@ -206,7 +206,7 @@ data_loading:
       dataset_config: ${data_loading.train_dataloader_config.dataloader.dataset_config}
       pin_memory: false
   datamodule:
-    _target_: src.data.loading.datamodules.sequence_datamodule.SequenceDataModule
+    _target_: src.data.loading.datamodules.sequence.SequenceDataModule
     train_dataloader_config: ${..train_dataloader_config.dataloader}
     val_dataloader_config: ${..val_dataloader_config.dataloader}
     test_dataloader_config: ${..test_dataloader_config.dataloader}

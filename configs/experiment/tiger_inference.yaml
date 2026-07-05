@@ -224,7 +224,7 @@ data_loading:
           num_hierarchies: ${model.num_hierarchies}
       pin_memory: false
   datamodule:
-    _target_: src.data.loading.datamodules.sequence_datamodule.SequenceDataModule
+    _target_: src.data.loading.datamodules.sequence.SequenceDataModule
     predict_dataloader_config: ${..predict_dataloader_config.dataloader}
 
 # -----------------------------

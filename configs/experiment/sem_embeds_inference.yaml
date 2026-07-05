@@ -152,7 +152,7 @@ data_loading:
         - text_mask
       field_type_map: ${create_map_from_list_of_dicts:${data_loading.features_config.features}, "name", "type"}
   datamodule:
-    _target_: src.data.loading.datamodules.sequence_datamodule.ItemDataModule
+    _target_: src.data.loading.datamodules.item.ItemDataModule
     predict_dataloader_config:
       _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
       dataset_class:
