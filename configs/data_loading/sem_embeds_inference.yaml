@@ -1,0 +1,120 @@
+# @package _global_
+
+data_iterator:
+  _target_: src.data.loading.components.iterators.TFRecordIterator
+dataset_class:
+  _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
+  _partial_: true
+collate:
+  _target_: src.data.loading.components.collate_functions.collate_fn_items
+  _partial_: true
+  item_id_field: ${data_loading.dataset.item_id_field}
+  feature_to_input_name: ${data_loading.predict_dataloader.feature_to_input_name}
+preprocessing:
+  filter_features:
+    _target_: src.data.loading.components.pre_processing.filter_features_to_consider
+    _partial_: true
+  dense_array:
+    _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
+    _partial_: true
+    features_to_apply:
+    - id
+    - text
+  squeeze_text:
+    _target_: src.data.loading.components.pre_processing.squeeze_tensor_in_place
+    _partial_: true
+    features_to_apply:
+    - text
+  convert_id:
+    _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
+    _partial_: true
+    features_to_apply:
+    - id
+  bytes_to_string:
+    _target_: src.data.loading.components.pre_processing.convert_bytes_to_string
+    _partial_: true
+    features_to_apply:
+    - text
+  tokenize_text:
+    _target_: src.data.loading.components.pre_processing.tokenize_text_features
+    _partial_: true
+    features_to_apply:
+    - text
+    tokenizer_config: ${data_loading.tokenizer}
+  squeeze_tokenized:
+    _target_: src.data.loading.components.pre_processing.squeeze_tensor_in_place
+    _partial_: true
+    features_to_apply:
+    - text
+    - text_mask
+dataset:
+  _target_: src.data.loading.components.interfaces.ItemDatasetConfig
+  item_id_field: id
+  keep_item_id: true
+  data_iterator: ${data_loading.data_iterator}
+  features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features},
+    "name", False, "is_text", "True"}
+  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features},
+    "name", "num_placeholder_tokens"}
+  preprocessing_functions:
+  - ${data_loading.preprocessing.filter_features}
+  - ${data_loading.preprocessing.dense_array}
+  - ${data_loading.preprocessing.squeeze_text}
+  - ${data_loading.preprocessing.convert_id}
+  - ${data_loading.preprocessing.bytes_to_string}
+  - ${data_loading.preprocessing.tokenize_text}
+  - ${data_loading.preprocessing.squeeze_tokenized}
+  field_type_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name",
+    "type"}
+predict_dataloader:
+  _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+  dataset_class: ${data_loading.dataset_class}
+  data_folder: ${paths.data_dir}/items
+  should_shuffle_rows: false
+  batch_size_per_device: 8
+  num_workers: 2
+  assign_files_by_size: true
+  timeout: 60
+  drop_last: false
+  pin_memory: false
+  persistent_workers: true
+  collate_fn: ${data_loading.collate}
+  dataset_config: ${data_loading.dataset}
+  limit_files: null
+  feature_to_input_name:
+    id: item_ids
+    text: text_tokens
+    text_mask: text_mask
+    embedding: input_embedding
+datamodule:
+  _target_: src.data.loading.datamodules.item.ItemDataModule
+  predict_dataloader_config: ${data_loading.predict_dataloader}
+tokenizer:
+  max_length: 128
+  padding: max_length
+  truncation: true
+  add_special_tokens: true
+  postprocess_eos_token: false
+  tokenizer:
+    _target_: transformers.AutoTokenizer.from_pretrained
+    pretrained_model_name_or_path: ${embedding_model}
+features:
+- name: id
+  num_placeholder_tokens: 0
+  is_item_ids: true
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - int32
+- name: text
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - bytes
+  is_text: true
+- name: embedding
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - float32
+  is_embedding: true

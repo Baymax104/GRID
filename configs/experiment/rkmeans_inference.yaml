@@ -1,203 +1,21 @@
 # @package _global_
 
+defaults:
+- /data_loading@data_loading: rkmeans_inference
+- /model@model: rkmeans_inference
+- /callbacks@callbacks: rkmeans_inference
+- /logger@logger: rkmeans_inference
+- /trainer@trainer: rkmeans_inference
 data_dir: ???
 embedding_path: ???
 codebook_width: ???
 num_hierarchies: ???
 embedding_dim: ???
 ckpt_path: ???
-
 run_mode: inference
 task_name: rkmeans_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 seed: 42
-
-components:
-  data_loading:
-    data_iterator:
-      _target_: src.data.loading.components.iterators.TFRecordIterator
-    dataset_class:
-      _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-      _partial_: true
-    collate:
-      _target_: src.data.loading.components.collate_functions.collate_fn_items
-      _partial_: true
-      item_id_field: ${data_loading.dataset.item_id_field}
-      feature_to_input_name: ${data_loading.predict_dataloader.feature_to_input_name}
-    preprocessing:
-      filter_features:
-        _target_: src.data.loading.components.pre_processing.filter_features_to_consider
-        _partial_: true
-      dense_array:
-        _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
-        _partial_: true
-      convert_fields:
-        _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
-        _partial_: true
-      sparse_to_embedding:
-        _target_: src.data.loading.components.pre_processing.map_sparse_id_to_embedding
-        _partial_: true
-        sparse_id_field: id
-        embedding_field_to_add: embedding
-    dataset:
-      _target_: src.data.loading.components.interfaces.ItemDatasetConfig
-      item_id_field: ${data_loading.dataset.item_id_field}
-      keep_item_id: ${data_loading.dataset.keep_item_id}
-      data_iterator: ${components.data_loading.data_iterator}
-      features_to_consider: ${data_loading.dataset.features_to_consider}
-      embedding_map: ${data_loading.dataset.embedding_map}
-      num_placeholder_tokens_map: ${data_loading.dataset.num_placeholder_tokens_map}
-      preprocessing_functions:
-        - ${components.data_loading.preprocessing.filter_features}
-        - ${components.data_loading.preprocessing.dense_array}
-        - ${components.data_loading.preprocessing.convert_fields}
-        - ${components.data_loading.preprocessing.sparse_to_embedding}
-      field_type_map: ${data_loading.dataset.field_type_map}
-    predict_dataloader:
-      _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
-      dataset_class: ${components.data_loading.dataset_class}
-      data_folder: ${data_loading.predict_dataloader.data_folder}
-      should_shuffle_rows: ${data_loading.predict_dataloader.should_shuffle_rows}
-      batch_size_per_device: ${data_loading.predict_dataloader.batch_size_per_device}
-      num_workers: ${data_loading.predict_dataloader.num_workers}
-      assign_files_by_size: ${data_loading.predict_dataloader.assign_files_by_size}
-      timeout: ${data_loading.predict_dataloader.timeout}
-      drop_last: ${data_loading.predict_dataloader.drop_last}
-      pin_memory: ${data_loading.predict_dataloader.pin_memory}
-      persistent_workers: ${data_loading.predict_dataloader.persistent_workers}
-      collate_fn: ${components.data_loading.collate}
-      dataset_config: ${components.data_loading.dataset}
-      limit_files: ${data_loading.predict_dataloader.limit_files}
-    datamodule:
-      _target_: src.data.loading.datamodules.item.ItemDataModule
-      predict_dataloader_config: ${components.data_loading.predict_dataloader}
-  model:
-    root:
-      _target_: src.quantization.residual_quantization.ResidualQuantization
-      track_residuals: ${model.track_residuals}
-      verbose: ${model.verbose}
-      train_layer_wise: ${model.train_layer_wise}
-      normalize_residuals: ${model.normalize_residuals}
-      input_dim: ${model.input_dim}
-      n_layers: ${model.n_layers}
-      init_buffer_size: ${model.init_buffer_size}
-      quantization_layer: ${components.model.quantization_layer}
-      optimizer: null
-      scheduler: null
-      quantization_layer_list: null
-      training_loop_function: ${components.model.training_loop_function}
-      loss_function: null
-      evaluator: null
-    quantization_layer:
-      _target_: src.quantization.mini_batch_kmeans.MiniBatchKMeans
-      n_clusters: ${codebook_width}
-      n_features: ${model.input_dim}
-      distance_function:
-        _target_: src.common.components.distance_functions.SquaredEuclideanDistance
-      initializer:
-        _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
-        n_clusters: ${codebook_width}
-        distance_function: ${components.model.quantization_layer.distance_function}
-        initialize_on_cpu: false
-      init_buffer_size: ${model.init_buffer_size}
-    training_loop_function:
-      _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
-      _partial_: true
-  callbacks:
-    pickle_writer:
-      _target_: src.utils.inference_utils.LocalPickleWriter
-      output_dir: ${paths.output_dir}/pickle
-      flush_frequency: ${callbacks.pickle_writer.flush_frequency}
-      write_interval: ${callbacks.pickle_writer.write_interval}
-      should_merge_files_on_main: ${callbacks.pickle_writer.should_merge_files_on_main}
-      prediction_key_name: ${callbacks.pickle_writer.prediction_key_name}
-      prediction_name: ${callbacks.pickle_writer.prediction_name}
-      post_processing_functions: ${callbacks.pickle_writer.post_processing_functions}
-  logger:
-    csv:
-      _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-      save_dir: ${paths.output_dir}
-      name: ${logger.csv.name}
-      prefix: ${logger.csv.prefix}
-  trainer:
-    root:
-      _target_: lightning.pytorch.trainer.Trainer
-      default_root_dir: ${paths.output_dir}
-      min_steps: ${trainer.min_steps}
-      max_steps: ${trainer.max_steps}
-      max_epochs: ${trainer.max_epochs}
-      accelerator: ${trainer.accelerator}
-      devices: ${trainer.devices}
-      num_nodes: ${trainer.num_nodes}
-      precision: ${trainer.precision}
-      log_every_n_steps: ${trainer.log_every_n_steps}
-      val_check_interval: ${trainer.val_check_interval}
-      deterministic: ${trainer.deterministic}
-      accumulate_grad_batches: ${trainer.accumulate_grad_batches}
-      profiler: ${trainer.profiler}
-
-data_loading:
-  features:
-    - name: id
-      num_placeholder_tokens: 0
-      is_item_ids: true
-      embeddings:
-        _target_: torch.load
-        _args_:
-          - _target_: src.utils.file_utils.open_local_or_remote
-            file_path: ${embedding_path}
-            mode: rb
-      type:
-        _target_: torch.__dict__.get
-        _args_: [int32]
-  dataset:
-    item_id_field: id
-    keep_item_id: true
-    features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features}, "name", False, "is_item_ids", "True"}
-    embedding_map:
-      id: ${data_loading.features[0].embeddings}
-    num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name", "num_placeholder_tokens"}
-    field_type_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name", "type"}
-  predict_dataloader:
-    data_folder: ${paths.data_dir}/items
-    should_shuffle_rows: false
-    batch_size_per_device: 128
-    num_workers: 2
-    assign_files_by_size: true
-    timeout: 60
-    drop_last: false
-    pin_memory: false
-    persistent_workers: true
-    limit_files: null
-    feature_to_input_name:
-      id: item_ids
-      text: text_tokens
-      text_mask: text_mask
-      embedding: input_embedding
- 
-
-model:
-  track_residuals: true
-  verbose: true
-  train_layer_wise: true
-  normalize_residuals: true
-  input_dim: ${embedding_dim}
-  n_layers: ${num_hierarchies}
-  init_buffer_size: 3072
-
-callbacks:
-  pickle_writer:
-    flush_frequency: 100000
-    write_interval: batch
-    should_merge_files_on_main: true
-    prediction_key_name: item_id
-    prediction_name: cluster_ids
-    post_processing_functions:
-      - _target_: src.utils.tensor_utils.deduplicate_rows_in_tensor
-        _partial_: true
-      - _target_: src.utils.tensor_utils.transpose_tensor_from_file
-        _partial_: true
-
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -206,27 +24,6 @@ paths:
   work_dir: ${hydra:runtime.cwd}
   profile_dir: ${hydra:run.dir}/profile_output
   metadata_dir: ${paths.output_dir}/metadata
-
-logger:
-  csv:
-    name: csv/
-    prefix: ''
-
-trainer:
-  min_steps: 1
-  max_steps: 80000
-  max_epochs: 10
-  accelerator: gpu
-  devices: [0, 1]
-  num_nodes: 1
-  precision: bf16-mixed
-  log_every_n_steps: 2500
-  val_check_interval: 5000
-  deterministic: false
-  accumulate_grad_batches: 1
-  profiler:
-    _target_: lightning.pytorch.profilers.PassThroughProfiler
-
 extras:
   ignore_warnings: false
   print_config_warnings: true

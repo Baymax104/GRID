@@ -1,0 +1,114 @@
+# @package _global_
+
+data_iterator:
+  _target_: src.data.loading.components.iterators.TFRecordIterator
+dataset_class:
+  _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
+  _partial_: true
+collate:
+  _target_: src.data.loading.components.collate_functions.collate_fn_items
+  _partial_: true
+  item_id_field: ${data_loading.dataset.item_id_field}
+  feature_to_input_name: ${data_loading.feature_to_input_name}
+preprocessing:
+  filter_features:
+    _target_: src.data.loading.components.pre_processing.filter_features_to_consider
+    _partial_: true
+  dense_array:
+    _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
+    _partial_: true
+  convert_fields:
+    _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
+    _partial_: true
+  sparse_to_embedding:
+    _target_: src.data.loading.components.pre_processing.map_sparse_id_to_embedding
+    _partial_: true
+    sparse_id_field: id
+    embedding_field_to_add: embedding
+dataset:
+  _target_: src.data.loading.components.interfaces.ItemDatasetConfig
+  item_id_field: id
+  keep_item_id: true
+  data_iterator: ${data_loading.data_iterator}
+  features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features},
+    "name", False, "is_item_ids", "True"}
+  embedding_map:
+    id: ${data_loading.features[0].embeddings}
+  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features},
+    "name", "num_placeholder_tokens"}
+  preprocessing_functions:
+  - ${data_loading.preprocessing.filter_features}
+  - ${data_loading.preprocessing.dense_array}
+  - ${data_loading.preprocessing.convert_fields}
+  - ${data_loading.preprocessing.sparse_to_embedding}
+  field_type_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name",
+    "type"}
+train_dataloader:
+  _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+  dataset_class: ${data_loading.dataset_class}
+  data_folder: ${paths.data_dir}/items
+  should_shuffle_rows: true
+  batch_size_per_device: 2048
+  num_workers: 12
+  assign_files_by_size: false
+  timeout: 60
+  drop_last: false
+  pin_memory: true
+  persistent_workers: true
+  collate_fn: ${data_loading.collate}
+  dataset_config: ${data_loading.dataset}
+  limit_files: null
+val_dataloader:
+  _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+  dataset_class: ${data_loading.dataset_class}
+  data_folder: ${paths.data_dir}/items
+  should_shuffle_rows: false
+  batch_size_per_device: 256
+  num_workers: 2
+  assign_files_by_size: true
+  timeout: 60
+  drop_last: false
+  pin_memory: false
+  persistent_workers: true
+  collate_fn: ${data_loading.collate}
+  dataset_config: ${data_loading.dataset}
+  limit_files: null
+test_dataloader:
+  _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
+  dataset_class: ${data_loading.dataset_class}
+  data_folder: ${paths.data_dir}/items
+  should_shuffle_rows: false
+  batch_size_per_device: 256
+  num_workers: 2
+  assign_files_by_size: true
+  timeout: 60
+  drop_last: false
+  pin_memory: false
+  persistent_workers: true
+  collate_fn: ${data_loading.collate}
+  dataset_config: ${data_loading.dataset}
+  limit_files: null
+datamodule:
+  _target_: src.data.loading.datamodules.item.ItemDataModule
+  train_dataloader_config: ${data_loading.train_dataloader}
+  val_dataloader_config: ${data_loading.val_dataloader}
+  test_dataloader_config: ${data_loading.test_dataloader}
+features:
+- name: id
+  num_placeholder_tokens: 0
+  is_item_ids: true
+  embeddings:
+    _target_: torch.load
+    _args_:
+    - _target_: src.utils.file_utils.open_local_or_remote
+      file_path: ${embedding_path}
+      mode: rb
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - int32
+feature_to_input_name:
+  id: item_ids
+  text: text_tokens
+  text_mask: text_mask
+  embedding: input_embedding

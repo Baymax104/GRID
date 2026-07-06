@@ -1,0 +1,40 @@
+# @package _global_
+
+root:
+  _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
+  huggingface_model: ${model.huggingface_model}
+  feature_to_model_input_map:
+    sequence_data: input_ids
+    user_id: user_id
+  postprocessor: null
+  aggregator: null
+  decoder: ${model.decoder}
+  num_hierarchies: ${num_hierarchies}
+  num_user_bins: null
+  codebooks: ${data_loading.predict_dataset.semantic_id_map.sequence_data}
+  mlp_layers: 2
+  top_k_for_generation: 10
+huggingface_model:
+  _target_: transformers.T5EncoderModel
+  config:
+    _target_: transformers.T5Config
+    vocab_size: 256
+    d_model: 128
+    num_heads: 6
+    dropout_rate: 0.15
+    d_ff: 1024
+    d_kv: 64
+    num_layers: 4
+decoder:
+  _target_: transformers.models.t5.modeling_t5.T5Stack
+  config:
+    _target_: transformers.models.t5.configuration_t5.T5Config
+    vocab_size: ${model.huggingface_model.config.vocab_size}
+    d_model: ${model.huggingface_model.config.d_model}
+    num_heads: ${model.huggingface_model.config.num_heads}
+    dropout_rate: 0.15
+    d_ff: ${model.huggingface_model.config.d_ff}
+    d_kv: ${model.huggingface_model.config.d_kv}
+    num_layers: 4
+    is_decoder: true
+    is_encoder_decoder: false

@@ -1,0 +1,19 @@
+# @package _global_
+
+model_checkpoint:
+  _target_: lightning.pytorch.callbacks.ModelCheckpoint
+  dirpath: ${paths.output_dir}/checkpoints
+  filename: checkpoint_{epoch:03d}_{step:06d}
+  monitor: train/loss
+  verbose: true
+  save_last: null
+  save_top_k: 1
+  mode: min
+  auto_insert_metric_name: false
+  save_weights_only: false
+  every_n_train_steps: ${trainer.root.max_steps}
+  train_time_interval: null
+  every_n_epochs: null
+  save_on_train_epoch_end: null
+early_stopping: null
+model_summary: null

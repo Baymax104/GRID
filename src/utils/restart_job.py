@@ -307,7 +307,7 @@ class LocalJobLauncher(BaseJobLauncher):
     def __init__(self, cfg: DictConfig, max_retries: int = 3, retry_delay: int = 5):
         super().__init__(cfg, max_retries, retry_delay)
         self.should_skip_retry = cfg.get("should_skip_retry", False)
-        if not self.should_skip_retry and cfg.get("trainer") and cfg.trainer.num_nodes > 1:
+        if not self.should_skip_retry and cfg.get("trainer") and cfg.trainer.root.num_nodes > 1:
             self.logger.warning(
                 "Retry logic is not supported for multi-node training, setting should_skip_retry to True."
             )

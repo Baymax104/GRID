@@ -1,0 +1,105 @@
+# @package _global_
+
+data_iterator:
+  _target_: src.data.loading.components.iterators.TFRecordIterator
+dataset_class:
+  _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
+  _partial_: true
+collate:
+  _target_: src.data.loading.components.collate_functions.collate_fn_inference_for_sequence
+  _partial_: true
+  sequence_length: ${data_loading.predict_dataloader.sequence_length}
+  padding_token: ${data_loading.predict_dataloader.padding_token}
+  id_field_name: ${data_loading.dataset.user_id_field}
+preprocessing:
+  filter_features:
+    _target_: src.data.loading.components.pre_processing.filter_features_to_consider
+    _partial_: true
+  dense_array:
+    _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
+    _partial_: true
+  convert_fields:
+    _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
+    _partial_: true
+  sparse_to_semantic_id:
+    _target_: src.data.loading.components.pre_processing.map_sparse_id_to_semantic_id
+    _partial_: true
+    features_to_apply:
+    - sequence_data
+    num_hierarchies: ${model.root.num_hierarchies}
+predict_dataset:
+  _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
+  user_id_field: ${data_loading.dataset.user_id_field}
+  min_sequence_length: ${data_loading.dataset.min_sequence_length}
+  keep_user_id: ${data_loading.dataset.keep_user_id}
+  features_to_consider: ${data_loading.dataset.features_to_consider}
+  num_placeholder_tokens_map: ${data_loading.dataset.num_placeholder_tokens_map}
+  semantic_id_map:
+    sequence_data:
+      _target_: torch.load
+      _args_:
+      - _target_: src.utils.file_utils.open_local_or_remote
+        file_path: ${semantic_id_path}
+        mode: rb
+  data_iterator: ${data_loading.data_iterator}
+  preprocessing_functions:
+  - ${data_loading.preprocessing.filter_features}
+  - ${data_loading.preprocessing.dense_array}
+  - ${data_loading.preprocessing.convert_fields}
+  - ${data_loading.preprocessing.sparse_to_semantic_id}
+predict_dataloader:
+  _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
+  dataset_class: ${data_loading.dataset_class}
+  data_folder: ${paths.data_dir}/testing
+  should_shuffle_rows: false
+  labels: null
+  batch_size_per_device: 32
+  num_workers: 8
+  timeout: 60
+  assign_files_by_size: true
+  oov_token: null
+  masking_token: 1
+  sequence_length: ${sequence_length}
+  padding_token: -1
+  drop_last: false
+  persistent_workers: false
+  collate_fn: ${data_loading.collate}
+  dataset_config: ${data_loading.predict_dataset}
+  pin_memory: false
+datamodule:
+  _target_: src.data.loading.datamodules.sequence.SequenceDataModule
+  predict_dataloader_config: ${data_loading.predict_dataloader}
+features:
+- name: sequence_data
+  num_placeholder_tokens: 0
+  num_placeholder_tokens_sparse_ids: 2
+  semantic_ids: ${semantic_id_path}
+  is_item_ids: true
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - int32
+- name: embedding
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - float32
+- name: text
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - bytes
+- name: user_id
+  is_item_ids: true
+  type:
+    _target_: torch.__dict__.get
+    _args_:
+    - int32
+dataset:
+  user_id_field: user_id
+  min_sequence_length: 1
+  keep_user_id: true
+  features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features},
+    "name", False, "is_item_ids", "True"}
+  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features},
+    "name", "num_placeholder_tokens"}

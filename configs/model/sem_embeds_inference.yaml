@@ -1,0 +1,17 @@
+# @package _global_
+
+semantic_embedding_model:
+  _target_: src.embedding.hf_language_model.HFLanguageModel
+  huggingface_model:
+    _target_: transformers.T5EncoderModel.from_pretrained
+    pretrained_model_name_or_path: ${embedding_model}
+  aggregator:
+    _target_: src.common.modules.embedding_aggregator.EmbeddingAggregator
+    aggregation_strategy:
+      _target_: src.common.components.aggregation_strategy.MeanAggregation
+root:
+  _target_: src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
+  semantic_embedding_model_input_map:
+    input_ids: text_tokens
+    attention_mask: text_mask
+  semantic_embedding_model: ${model.semantic_embedding_model}

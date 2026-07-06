@@ -88,33 +88,33 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
     command_line_logger.info("Applying dry run overrides: minimal execution without business result writes.")
 
     with open_dict(cfg):
-        callback_definitions = cfg.get("components", {}).get("callbacks")
+        callback_definitions = cfg.get("callbacks")
         if callback_definitions:
             for name, cb_conf in callback_definitions.items():
                 if isinstance(cb_conf, DictConfig) and cb_conf.get("_target_") in DRY_RUN_DISABLED_CALLBACK_TARGETS:
                     command_line_logger.info(f"Disabling callback for dry run: {name} <{cb_conf.get('_target_')}>")
                     callback_definitions[name] = None
 
-        logger_definitions = cfg.get("components", {}).get("logger")
+        logger_definitions = cfg.get("logger")
         if logger_definitions:
             for name, lg_conf in logger_definitions.items():
                 if isinstance(lg_conf, DictConfig) and lg_conf.get("_target_") in DRY_RUN_DISABLED_LOGGER_TARGETS:
                     command_line_logger.info(f"Disabling logger for dry run: {name} <{lg_conf.get('_target_')}>")
                     logger_definitions[name] = None
 
-        cfg.trainer.log_every_n_steps = 1
-        cfg.trainer.max_epochs = 1
-        cfg.trainer.limit_predict_batches = 1
+        cfg.trainer.root.log_every_n_steps = 1
+        cfg.trainer.root.max_epochs = 1
+        cfg.trainer.root.limit_predict_batches = 1
 
         if cfg.get("run_mode") == "train":
-            cfg.trainer.max_steps = 1
-            cfg.trainer.limit_train_batches = 1
-            cfg.trainer.limit_val_batches = 0
-            cfg.trainer.limit_test_batches = 0
-            cfg.trainer.num_sanity_val_steps = 0
+            cfg.trainer.root.max_steps = 1
+            cfg.trainer.root.limit_train_batches = 1
+            cfg.trainer.root.limit_val_batches = 0
+            cfg.trainer.root.limit_test_batches = 0
+            cfg.trainer.root.num_sanity_val_steps = 0
 
-            if cfg.get("model") and "train_layer_wise" in cfg.model:
-                cfg.model.train_layer_wise = False
+            if cfg.get("model") and cfg.model.get("root") and "train_layer_wise" in cfg.model.root:
+                cfg.model.root.train_layer_wise = False
 
         if "run_test_after_training" in cfg:
             cfg.run_test_after_training = False
@@ -126,12 +126,12 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     """
     Initialize and instantiate various objects required for running pipelines.
 
-    Python-side top-level instantiation entrypoints are read from ``cfg.components``.
-    Parameter domains such as ``data_loading``, ``model``, and ``trainer`` remain
-    available for shared values, overrides, and hyperparameter logging.
+    Python-side top-level instantiation entrypoints are read from top-level component
+    groups such as ``cfg.data_loading``, ``cfg.model``, ``cfg.trainer``, ``cfg.callbacks``,
+    and ``cfg.logger``.
 
     Args:
-        cfg (DictConfig): Configuration object containing component entrypoints and parameter domains.
+        cfg (DictConfig): Configuration object containing top-level component entrypoints.
 
     Returns:
         PipelineModules: A dataclass containing the instantiated objects.
@@ -143,27 +143,27 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
     cfg = apply_dry_run_overrides(cfg)
 
-    command_line_logger.info(f"Instantiating datamodule <{cfg.components.data_loading.datamodule._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.components.data_loading.datamodule)
+    command_line_logger.info(f"Instantiating datamodule <{cfg.data_loading.datamodule._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data_loading.datamodule)
 
-    command_line_logger.info(f"Instantiating model <{cfg.components.model.root._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.components.model.root)
+    command_line_logger.info(f"Instantiating model <{cfg.model.root._target_}>")
+    model: LightningModule = hydra.utils.instantiate(cfg.model.root)
 
     command_line_logger.info("Instantiating callbacks...")
-    callbacks: list[Callback] = instantiate_callbacks(cfg.get("components", {}).get("callbacks"))
+    callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     command_line_logger.info("Instantiating loggers...")
-    loggers: list[Logger] = instantiate_loggers(cfg.get("components", {}).get("logger"))
+    loggers: list[Logger] = instantiate_loggers(cfg.get("logger"))
     if cfg.get("dry_run", False) and len(loggers) == 0:
         command_line_logger.info("Using DryRunLogger to satisfy Lightning logging without writing business results.")
         loggers = [DryRunLogger()]
 
-    command_line_logger.info(f"Instantiating trainer <{cfg.components.trainer.root._target_}>")
+    command_line_logger.info(f"Instantiating trainer <{cfg.trainer.root._target_}>")
 
     enable_checkpointing = has_class_object_inside_list(callbacks, ModelCheckpoint)
     enable_model_summary = has_class_object_inside_list(callbacks, ModelSummary)
     trainer: Trainer = hydra.utils.instantiate(
-        cfg.components.trainer.root,
+        cfg.trainer.root,
         callbacks=callbacks,
         logger=loggers,
         # The default behavior for lightning it to set `enable_checkpointing` and
@@ -171,8 +171,8 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
         # debug. We change the default to False, but this can be overridden by either
         # setting the parameters in the config file or passing the callbacks as part
         # of the callbacks YAML.
-        enable_checkpointing=cfg.components.trainer.root.get("enable_checkpointing", enable_checkpointing),
-        enable_model_summary=cfg.components.trainer.root.get("enable_model_summary", enable_model_summary),
+        enable_checkpointing=cfg.trainer.root.get("enable_checkpointing", enable_checkpointing),
+        enable_model_summary=cfg.trainer.root.get("enable_model_summary", enable_model_summary),
     )
 
     pipeline_modules = PipelineModules(

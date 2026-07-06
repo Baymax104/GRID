@@ -1,208 +1,20 @@
 # @package _global_
 
+defaults:
+- /data_loading@data_loading: tiger_inference
+- /model@model: tiger_inference
+- /callbacks@callbacks: tiger_inference
+- /logger@logger: tiger_inference
+- /trainer@trainer: tiger_inference
 data_dir: ???
 semantic_id_path: ???
 ckpt_path: ???
 num_hierarchies: ???
-
 run_mode: inference
 task_name: tiger_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-
 seed: 42
 sequence_length: 120
-
-components:
-  data_loading:
-    data_iterator:
-      _target_: src.data.loading.components.iterators.TFRecordIterator
-    dataset_class:
-      _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
-      _partial_: true
-    collate:
-      _target_: src.data.loading.components.collate_functions.collate_fn_inference_for_sequence
-      _partial_: true
-      sequence_length: ${data_loading.predict_dataloader.sequence_length}
-      padding_token: ${data_loading.predict_dataloader.padding_token}
-      id_field_name: ${data_loading.dataset.user_id_field}
-    preprocessing:
-      filter_features: {_target_: src.data.loading.components.pre_processing.filter_features_to_consider, _partial_: true}
-      dense_array: {_target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array, _partial_: true}
-      convert_fields: {_target_: src.data.loading.components.pre_processing.convert_fields_to_tensors, _partial_: true}
-      sparse_to_semantic_id:
-        _target_: src.data.loading.components.pre_processing.map_sparse_id_to_semantic_id
-        _partial_: true
-        features_to_apply: [sequence_data]
-        num_hierarchies: ${model.num_hierarchies}
-    predict_dataset:
-      _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
-      user_id_field: ${data_loading.dataset.user_id_field}
-      min_sequence_length: ${data_loading.dataset.min_sequence_length}
-      keep_user_id: ${data_loading.dataset.keep_user_id}
-      features_to_consider: ${data_loading.dataset.features_to_consider}
-      num_placeholder_tokens_map: ${data_loading.dataset.num_placeholder_tokens_map}
-      semantic_id_map:
-        sequence_data:
-          _target_: torch.load
-          _args_:
-            - _target_: src.utils.file_utils.open_local_or_remote
-              file_path: ${semantic_id_path}
-              mode: rb
-      data_iterator: ${components.data_loading.data_iterator}
-      preprocessing_functions:
-        - ${components.data_loading.preprocessing.filter_features}
-        - ${components.data_loading.preprocessing.dense_array}
-        - ${components.data_loading.preprocessing.convert_fields}
-        - ${components.data_loading.preprocessing.sparse_to_semantic_id}
-    predict_dataloader:
-      _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
-      dataset_class: ${components.data_loading.dataset_class}
-      data_folder: ${data_loading.predict_dataloader.data_folder}
-      should_shuffle_rows: ${data_loading.predict_dataloader.should_shuffle_rows}
-      labels: ~
-      batch_size_per_device: ${data_loading.predict_dataloader.batch_size_per_device}
-      num_workers: ${data_loading.predict_dataloader.num_workers}
-      timeout: ${data_loading.predict_dataloader.timeout}
-      assign_files_by_size: ${data_loading.predict_dataloader.assign_files_by_size}
-      oov_token: ${data_loading.predict_dataloader.oov_token}
-      masking_token: ${data_loading.predict_dataloader.masking_token}
-      sequence_length: ${data_loading.predict_dataloader.sequence_length}
-      padding_token: ${data_loading.predict_dataloader.padding_token}
-      drop_last: ${data_loading.predict_dataloader.drop_last}
-      persistent_workers: ${data_loading.predict_dataloader.persistent_workers}
-      collate_fn: ${components.data_loading.collate}
-      dataset_config: ${components.data_loading.predict_dataset}
-      pin_memory: ${data_loading.predict_dataloader.pin_memory}
-    datamodule:
-      _target_: src.data.loading.datamodules.sequence.SequenceDataModule
-      predict_dataloader_config: ${components.data_loading.predict_dataloader}
-  model:
-    root:
-      _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
-      huggingface_model: ${components.model.huggingface_model}
-      feature_to_model_input_map: ${model.feature_to_model_input_map}
-      postprocessor: ${model.postprocessor}
-      aggregator: ${model.aggregator}
-      decoder: ${components.model.decoder}
-      num_hierarchies: ${model.num_hierarchies}
-      num_user_bins: ${model.num_user_bins}
-      codebooks: ${components.data_loading.predict_dataset.semantic_id_map.sequence_data}
-      mlp_layers: ${model.mlp_layers}
-      top_k_for_generation: ${model.top_k_for_generation}
-    huggingface_model:
-      _target_: transformers.T5EncoderModel
-      config:
-        _target_: transformers.T5Config
-        vocab_size: 256
-        d_model: 128
-        num_heads: 6
-        dropout_rate: 0.15
-        d_ff: 1024
-        d_kv: 64
-        num_layers: 4
-    decoder:
-      _target_: transformers.models.t5.modeling_t5.T5Stack
-      config:
-        _target_: transformers.models.t5.configuration_t5.T5Config
-        vocab_size: ${components.model.huggingface_model.config.vocab_size}
-        d_model: ${components.model.huggingface_model.config.d_model}
-        num_heads: ${components.model.huggingface_model.config.num_heads}
-        dropout_rate: 0.15
-        d_ff: ${components.model.huggingface_model.config.d_ff}
-        d_kv: ${components.model.huggingface_model.config.d_kv}
-        num_layers: 4
-        is_decoder: true
-        is_encoder_decoder: false
-  callbacks:
-    pickle_writer:
-      _target_: src.utils.inference_utils.LocalPickleWriter
-      output_dir: ${paths.output_dir}/pickle
-      flush_frequency: ${callbacks.pickle_writer.flush_frequency}
-      write_interval: ${callbacks.pickle_writer.write_interval}
-      should_merge_files_on_main: ${callbacks.pickle_writer.should_merge_files_on_main}
-      prediction_key_name: ${callbacks.pickle_writer.prediction_key_name}
-      prediction_name: ${callbacks.pickle_writer.prediction_name}
-  logger:
-    csv:
-      _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-      save_dir: ${paths.output_dir}
-      name: ${logger.csv.name}
-      prefix: ${logger.csv.prefix}
-  trainer:
-    root:
-      _target_: lightning.pytorch.trainer.Trainer
-      default_root_dir: ${paths.output_dir}
-      min_steps: ${trainer.min_steps}
-      max_steps: ${trainer.max_steps}
-      max_epochs: ${trainer.max_epochs}
-      accelerator: ${trainer.accelerator}
-      devices: ${trainer.devices}
-      num_nodes: ${trainer.num_nodes}
-      precision: ${trainer.precision}
-      log_every_n_steps: ${trainer.log_every_n_steps}
-      val_check_interval: ${trainer.val_check_interval}
-      deterministic: ${trainer.deterministic}
-      accumulate_grad_batches: ${trainer.accumulate_grad_batches}
-      profiler: ${trainer.profiler}
-      strategy: ${trainer.strategy}
-      sync_batchnorm: ${trainer.sync_batchnorm}
-
-data_loading:
-  features:
-    - name: sequence_data
-      num_placeholder_tokens: 0
-      num_placeholder_tokens_sparse_ids: 2
-      semantic_ids: ${semantic_id_path}
-      is_item_ids: true
-      type: {_target_: torch.__dict__.get, _args_: [int32]}
-    - name: embedding
-      type: {_target_: torch.__dict__.get, _args_: [float32]}
-    - name: text
-      type: {_target_: torch.__dict__.get, _args_: [bytes]}
-    - name: user_id
-      is_item_ids: true
-      type: {_target_: torch.__dict__.get, _args_: [int32]}
-  dataset:
-    user_id_field: user_id
-    min_sequence_length: 1
-    keep_user_id: true
-    features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features}, "name", False, "is_item_ids", "True"}
-    num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name", "num_placeholder_tokens"}
-  predict_dataloader:
-    data_folder: ${paths.data_dir}/testing
-    should_shuffle_rows: false
-    batch_size_per_device: 32
-    num_workers: 8
-    timeout: 60
-    assign_files_by_size: true
-    oov_token: null
-    masking_token: 1
-    sequence_length: ${sequence_length}
-    padding_token: -1
-    drop_last: false
-    persistent_workers: false
-    pin_memory: false
- 
-
-model:
-  feature_to_model_input_map:
-    sequence_data: input_ids
-    user_id: user_id
-  postprocessor: null
-  aggregator: null
-  num_hierarchies: ${num_hierarchies}
-  num_user_bins: null
-  mlp_layers: 2
-  top_k_for_generation: 10
-
-callbacks:
-  pickle_writer:
-    flush_frequency: 100000
-    write_interval: batch
-    should_merge_files_on_main: true
-    prediction_key_name: user_id
-    prediction_name: semantic_ids
-
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -211,26 +23,6 @@ paths:
   work_dir: ${hydra:runtime.cwd}
   profile_dir: ${hydra:run.dir}/profile_output
   metadata_dir: ${paths.output_dir}/metadata
-logger:
-  csv:
-    name: csv/
-    prefix: ''
-trainer:
-  min_steps: 1
-  max_steps: 80000
-  max_epochs: 10
-  accelerator: gpu
-  devices: -1
-  num_nodes: 1
-  precision: 32-true
-  log_every_n_steps: 2500
-  val_check_interval: 5000
-  deterministic: false
-  accumulate_grad_batches: 1
-  profiler: {_target_: lightning.pytorch.profilers.PassThroughProfiler}
-  strategy: ddp
-  sync_batchnorm: true
-
 extras:
   ignore_warnings: false
   print_config_warnings: true
