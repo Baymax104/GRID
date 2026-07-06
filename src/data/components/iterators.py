@@ -10,7 +10,7 @@ from src.utils.decorators import retry
 from src.utils.file_utils import open_pyarrow_file
 
 
-class RawDataIterator(ABC):
+class BaseIterator(ABC):
     """the abstract class for raw data iterator (e.g., parquet, avro, etc.)
 
     Parameters
@@ -46,7 +46,7 @@ class RawDataIterator(ABC):
             return None
 
 
-class ParquetDataIterator(RawDataIterator):
+class ParquetDataIterator(BaseIterator):
     """Data iterator class for parquet files
 
     Parameters
@@ -58,7 +58,7 @@ class ParquetDataIterator(RawDataIterator):
     def __init__(self, buffer_size=1000, features_to_consider=None, **kwargs):
         super().__init__(**kwargs)
         self.buffer_size = buffer_size
-        self.features_to_consider = features_to_consider
+        self.features_to_consider = features_to_consider or []
 
     def iterrows(self):
         assert self.list_of_file_paths is not None, "list_of_file_paths is not set"
@@ -67,14 +67,11 @@ class ParquetDataIterator(RawDataIterator):
             with open_pyarrow_file(file_path) as f:
                 parquet_file = pq.ParquetFile(f)
 
-                for batch in parquet_file.iter_batches(
-                        columns=self.features_to_consider if self.features_to_consider else None,
-                        batch_size=self.buffer_size,
-                ):
+                for batch in parquet_file.iter_batches(columns=self.features_to_consider, batch_size=self.buffer_size):
                     for row in batch.to_pylist():
                         yield row
 
-    def shuffle(self, seed=42) -> RawDataIterator:
+    def shuffle(self, seed=42) -> BaseIterator:
         random.seed(seed)
         random.shuffle(self.list_of_file_paths)
         return self
@@ -83,7 +80,7 @@ class ParquetDataIterator(RawDataIterator):
         return "parquet"
 
 
-class TFRecordIterator(RawDataIterator):
+class TFRecordIterator(BaseIterator):
     """
     Data iterator class for tfrecord files
     """
@@ -138,7 +135,7 @@ class TFRecordIterator(RawDataIterator):
             yield curr_example
             curr_example = self._get_next_example(dataset_iterator)
 
-    def shuffle(self, seed=42) -> RawDataIterator:
+    def shuffle(self, seed=42) -> BaseIterator:
         # TODO(lneves): Unify the shuffle method for all iterators
         # Currently this one shuffles only files, parquet shuffles rows.
         random.seed(seed)

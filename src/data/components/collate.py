@@ -3,13 +3,13 @@ from typing import Any, Optional, Tuple, Union
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from src.data.loading.components.interfaces import (
+from src.data.components.data_models import (
     ItemData,
     LabelFunctionOutput,
     SequentialModelInputData,
     SequentialModuleLabelData
 )
-from src.data.loading.utils import combine_list_of_tensor_dicts, pad_or_trim_sequence
+from src.data.utils import combine_list_of_tensor_dicts, pad_or_trim_sequence
 
 
 def identity_collate_fn(batch: Any) -> Any:

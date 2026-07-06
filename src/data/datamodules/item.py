@@ -4,7 +4,7 @@ from typing import Optional
 
 from omegaconf import DictConfig
 
-from src.data.loading.datamodules.base import BaseDataModule
+from src.data.datamodules.base import BaseDataModule
 
 
 class ItemDataModule(BaseDataModule):

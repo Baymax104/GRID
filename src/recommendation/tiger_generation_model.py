@@ -4,7 +4,7 @@ import torch
 import transformers
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 
-from src.data.loading.components.interfaces import (
+from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )

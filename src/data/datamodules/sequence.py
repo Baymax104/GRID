@@ -5,7 +5,7 @@ from typing import Optional
 
 from omegaconf import DictConfig
 
-from src.data.loading.datamodules.base import BaseDataModule
+from src.data.datamodules.base import BaseDataModule
 
 
 class SequenceDataModule(BaseDataModule):
@@ -32,5 +32,5 @@ class SequenceDataModule(BaseDataModule):
             sequence_length=curr_config.sequence_length,
             masking_token=curr_config.masking_token,
             padding_token=curr_config.padding_token,
-            oov_token=curr_config.get("oov_token", None),
+            oov_token=getattr(curr_config, "oov_token", None),
         )

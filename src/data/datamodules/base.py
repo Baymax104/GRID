@@ -8,8 +8,8 @@ from lightning import LightningDataModule
 from lightning.pytorch.trainer.states import TrainerFn
 from omegaconf import DictConfig
 
-from src.data.loading.components.custom_dataloader import DataloaderWithIterationRetry
-from src.data.loading.utils import assign_files_to_workers
+from src.data.components.dataloaders import DataloaderWithIterationRetry
+from src.data.utils import assign_files_to_workers
 from src.utils.file_utils import list_files
 
 
@@ -63,7 +63,7 @@ class BaseDataModule(LightningDataModule, ABC):
                 list_of_files=list_of_files,
                 total_workers=self.trainer.world_size,
                 assign_by_size=config.assign_files_by_size,
-                should_shuffle_rows=config.get("should_shuffle_rows", False),
+                should_shuffle_rows=getattr(config, "should_shuffle_rows", False),
             )
 
     def _get_stage_config(self, stage: TrainerFn) -> DictConfig | None:

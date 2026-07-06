@@ -22,8 +22,8 @@ flowchart TB
 
 数据集会根据进程数被分配一次，具体实现如下:
 
-- `datamodules.base.BaseFileDataModule.setup`
-- `datamodules.base.BaseFileDataModule.get_dataloader`
+- `datamodules.base.BaseDataModule.setup`
+- `datamodules.base.BaseDataModule.get_dataloader`
 
 ### 工作线程
 

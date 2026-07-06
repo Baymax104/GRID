@@ -9,7 +9,7 @@ from torchmetrics.aggregation import BaseAggregator
 from src.common.components.eval_metrics import Evaluator
 from src.common.components.model_output import SharedKeyAcrossPredictionsOutput
 from src.common.modules.embedding_aggregator import EmbeddingAggregator
-from src.data.loading.components.interfaces import (
+from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )

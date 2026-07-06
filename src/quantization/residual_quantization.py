@@ -10,7 +10,7 @@ from torch import nn
 from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
-from src.data.loading.components.interfaces import ItemData
+from src.data.components.data_models import ItemData
 from src.common.components.model_output import OneKeyPerPredictionOutput
 from src.quantization.base_clustering_module import BaseClusteringModule
 

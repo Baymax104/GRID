@@ -2,8 +2,9 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import torch
+from omegaconf import DictConfig
 
-from src.data.loading.components.interfaces import BaseDatasetConfig, SemanticIDDatasetConfig, TokenizerConfig
+from src.data.components.data_models import TokenizerConfig
 from src.utils.file_utils import load_json
 from src.utils.utils import load_tokenize
 
@@ -15,7 +16,7 @@ from src.utils.utils import load_tokenize
 
 def convert_bytes_to_string(
     batch_or_row: dict[str, np.ndarray],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
@@ -26,7 +27,7 @@ def convert_bytes_to_string(
     return batch_or_row
 
 
-def is_feature_in_features_to_apply(features_to_apply: list[str], k: str) -> bool:
+def is_feature_in_features_to_apply(features_to_apply: Optional[list[str]], k: str) -> bool:
     if features_to_apply and k not in features_to_apply:
         return False
     return True
@@ -34,7 +35,7 @@ def is_feature_in_features_to_apply(features_to_apply: list[str], k: str) -> boo
 
 def filter_features_to_consider(
     batch_or_row: dict[str, Any],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
 ):
@@ -54,10 +55,10 @@ def filter_features_to_consider(
     features_to_consider = set(dataset_config.features_to_consider)
 
     # add user_id and item_id to features_to_consider if the condition is met
-    if dataset_config.get("keep_user_id", False):
+    if getattr(dataset_config, "keep_user_id", False):
         if dataset_config.user_id_field not in features_to_consider:
             features_to_consider.add(dataset_config.user_id_field)
-    if dataset_config.get("keep_item_id", False):
+    if getattr(dataset_config, "keep_item_id", False):
         if dataset_config.item_id_field not in features_to_consider:
             features_to_consider.add(dataset_config.item_id_field)
 
@@ -71,7 +72,7 @@ def filter_features_to_consider(
 
 def convert_to_dense_numpy_array(
     batch_or_row: dict[str, Any],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
@@ -105,10 +106,10 @@ def convert_to_dense_numpy_array(
 
 def map_feature_names(
     batch_or_row: dict[str, np.ndarray | torch.Tensor | Any],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
-) -> dict[str, np.ndarray]:
+) -> dict[str, np.ndarray | torch.Tensor]:
     """
     Map the feature names to the desired feature names.
 
@@ -132,7 +133,7 @@ def map_feature_names(
 
 def convert_fields_to_tensors(
     batch_or_row: dict[str, np.ndarray],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
@@ -160,7 +161,7 @@ def convert_fields_to_tensors(
 
 def filter_sequence_length_row(
     row: dict[str, torch.Tensor],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs
 ) -> dict | None:
@@ -185,7 +186,7 @@ def filter_sequence_length_row(
 
 def filter_empty_feature(
     row: dict[str, torch.Tensor],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     **kwargs
 ) -> dict | None:
@@ -211,7 +212,7 @@ def filter_empty_feature(
 
 def map_sparse_id_to_semantic_id(
     row: dict[str, torch.Tensor],
-    dataset_config: SemanticIDDatasetConfig,
+    dataset_config: DictConfig,
     features_to_apply: Optional[list[str]] = None,
     num_hierarchies: Optional[int] = None,
     **kwargs,
@@ -255,7 +256,7 @@ def map_sparse_id_to_semantic_id(
 
 def trim_sequence_row(
     row: dict[str, Any],
-    dataset_config: BaseDatasetConfig,
+    dataset_config: DictConfig,
     sequence_length: int,
     should_trim_left: bool,
     features_to_apply: Optional[list[str]] = None,
@@ -273,7 +274,7 @@ def trim_sequence_row(
             value is a sequential object to be truncated. The value will be trimmed on
             the side determined by should_trim_left to the specified sequence_length in
             the first dimension.
-        dataset_config (BaseDatasetConfig): The dataset configuration object.
+        dataset_config (DictConfig): The dataset configuration object.
         sequence_length (int): The desired length to trim the sequences to.
         should_trim_left (bool): If True, trim the left side of the sequence.
             If False, trim the right side of the sequence.
@@ -300,8 +301,8 @@ def trim_sequence_row(
 
 def tokenize_text_features(
     batch_or_row: dict[str, Any],
+    tokenizer_config: TokenizerConfig,
     features_to_apply: Optional[list[str]] = None,
-    tokenizer_config: Optional[TokenizerConfig] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -316,6 +317,8 @@ def tokenize_text_features(
     Returns:
         batch_or_row containing text input_ids and attention_mask
     """
+    if not tokenizer_config:
+        raise AttributeError("Tokenizer config not provided")
     tokenize = load_tokenize(config=tokenizer_config)
     batch_or_row_masks = {}
     for k, v in batch_or_row.items():
@@ -331,7 +334,9 @@ def tokenize_text_features(
                 batch_or_row[k] = torch.stack([seq["input_ids"].flatten() for seq in tokenized_seq_list])
                 # text_mask -> attention_mask
                 # seq_length x token_seq_length x 1
-                batch_or_row_masks[k_mask] = torch.stack([seq["attention_mask"].flatten() for seq in tokenized_seq_list])
+                batch_or_row_masks[k_mask] = torch.stack(
+                    [seq["attention_mask"].flatten() for seq in tokenized_seq_list]
+                )
             else:
                 # one row
                 tokenized_seq = tokenize(v)

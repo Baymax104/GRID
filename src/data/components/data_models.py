@@ -1,40 +1,15 @@
-import abc
-from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Union
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Union
 
 import torch
 import transformers
 from torch.utils.data import IterableDataset
 
-from src.data.loading.components.iterators import RawDataIterator
-
-
-class BaseDatasetConfig:
-    """
-    Class to provide base typing for dataset configurations. Should be inherited by all dataset configurations.
-    """
-
-    def __init__(self):
-        pass
-
-    def get(self, attribute: str, default=None):
-        return getattr(self, attribute, default)
-
-
-class BaseDataloaderConfig:
-    """
-    Class to provide base typing for dataloader configurations. Should be inherited by all dataloader configurations.
-    """
-
-    def __init__(self):
-        pass
-
-    def get(self, attribute: str, default=None):
-        return getattr(self, attribute, default)
+from src.data.components.iterators import BaseIterator
 
 
 @dataclass
-class SequenceDatasetConfig(BaseDatasetConfig):
+class SequenceDatasetConfig:
     """The generic dataset configuration class for datasets of sequence data.
 
     Parameters:
@@ -66,7 +41,7 @@ class SequenceDatasetConfig(BaseDatasetConfig):
     """
 
     user_id_field: str
-    data_iterator: RawDataIterator
+    data_iterator: BaseIterator
     preprocessing_functions: list[callable]  # type: ignore
     keep_user_id: bool = False
     num_placeholder_tokens_map: Optional[dict] = field(default_factory=dict)
@@ -78,7 +53,7 @@ class SequenceDatasetConfig(BaseDatasetConfig):
 
 
 @dataclass
-class SequenceDataloaderConfig(BaseDataloaderConfig):
+class SequenceDataloaderConfig:
     """The generic dataloader configuration class for datasets of sequence data.
 
     Each instance of this class is run on one device.
@@ -260,7 +235,7 @@ class TokenizerConfig:
 
 
 @dataclass
-class ItemDatasetConfig(BaseDatasetConfig):
+class ItemDatasetConfig:
     """The configuration class used to store the item dataset configuration.
 
     Parameters
@@ -269,7 +244,7 @@ class ItemDatasetConfig(BaseDatasetConfig):
         The item id field.
     preprocessing_functions: list[callable]
         The preprocessing functions to be applied to the data.
-    data_iterator: RawDataIterator
+    data_iterator: BaseIterator
         The data iterator.
     keep_item_id: bool
         Whether to keep the item id in the data.
@@ -290,7 +265,7 @@ class ItemDatasetConfig(BaseDatasetConfig):
 
     item_id_field: str
     preprocessing_functions: list[callable]  # type: ignore
-    data_iterator: RawDataIterator
+    data_iterator: BaseIterator
     keep_item_id: bool = True
     features_to_consider: Optional[List[str]] = None
     feature_map: Optional[Dict[str, str]] = None
@@ -300,7 +275,7 @@ class ItemDatasetConfig(BaseDatasetConfig):
 
 
 @dataclass
-class ItemDataloaderConfig(BaseDataloaderConfig):
+class ItemDataloaderConfig:
 
     dataset_class: IterableDataset
     data_folder: str

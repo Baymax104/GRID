@@ -1,10 +1,9 @@
 from typing import List
 
+from omegaconf import DictConfig
 from torch.utils.data import IterableDataset, get_worker_info
 
-from src.data.loading.components.interfaces import BaseDatasetConfig
 from src.utils.pylogger import RankedLogger
-
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -12,7 +11,7 @@ command_line_logger = RankedLogger(__name__, rank_zero_only=True)
 class BaseDataset:
     def __init__(
         self,
-        dataset_config: BaseDatasetConfig,
+        dataset_config: DictConfig,
         data_folder: str,
         should_shuffle_rows: bool = False,
         is_for_training: bool = True,
@@ -20,7 +19,7 @@ class BaseDataset:
         """
         Base class for all datasets. This class is used to set up the dataset and provide the list of files to be used.
         Args:
-            dataset_config (BaseDatasetConfig): Configuration for the dataset.
+            dataset_config (DictConfig): Configuration for the dataset.
             data_folder (str): Path to the folder where the data is stored.
             should_shuffle_rows (bool): Whether to shuffle the rows of the dataset.
             is_for_training (bool): Whether the dataset is for training or not.
@@ -76,7 +75,7 @@ class BaseDataset:
         pass
 
 
-class UnboundedSequenceIterable(BaseDataset, IterableDataset):
+class SequenceDataset(BaseDataset, IterableDataset):
     """
     An unbounded dataset is a dataset that we don't know the size of beforehand.
     For training, we will iterate over the dataset infinitely.
@@ -85,7 +84,7 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
 
     def __init__(
         self,
-        dataset_config: BaseDatasetConfig,
+        dataset_config: DictConfig,
         data_folder: str,
         should_shuffle_rows: bool = False,
         is_for_training: bool = True,
@@ -135,6 +134,7 @@ class UnboundedSequenceIterable(BaseDataset, IterableDataset):
         if self.dataset_to_iterate is None:
             # If it has not been set up, it means it is a forkserver worker. We need to set it up.
             self.setup()
+        assert self.dataset_to_iterate is not None, "Dataset to iterate is not set"
         # If the dataset is for training, we want to keep iterating over the dataset infinitely.
         # On a streaming dataset, we will always be on Epoch 0.
         finished_iteration = False

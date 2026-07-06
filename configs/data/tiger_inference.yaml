@@ -1,34 +1,34 @@
 # @package _global_
 
 data_iterator:
-  _target_: src.data.loading.components.iterators.TFRecordIterator
+  _target_: src.data.components.iterators.TFRecordIterator
 dataset_class:
-  _target_: src.data.loading.components.dataloading.UnboundedSequenceIterable
+  _target_: src.data.components.datasets.SequenceDataset
   _partial_: true
 collate:
-  _target_: src.data.loading.components.collate_functions.collate_fn_inference_for_sequence
+  _target_: src.data.components.collate.collate_fn_inference_for_sequence
   _partial_: true
   sequence_length: ${data.predict_dataloader.sequence_length}
   padding_token: ${data.predict_dataloader.padding_token}
   id_field_name: ${data.dataset.user_id_field}
 preprocessing:
   filter_features:
-    _target_: src.data.loading.components.pre_processing.filter_features_to_consider
+    _target_: src.data.components.preprocessing.filter_features_to_consider
     _partial_: true
   dense_array:
-    _target_: src.data.loading.components.pre_processing.convert_to_dense_numpy_array
+    _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
     _partial_: true
   convert_fields:
-    _target_: src.data.loading.components.pre_processing.convert_fields_to_tensors
+    _target_: src.data.components.preprocessing.convert_fields_to_tensors
     _partial_: true
   sparse_to_semantic_id:
-    _target_: src.data.loading.components.pre_processing.map_sparse_id_to_semantic_id
+    _target_: src.data.components.preprocessing.map_sparse_id_to_semantic_id
     _partial_: true
     features_to_apply:
     - sequence_data
     num_hierarchies: ${model.root.num_hierarchies}
 predict_dataset:
-  _target_: src.data.loading.components.interfaces.SemanticIDDatasetConfig
+  _target_: src.data.components.data_models.SemanticIDDatasetConfig
   user_id_field: ${data.dataset.user_id_field}
   min_sequence_length: ${data.dataset.min_sequence_length}
   keep_user_id: ${data.dataset.keep_user_id}
@@ -48,7 +48,7 @@ predict_dataset:
   - ${data.preprocessing.convert_fields}
   - ${data.preprocessing.sparse_to_semantic_id}
 predict_dataloader:
-  _target_: src.data.loading.components.interfaces.SequenceDataloaderConfig
+  _target_: src.data.components.data_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
   should_shuffle_rows: false
@@ -67,7 +67,7 @@ predict_dataloader:
   dataset_config: ${data.predict_dataset}
   pin_memory: false
 datamodule:
-  _target_: src.data.loading.datamodules.sequence.SequenceDataModule
+  _target_: src.data.datamodules.sequence.SequenceDataModule
   predict_dataloader_config: ${data.predict_dataloader}
 features:
 - name: sequence_data

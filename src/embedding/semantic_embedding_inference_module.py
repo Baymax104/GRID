@@ -4,7 +4,7 @@ from lightning import LightningModule
 from torch import nn
 
 from src.common.components.model_output import OneKeyPerPredictionOutput
-from src.data.loading.components.interfaces import ItemData
+from src.data.components.data_models import ItemData
 
 
 class SemanticEmbeddingInferenceModule(LightningModule):
