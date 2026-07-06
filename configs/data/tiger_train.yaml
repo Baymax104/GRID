@@ -45,7 +45,7 @@ eval_collate:
   sequence_length: ${data.val_dataloader.sequence_length}
   padding_token: ${data.val_dataloader.padding_token}
 train_dataset:
-  _target_: src.data.components.data_models.SemanticIDDatasetConfig
+  _target_: src.data.components.config_models.SemanticIDDatasetConfig
   user_id_field: ${data.dataset.user_id_field}
   min_sequence_length: ${data.dataset.min_sequence_length}
   keep_user_id: ${data.dataset.keep_user_id}
@@ -65,7 +65,7 @@ train_dataset:
   - ${data.preprocessing.convert_fields}
   - ${data.preprocessing.sparse_to_semantic_id}
 train_dataloader:
-  _target_: src.data.components.data_models.SequenceDataloaderConfig
+  _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/training
   should_shuffle_rows: true
@@ -84,7 +84,7 @@ train_dataloader:
   dataset_config: ${data.train_dataset}
   pin_memory: true
 val_dataloader:
-  _target_: src.data.components.data_models.SequenceDataloaderConfig
+  _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/evaluation
   should_shuffle_rows: false
@@ -103,7 +103,7 @@ val_dataloader:
   dataset_config: ${data.train_dataset}
   pin_memory: false
 test_dataloader:
-  _target_: src.data.components.data_models.SequenceDataloaderConfig
+  _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
   should_shuffle_rows: false

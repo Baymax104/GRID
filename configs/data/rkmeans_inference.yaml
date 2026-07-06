@@ -26,7 +26,7 @@ preprocessing:
     sparse_id_field: id
     embedding_field_to_add: embedding
 dataset:
-  _target_: src.data.components.data_models.ItemDatasetConfig
+  _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
   keep_item_id: true
   data_iterator: ${data.data_iterator}
@@ -44,7 +44,7 @@ dataset:
   field_type_map: ${create_map_from_list_of_dicts:${data.features}, "name",
     "type"}
 predict_dataloader:
-  _target_: src.data.components.data_models.ItemDataloaderConfig
+  _target_: src.data.components.config_models.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   should_shuffle_rows: false

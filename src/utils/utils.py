@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 from tokenizers.processors import TemplateProcessing
 from transformers.cache_utils import DynamicCache
 
-from src.data.components.data_models import TokenizerConfig
+from src.data.components.config_models import TokenizerConfig
 from src.utils.pylogger import RankedLogger
 from src.utils.rich_utils import print_config_tree
 

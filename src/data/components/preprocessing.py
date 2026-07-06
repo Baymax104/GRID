@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from omegaconf import DictConfig
 
-from src.data.components.data_models import TokenizerConfig
+from src.data.components.config_models import TokenizerConfig
 from src.utils.file_utils import load_json
 from src.utils.utils import load_tokenize
 

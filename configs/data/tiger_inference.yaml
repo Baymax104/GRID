@@ -28,7 +28,7 @@ preprocessing:
     - sequence_data
     num_hierarchies: ${model.root.num_hierarchies}
 predict_dataset:
-  _target_: src.data.components.data_models.SemanticIDDatasetConfig
+  _target_: src.data.components.config_models.SemanticIDDatasetConfig
   user_id_field: ${data.dataset.user_id_field}
   min_sequence_length: ${data.dataset.min_sequence_length}
   keep_user_id: ${data.dataset.keep_user_id}
@@ -48,7 +48,7 @@ predict_dataset:
   - ${data.preprocessing.convert_fields}
   - ${data.preprocessing.sparse_to_semantic_id}
 predict_dataloader:
-  _target_: src.data.components.data_models.SequenceDataloaderConfig
+  _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
   should_shuffle_rows: false
