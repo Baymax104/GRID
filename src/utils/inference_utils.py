@@ -264,5 +264,9 @@ class LocalPickleWriter(BaseBufferedWriter):
                 index_key=self.prediction_key_name,
                 value_key=self.prediction_name,
             )
-            torch.save(merged_data_tensor.cpu(), os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
-            log.info(f"Merged {len(merged_data_tensor)} rows into merged_predictions_tensor.pt. as pytorch tensor")
+            cpu_bundle = {k: v.cpu() for k, v in merged_data_tensor.items()}
+            torch.save(cpu_bundle, os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
+            log.info(
+                "Merged %s keyed rows into merged_predictions_tensor.pt. as keyed prediction bundle",
+                len(cpu_bundle["keys"]),
+            )

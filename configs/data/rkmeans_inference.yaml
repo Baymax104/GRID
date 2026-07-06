@@ -71,11 +71,8 @@ features:
   num_placeholder_tokens: 0
   is_item_ids: true
   embeddings:
-    _target_: torch.load
-    _args_:
-    - _target_: src.utils.file_utils.open_local_or_remote
-      file_path: ${embedding_path}
-      mode: rb
+    _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
+    file_path: ${embedding_path}
   type:
     _target_: torch.__dict__.get
     _args_:

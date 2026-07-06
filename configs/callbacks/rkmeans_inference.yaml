@@ -11,5 +11,3 @@ pickle_writer:
   post_processing_functions:
   - _target_: src.utils.tensor_utils.deduplicate_rows_in_tensor
     _partial_: true
-  - _target_: src.utils.tensor_utils.transpose_tensor_from_file
-    _partial_: true

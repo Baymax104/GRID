@@ -53,11 +53,8 @@ train_dataset:
   num_placeholder_tokens_map: ${data.dataset.num_placeholder_tokens_map}
   semantic_id_map:
     sequence_data:
-      _target_: torch.load
-      _args_:
-      - _target_: src.utils.file_utils.open_local_or_remote
-        file_path: ${semantic_id_path}
-        mode: rb
+      _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
+      file_path: ${semantic_id_path}
   data_iterator: ${data.data_iterator}
   preprocessing_functions:
   - ${data.preprocessing.filter_features}

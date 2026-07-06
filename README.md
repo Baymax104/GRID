@@ -52,6 +52,9 @@ We provide pre-processed Amazon data explored in the [P5 paper](https://arxiv.or
 
 Generate embeddings from LLMs, which later will be transformed into semantic IDs. 
 
+The output file `merged_predictions_tensor.pt` is a keyed prediction bundle with the form
+`{"keys": ..., "predictions": ...}` rather than a bare tensor.
+
 ```bash
 python -m src.main experiment=sem_embeds_inference data_dir=data/amazon_data/beauty # avaiable data includes 'beauty', 'sports', and 'toys'
 ```
@@ -63,7 +66,7 @@ Learn semantic ID centroids for embeddings generated in step 2:
 ```bash
 python -m src.main experiment=rkmeans_train \
     data_dir=data/amazon_data/beauty \
-    embedding_path=<output_path_from_step_2>/merged_predictions_tensor.pt \ # this can be found in the log dirs in step2
+    embedding_path=<output_path_from_step_2>/merged_predictions_tensor.pt \ # keyed prediction bundle from step 2
     embedding_dim=2048 \ # the model dimension of the LLMs you use in step 2. 2048 for flan-t5-xl as used in this example.
     num_hierarchies=3 \  # we train 3 codebooks
     codebook_width=256 \ # each codebook has 256 rows of centroids  
@@ -74,7 +77,7 @@ Generate SIDs:
 ```bash
 python -m src.main experiment=rkmeans_inference \
     data_dir=data/amazon_data/beauty \
-    embedding_path=<output_path_from_step_2>/merged_predictions_tensor.pt \ 
+    embedding_path=<output_path_from_step_2>/merged_predictions_tensor.pt \ # keyed prediction bundle from step 2
     embedding_dim=2048 \ 
     num_hierarchies=3 \  
     codebook_width=256 \ 
@@ -89,7 +92,7 @@ Train the recommendation model using the learned semantic IDs:
 ```bash
 python -m src.main experiment=tiger_train \
     data_dir=data/amazon_data/beauty \ 
-    semantic_id_path=<output_path_from_step_3>/pickle/merged_predictions_tensor.pt \
+    semantic_id_path=<output_path_from_step_3>/pickle/merged_predictions_tensor.pt \ # keyed prediction bundle from step 3
     num_hierarchies=4 # Please note that we add 1 for num_hierarchies because in the previous step we appended one additional digit to de-duplicate the semantic IDs we generate.
 ```
 
@@ -100,7 +103,7 @@ Run inference to generate recommendations:
 ```bash
 python -m src.main experiment=tiger_inference \
     data_dir=data/amazon_data/beauty \ 
-    semantic_id_path=<output_path_from_step_3>/pickle/merged_predictions_tensor.pt \
+    semantic_id_path=<output_path_from_step_3>/pickle/merged_predictions_tensor.pt \ # keyed prediction bundle from step 3
     ckpt_path=<the_checkpoint_you_just_get_above> \ # this can be found in the log dir for training GR models
     num_hierarchies=4 \ # Please note that we add 1 for num_hierarchies because in the previous step we appended one additional digit to de-duplicate the semantic IDs we generate.
 ```
