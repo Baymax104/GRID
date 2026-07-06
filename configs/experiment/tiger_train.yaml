@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-- /data_loading@data_loading: tiger_train
+- /data@data: tiger_train
 - /model@model: tiger_train
 - /callbacks@callbacks: tiger_train
 - /logger@logger: tiger_train

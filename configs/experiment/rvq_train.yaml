@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-- /data_loading@data_loading: rvq_train
+- /data@data: rvq_train
 - /model@model: rvq_train
 - /callbacks@callbacks: rvq_train
 - /logger@logger: rvq_train

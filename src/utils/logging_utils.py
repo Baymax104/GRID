@@ -117,7 +117,7 @@ def log_hyperparameters(cfg: DictConfig, model: LightningModule, trainer: Traine
     hparams["model/params/trainable"] = sum(p.numel() for p in model.parameters() if p.requires_grad)
     hparams["model/params/non_trainable"] = sum(p.numel() for p in model.parameters() if not p.requires_grad)
 
-    hparams["data_loading"] = cfg["data_loading"]
+    hparams["data"] = cfg["data"]
     hparams["trainer"] = cfg["trainer"]
 
     hparams["callbacks"] = cfg.get("callbacks")

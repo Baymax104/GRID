@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-- /data_loading@data_loading: rkmeans_train
+- /data@data: rkmeans_train
 - /model@model: rkmeans_train
 - /callbacks@callbacks: rkmeans_train
 - /logger@logger: rkmeans_train

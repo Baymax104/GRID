@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-- /data_loading@data_loading: rkmeans_inference
+- /data@data: rkmeans_inference
 - /model@model: rkmeans_inference
 - /callbacks@callbacks: rkmeans_inference
 - /logger@logger: rkmeans_inference

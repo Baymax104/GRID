@@ -16,7 +16,7 @@ log = RankedLogger(__name__, rank_zero_only=True)
 def print_config_tree(
     cfg: DictConfig,
     print_order: Sequence[str] = (
-        "data_loading",
+        "data",
         "model",
         "callbacks",
         "logger",

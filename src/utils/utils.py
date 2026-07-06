@@ -18,7 +18,7 @@ log = RankedLogger(__name__, rank_zero_only=True)
 
 def print_warnings_for_missing_configs(cfg: DictConfig) -> None:
     _DEFAULT_CONFIGS = [
-        "data_loading",
+        "data",
         "model",
         # "loss",
         # "optim",

@@ -13,7 +13,7 @@ root:
     sequence_data: input_ids
     user_id: user_id
   decoder: ${model.decoder}
-  codebooks: ${data_loading.train_dataset.semantic_id_map.sequence_data}
+  codebooks: ${data.train_dataset.semantic_id_map.sequence_data}
   num_hierarchies: ${num_hierarchies}
   should_check_prefix: true
   num_user_bins: null

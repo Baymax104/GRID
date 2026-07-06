@@ -11,7 +11,7 @@ root:
   decoder: ${model.decoder}
   num_hierarchies: ${num_hierarchies}
   num_user_bins: null
-  codebooks: ${data_loading.predict_dataset.semantic_id_map.sequence_data}
+  codebooks: ${data.predict_dataset.semantic_id_map.sequence_data}
   mlp_layers: 2
   top_k_for_generation: 10
 huggingface_model:

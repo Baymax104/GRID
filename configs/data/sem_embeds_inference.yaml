@@ -8,8 +8,8 @@ dataset_class:
 collate:
   _target_: src.data.loading.components.collate_functions.collate_fn_items
   _partial_: true
-  item_id_field: ${data_loading.dataset.item_id_field}
-  feature_to_input_name: ${data_loading.predict_dataloader.feature_to_input_name}
+  item_id_field: ${data.dataset.item_id_field}
+  feature_to_input_name: ${data.predict_dataloader.feature_to_input_name}
 preprocessing:
   filter_features:
     _target_: src.data.loading.components.pre_processing.filter_features_to_consider
@@ -40,7 +40,7 @@ preprocessing:
     _partial_: true
     features_to_apply:
     - text
-    tokenizer_config: ${data_loading.tokenizer}
+    tokenizer_config: ${data.tokenizer}
   squeeze_tokenized:
     _target_: src.data.loading.components.pre_processing.squeeze_tensor_in_place
     _partial_: true
@@ -51,24 +51,24 @@ dataset:
   _target_: src.data.loading.components.interfaces.ItemDatasetConfig
   item_id_field: id
   keep_item_id: true
-  data_iterator: ${data_loading.data_iterator}
-  features_to_consider: ${extract_fields_from_list_of_dicts:${data_loading.features},
+  data_iterator: ${data.data_iterator}
+  features_to_consider: ${extract_fields_from_list_of_dicts:${data.features},
     "name", False, "is_text", "True"}
-  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data_loading.features},
+  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data.features},
     "name", "num_placeholder_tokens"}
   preprocessing_functions:
-  - ${data_loading.preprocessing.filter_features}
-  - ${data_loading.preprocessing.dense_array}
-  - ${data_loading.preprocessing.squeeze_text}
-  - ${data_loading.preprocessing.convert_id}
-  - ${data_loading.preprocessing.bytes_to_string}
-  - ${data_loading.preprocessing.tokenize_text}
-  - ${data_loading.preprocessing.squeeze_tokenized}
-  field_type_map: ${create_map_from_list_of_dicts:${data_loading.features}, "name",
+  - ${data.preprocessing.filter_features}
+  - ${data.preprocessing.dense_array}
+  - ${data.preprocessing.squeeze_text}
+  - ${data.preprocessing.convert_id}
+  - ${data.preprocessing.bytes_to_string}
+  - ${data.preprocessing.tokenize_text}
+  - ${data.preprocessing.squeeze_tokenized}
+  field_type_map: ${create_map_from_list_of_dicts:${data.features}, "name",
     "type"}
 predict_dataloader:
   _target_: src.data.loading.components.interfaces.ItemDataloaderConfig
-  dataset_class: ${data_loading.dataset_class}
+  dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   should_shuffle_rows: false
   batch_size_per_device: 8
@@ -78,8 +78,8 @@ predict_dataloader:
   drop_last: false
   pin_memory: false
   persistent_workers: true
-  collate_fn: ${data_loading.collate}
-  dataset_config: ${data_loading.dataset}
+  collate_fn: ${data.collate}
+  dataset_config: ${data.dataset}
   limit_files: null
   feature_to_input_name:
     id: item_ids
@@ -88,7 +88,7 @@ predict_dataloader:
     embedding: input_embedding
 datamodule:
   _target_: src.data.loading.datamodules.item.ItemDataModule
-  predict_dataloader_config: ${data_loading.predict_dataloader}
+  predict_dataloader_config: ${data.predict_dataloader}
 tokenizer:
   max_length: 128
   padding: max_length

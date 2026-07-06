@@ -127,7 +127,7 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     Initialize and instantiate various objects required for running pipelines.
 
     Python-side top-level instantiation entrypoints are read from top-level component
-    groups such as ``cfg.data_loading``, ``cfg.model``, ``cfg.trainer``, ``cfg.callbacks``,
+    groups such as ``cfg.data``, ``cfg.model``, ``cfg.trainer``, ``cfg.callbacks``,
     and ``cfg.logger``.
 
     Args:
@@ -143,8 +143,8 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
     cfg = apply_dry_run_overrides(cfg)
 
-    command_line_logger.info(f"Instantiating datamodule <{cfg.data_loading.datamodule._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data_loading.datamodule)
+    command_line_logger.info(f"Instantiating datamodule <{cfg.data.datamodule._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data.datamodule)
 
     command_line_logger.info(f"Instantiating model <{cfg.model.root._target_}>")
     model: LightningModule = hydra.utils.instantiate(cfg.model.root)

@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-- /data_loading@data_loading: sem_embeds_inference
+- /data@data: sem_embeds_inference
 - /model@model: sem_embeds_inference
 - /callbacks@callbacks: sem_embeds_inference
 - /logger@logger: sem_embeds_inference
