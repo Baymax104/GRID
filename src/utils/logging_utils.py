@@ -1,7 +1,7 @@
 import json
 import os
 from importlib.util import find_spec
-from typing import Any
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from lightning import LightningModule, Trainer
@@ -9,9 +9,10 @@ from lightning.pytorch.loggers import Logger
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
 
-from src.utils import pylogger
+from src.utils.pylogger import RankedLogger
 
-log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+
+log = RankedLogger(__name__, rank_zero_only=True)
 
 # logging constants
 END_RUN = "end_run"
@@ -36,18 +37,18 @@ class DryRunLogger(Logger):
     def experiment(self) -> "DryRunLogger":
         return self
 
-    def log_hyperparams(self, params: Any) -> None:
+    def log_hyperparams(self, params, *args, **kwargs):
         return None
 
-    def log_metrics(self, metrics: dict[str, Any], step: int) -> None:
-        return None
+    def log_metrics(self, metrics: dict[str, float], step=None) -> None:
+        pass
 
-    def finalize(self, status: str) -> None:
+    def finalize(self, status: str):
         return None
 
 
 def convert_dict_to_json_string(data: dict) -> str:
-    return json.dumps(data, indent=4)
+    return json.dumps(data, ensure_ascii=False, indent=2)
 
 
 @rank_zero_only

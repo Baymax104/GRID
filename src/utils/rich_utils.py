@@ -6,10 +6,10 @@ import rich.tree
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
 
-from src.utils import pylogger
 from src.utils.file_utils import open_local_or_remote
+from src.utils.pylogger import RankedLogger
 
-log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+log = RankedLogger(__name__, rank_zero_only=True)
 
 
 @rank_zero_only
@@ -70,4 +70,3 @@ def print_config_tree(
     if save_to_file:
         with open_local_or_remote(f"{cfg.paths.output_dir}/config_tree.log", "w") as file:
             rich.print(tree, file=file)
-

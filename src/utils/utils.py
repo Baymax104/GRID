@@ -10,9 +10,10 @@ from tokenizers.processors import TemplateProcessing
 from transformers.cache_utils import DynamicCache
 
 from src.data.loading.components.interfaces import TokenizerConfig
-from src.utils import pylogger, rich_utils
+from src.utils.pylogger import RankedLogger
+from src.utils.rich_utils import print_config_tree
 
-log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+log = RankedLogger(__name__, rank_zero_only=True)
 
 
 def print_warnings_for_missing_configs(cfg: DictConfig) -> None:
@@ -57,7 +58,7 @@ def extras(cfg: DictConfig) -> None:
     # pretty print config tree using Rich library
     if cfg.extras.get("print_config"):
         log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
-        rich_utils.print_config_tree(cfg, resolve=True, save_to_file=True)
+        print_config_tree(cfg, resolve=True, save_to_file=True)
 
 
 def delete_module(module: torch.nn.Module, module_name: str) -> None:
@@ -138,22 +139,6 @@ def has_class_object_inside_list(obj_list: list, class_type: Any) -> bool:
         True if the list contains an object of the given class type.
     """
     return any(isinstance(obj, class_type) for obj in obj_list)
-
-
-def convert_legacy_kv_cache_to_dynamic(kv_cache: DynamicCache | tuple[torch.Tensor]) -> DynamicCache:
-    """
-    Converts a legacy key-value cache (Tuple of tensors) to a dynamic cache.
-
-    Args:
-        kv_cache: The key-value cache.
-
-    Returns:
-        The dynamic cache.
-    """
-    if isinstance(kv_cache, DynamicCache):
-        return kv_cache
-
-    return DynamicCache.from_legacy_cache(kv_cache)
 
 
 def get_parent_module_and_attr(model: torch.nn.Module, module_name: str) -> tuple[torch.nn.Module, str]:
