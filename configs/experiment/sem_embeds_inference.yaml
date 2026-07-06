@@ -111,6 +111,38 @@ components:
         _target_: src.common.modules.embedding_aggregator.EmbeddingAggregator
         aggregation_strategy:
           _target_: src.common.components.aggregation_strategy.MeanAggregation
+    root:
+      _target_: src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
+      semantic_embedding_model_input_map: ${model.semantic_embedding_model_input_map}
+      semantic_embedding_model: ${components.model.semantic_embedding_model}
+  callbacks:
+    pickle_writer:
+      _target_: src.utils.inference_utils.LocalPickleWriter
+      output_dir: ${paths.output_dir}/pickle
+      flush_frequency: 64
+      write_interval: batch
+      should_merge_files_on_main: true
+      prediction_key_name: item_id
+      prediction_name: embedding
+      should_merge_list_of_keyed_tensors_to_single_tensor: true
+  logger:
+    {}
+  trainer:
+    root:
+      _target_: lightning.pytorch.trainer.Trainer
+      default_root_dir: ${paths.output_dir}
+      min_steps: ${trainer.min_steps}
+      max_steps: ${trainer.max_steps}
+      max_epochs: ${trainer.max_epochs}
+      accelerator: ${trainer.accelerator}
+      devices: ${trainer.devices}
+      num_nodes: ${trainer.num_nodes}
+      precision: ${trainer.precision}
+      log_every_n_steps: ${trainer.log_every_n_steps}
+      val_check_interval: ${trainer.val_check_interval}
+      deterministic: ${trainer.deterministic}
+      accumulate_grad_batches: ${trainer.accumulate_grad_batches}
+      profiler: ${trainer.profiler}
 
 # -----------------------------
 # Data loading parameters
@@ -164,40 +196,13 @@ data_loading:
       text: text_tokens
       text_mask: text_mask
       embedding: input_embedding
-  datamodule: ${components.data_loading.datamodule}
 
-# -----------------------------
-# Model
-# -----------------------------
 model:
-  _target_: src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
   semantic_embedding_model_input_map:
     input_ids: text_tokens
     attention_mask: text_mask
-  semantic_embedding_model: ${components.model.semantic_embedding_model}
-
-# -----------------------------
-# Callbacks and logging
-# -----------------------------
-callbacks:
-  pickle_writer:
-    _target_: src.utils.inference_utils.LocalPickleWriter
-    output_dir: ${paths.output_dir}/pickle
-    flush_frequency: 64
-    write_interval: batch
-    should_merge_files_on_main: true
-    prediction_key_name: item_id
-    prediction_name: embedding
-    should_merge_list_of_keyed_tensors_to_single_tensor: true
-
-logger: {}
-
-# -----------------------------
-# Trainer
-# -----------------------------
+ 
 trainer:
-  _target_: lightning.pytorch.trainer.Trainer
-  default_root_dir: ${paths.output_dir}
   min_steps: 1
   max_steps: 80000
   max_epochs: 10

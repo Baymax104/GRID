@@ -72,6 +72,22 @@ components:
       _target_: src.data.loading.datamodules.item.ItemDataModule
       predict_dataloader_config: ${components.data_loading.predict_dataloader}
   model:
+    root:
+      _target_: src.quantization.residual_quantization.ResidualQuantization
+      track_residuals: ${model.track_residuals}
+      verbose: ${model.verbose}
+      train_layer_wise: ${model.train_layer_wise}
+      normalize_residuals: ${model.normalize_residuals}
+      input_dim: ${model.input_dim}
+      n_layers: ${model.n_layers}
+      init_buffer_size: ${model.init_buffer_size}
+      quantization_layer: ${components.model.quantization_layer}
+      optimizer: null
+      scheduler: null
+      quantization_layer_list: null
+      training_loop_function: ${components.model.training_loop_function}
+      loss_function: null
+      evaluator: null
     quantization_layer:
       _target_: src.quantization.mini_batch_kmeans.MiniBatchKMeans
       n_clusters: ${codebook_width}
@@ -87,6 +103,38 @@ components:
     training_loop_function:
       _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
       _partial_: true
+  callbacks:
+    pickle_writer:
+      _target_: src.utils.inference_utils.LocalPickleWriter
+      output_dir: ${paths.output_dir}/pickle
+      flush_frequency: ${callbacks.pickle_writer.flush_frequency}
+      write_interval: ${callbacks.pickle_writer.write_interval}
+      should_merge_files_on_main: ${callbacks.pickle_writer.should_merge_files_on_main}
+      prediction_key_name: ${callbacks.pickle_writer.prediction_key_name}
+      prediction_name: ${callbacks.pickle_writer.prediction_name}
+      post_processing_functions: ${callbacks.pickle_writer.post_processing_functions}
+  logger:
+    csv:
+      _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
+      save_dir: ${paths.output_dir}
+      name: ${logger.csv.name}
+      prefix: ${logger.csv.prefix}
+  trainer:
+    root:
+      _target_: lightning.pytorch.trainer.Trainer
+      default_root_dir: ${paths.output_dir}
+      min_steps: ${trainer.min_steps}
+      max_steps: ${trainer.max_steps}
+      max_epochs: ${trainer.max_epochs}
+      accelerator: ${trainer.accelerator}
+      devices: ${trainer.devices}
+      num_nodes: ${trainer.num_nodes}
+      precision: ${trainer.precision}
+      log_every_n_steps: ${trainer.log_every_n_steps}
+      val_check_interval: ${trainer.val_check_interval}
+      deterministic: ${trainer.deterministic}
+      accumulate_grad_batches: ${trainer.accumulate_grad_batches}
+      profiler: ${trainer.profiler}
 
 data_loading:
   features:
@@ -126,10 +174,9 @@ data_loading:
       text: text_tokens
       text_mask: text_mask
       embedding: input_embedding
-  datamodule: ${components.data_loading.datamodule}
+ 
 
 model:
-  _target_: src.quantization.residual_quantization.ResidualQuantization
   track_residuals: true
   verbose: true
   train_layer_wise: true
@@ -137,18 +184,9 @@ model:
   input_dim: ${embedding_dim}
   n_layers: ${num_hierarchies}
   init_buffer_size: 3072
-  quantization_layer: ${components.model.quantization_layer}
-  optimizer: null
-  scheduler: null
-  quantization_layer_list: null
-  training_loop_function: ${components.model.training_loop_function}
-  loss_function: null
-  evaluator: null
 
 callbacks:
   pickle_writer:
-    _target_: src.utils.inference_utils.LocalPickleWriter
-    output_dir: ${paths.output_dir}/pickle
     flush_frequency: 100000
     write_interval: batch
     should_merge_files_on_main: true
@@ -171,14 +209,10 @@ paths:
 
 logger:
   csv:
-    _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-    save_dir: ${paths.output_dir}
     name: csv/
     prefix: ''
 
 trainer:
-  _target_: lightning.pytorch.trainer.Trainer
-  default_root_dir: ${paths.output_dir}
   min_steps: 1
   max_steps: 80000
   max_epochs: 10

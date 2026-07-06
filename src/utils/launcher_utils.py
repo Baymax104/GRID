@@ -8,18 +8,14 @@ from lightning.pytorch.callbacks import ModelCheckpoint, ModelSummary
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, open_dict
 
-from src.utils import (
-    RankedLogger,
-    instantiate_callbacks,
-    instantiate_loggers,
-    log_hyperparameters,
-)
 from src.utils.file_utils import (
     get_last_modified_file,
     has_no_extension,
     list_subfolders,
 )
-from src.utils.logging_utils import DryRunLogger, finalize_loggers
+from src.utils.instantiators import instantiate_callbacks, instantiate_loggers
+from src.utils.logging_utils import DryRunLogger, finalize_loggers, log_hyperparameters
+from src.utils.pylogger import RankedLogger
 from src.utils.utils import has_class_object_inside_list
 
 command_line_logger = RankedLogger(__name__, rank_zero_only=True)
@@ -92,17 +88,19 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
     command_line_logger.info("Applying dry run overrides: minimal execution without business result writes.")
 
     with open_dict(cfg):
-        if cfg.get("callbacks"):
-            for name, cb_conf in cfg.callbacks.items():
+        callback_definitions = cfg.get("components", {}).get("callbacks")
+        if callback_definitions:
+            for name, cb_conf in callback_definitions.items():
                 if isinstance(cb_conf, DictConfig) and cb_conf.get("_target_") in DRY_RUN_DISABLED_CALLBACK_TARGETS:
                     command_line_logger.info(f"Disabling callback for dry run: {name} <{cb_conf.get('_target_')}>")
-                    cfg.callbacks[name] = None
+                    callback_definitions[name] = None
 
-        if cfg.get("logger"):
-            for name, lg_conf in cfg.logger.items():
+        logger_definitions = cfg.get("components", {}).get("logger")
+        if logger_definitions:
+            for name, lg_conf in logger_definitions.items():
                 if isinstance(lg_conf, DictConfig) and lg_conf.get("_target_") in DRY_RUN_DISABLED_LOGGER_TARGETS:
                     command_line_logger.info(f"Disabling logger for dry run: {name} <{lg_conf.get('_target_')}>")
-                    cfg.logger[name] = None
+                    logger_definitions[name] = None
 
         cfg.trainer.log_every_n_steps = 1
         cfg.trainer.max_epochs = 1
@@ -128,8 +126,12 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     """
     Initialize and instantiate various objects required for running pipelines.
 
+    Python-side top-level instantiation entrypoints are read from ``cfg.components``.
+    Parameter domains such as ``data_loading``, ``model``, and ``trainer`` remain
+    available for shared values, overrides, and hyperparameter logging.
+
     Args:
-        cfg (DictConfig): Configuration object containing parameters for data, model, callbacks, logger, and trainer.
+        cfg (DictConfig): Configuration object containing component entrypoints and parameter domains.
 
     Returns:
         PipelineModules: A dataclass containing the instantiated objects.
@@ -141,27 +143,27 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
     cfg = apply_dry_run_overrides(cfg)
 
-    command_line_logger.info(f"Instantiating datamodule <{cfg.data_loading.datamodule._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data_loading.datamodule)
+    command_line_logger.info(f"Instantiating datamodule <{cfg.components.data_loading.datamodule._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.components.data_loading.datamodule)
 
-    command_line_logger.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    command_line_logger.info(f"Instantiating model <{cfg.components.model.root._target_}>")
+    model: LightningModule = hydra.utils.instantiate(cfg.components.model.root)
 
     command_line_logger.info("Instantiating callbacks...")
-    callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
+    callbacks: list[Callback] = instantiate_callbacks(cfg.get("components", {}).get("callbacks"))
 
     command_line_logger.info("Instantiating loggers...")
-    loggers: list[Logger] = instantiate_loggers(cfg.get("logger"))
+    loggers: list[Logger] = instantiate_loggers(cfg.get("components", {}).get("logger"))
     if cfg.get("dry_run", False) and len(loggers) == 0:
         command_line_logger.info("Using DryRunLogger to satisfy Lightning logging without writing business results.")
         loggers = [DryRunLogger()]
 
-    command_line_logger.info(f"Instantiating trainer <{cfg.trainer._target_}>")
+    command_line_logger.info(f"Instantiating trainer <{cfg.components.trainer.root._target_}>")
 
     enable_checkpointing = has_class_object_inside_list(callbacks, ModelCheckpoint)
     enable_model_summary = has_class_object_inside_list(callbacks, ModelSummary)
     trainer: Trainer = hydra.utils.instantiate(
-        cfg.trainer,
+        cfg.components.trainer.root,
         callbacks=callbacks,
         logger=loggers,
         # The default behavior for lightning it to set `enable_checkpointing` and
@@ -169,8 +171,8 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
         # debug. We change the default to False, but this can be overridden by either
         # setting the parameters in the config file or passing the callbacks as part
         # of the callbacks YAML.
-        enable_checkpointing=cfg.trainer.get("enable_checkpointing", enable_checkpointing),
-        enable_model_summary=cfg.trainer.get("enable_model_summary", enable_model_summary),
+        enable_checkpointing=cfg.components.trainer.root.get("enable_checkpointing", enable_checkpointing),
+        enable_model_summary=cfg.components.trainer.root.get("enable_model_summary", enable_model_summary),
     )
 
     pipeline_modules = PipelineModules(

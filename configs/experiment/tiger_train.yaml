@@ -137,6 +137,22 @@ components:
       val_dataloader_config: ${components.data_loading.val_dataloader}
       test_dataloader_config: ${components.data_loading.test_dataloader}
   model:
+    root:
+      _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
+      huggingface_model: ${components.model.huggingface_model}
+      postprocessor: ${model.postprocessor}
+      aggregator: ${model.aggregator}
+      optimizer: ${components.model.optimizer}
+      scheduler: ${components.model.scheduler}
+      loss_function: ${components.model.loss_function}
+      evaluator: ${components.model.evaluator}
+      feature_to_model_input_map: ${model.feature_to_model_input_map}
+      decoder: ${components.model.decoder}
+      codebooks: ${components.data_loading.train_dataset.semantic_id_map.sequence_data}
+      num_hierarchies: ${model.num_hierarchies}
+      should_check_prefix: ${model.should_check_prefix}
+      num_user_bins: ${model.num_user_bins}
+      mlp_layers: ${model.mlp_layers}
     huggingface_model:
       _target_: transformers.T5EncoderModel
       config:
@@ -181,6 +197,67 @@ components:
       metrics:
         ndcg: {_target_: src.common.components.eval_metrics.NDCG, _partial_: true}
         recall: {_target_: src.common.components.eval_metrics.Recall, _partial_: true}
+  callbacks:
+    model_checkpoint:
+      _target_: lightning.pytorch.callbacks.ModelCheckpoint
+      dirpath: ${paths.output_dir}/checkpoints
+      filename: checkpoint_{epoch:03d}_{step:06d}
+      monitor: ${callbacks.model_checkpoint.monitor}
+      verbose: ${callbacks.model_checkpoint.verbose}
+      save_last: ${callbacks.model_checkpoint.save_last}
+      save_top_k: ${callbacks.model_checkpoint.save_top_k}
+      mode: ${callbacks.model_checkpoint.mode}
+      auto_insert_metric_name: ${callbacks.model_checkpoint.auto_insert_metric_name}
+      save_weights_only: ${callbacks.model_checkpoint.save_weights_only}
+      every_n_train_steps: ${callbacks.model_checkpoint.every_n_train_steps}
+      train_time_interval: ${callbacks.model_checkpoint.train_time_interval}
+      every_n_epochs: ${callbacks.model_checkpoint.every_n_epochs}
+      save_on_train_epoch_end: ${callbacks.model_checkpoint.save_on_train_epoch_end}
+    early_stopping:
+      _target_: lightning.pytorch.callbacks.EarlyStopping
+      monitor: ${callbacks.early_stopping.monitor}
+      min_delta: ${callbacks.early_stopping.min_delta}
+      patience: ${callbacks.early_stopping.patience}
+      verbose: ${callbacks.early_stopping.verbose}
+      mode: ${callbacks.early_stopping.mode}
+      strict: ${callbacks.early_stopping.strict}
+      check_finite: ${callbacks.early_stopping.check_finite}
+      stopping_threshold: ${callbacks.early_stopping.stopping_threshold}
+      divergence_threshold: ${callbacks.early_stopping.divergence_threshold}
+      check_on_train_epoch_end: ${callbacks.early_stopping.check_on_train_epoch_end}
+    model_summary: null
+  logger:
+    csv:
+      _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
+      save_dir: ${paths.output_dir}
+      name: ${logger.csv.name}
+      prefix: ${logger.csv.prefix}
+    wandb:
+      _target_: lightning.pytorch.loggers.wandb.WandbLogger
+      name: ${logger.wandb.name}
+      save_dir: ${paths.output_dir}
+      project: ${logger.wandb.project}
+      group: ${logger.wandb.group}
+  trainer:
+    root:
+      _target_: lightning.pytorch.trainer.Trainer
+      default_root_dir: ${paths.output_dir}
+      min_steps: ${trainer.min_steps}
+      max_steps: ${trainer.max_steps}
+      min_epochs: ${trainer.min_epochs}
+      max_epochs: ${trainer.max_epochs}
+      accelerator: ${trainer.accelerator}
+      devices: ${trainer.devices}
+      num_nodes: ${trainer.num_nodes}
+      precision: ${trainer.precision}
+      log_every_n_steps: ${trainer.log_every_n_steps}
+      val_check_interval: ${trainer.val_check_interval}
+      deterministic: ${trainer.deterministic}
+      accumulate_grad_batches: ${trainer.accumulate_grad_batches}
+      profiler: ${trainer.profiler}
+      strategy: ${trainer.strategy}
+      sync_batchnorm: ${trainer.sync_batchnorm}
+      num_sanity_val_steps: ${trainer.num_sanity_val_steps}
 
 data_loading:
   features:
@@ -244,22 +321,14 @@ data_loading:
     drop_last: false
     persistent_workers: false
     pin_memory: false
-  datamodule: ${components.data_loading.datamodule}
+  
 
 model:
-  _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
-  huggingface_model: ${components.model.huggingface_model}
   postprocessor: null
   aggregator: null
-  optimizer: ${components.model.optimizer}
-  scheduler: ${components.model.scheduler}
-  loss_function: ${components.model.loss_function}
-  evaluator: ${components.model.evaluator}
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id
-  decoder: ${components.model.decoder}
-  codebooks: ${components.data_loading.train_dataset.semantic_id_map.sequence_data}
   num_hierarchies: ${num_hierarchies}
   should_check_prefix: true
   num_user_bins: null
@@ -267,9 +336,6 @@ model:
 
 callbacks:
   model_checkpoint:
-    _target_: lightning.pytorch.callbacks.ModelCheckpoint
-    dirpath: ${paths.output_dir}/checkpoints
-    filename: checkpoint_{epoch:03d}_{step:06d}
     monitor: val/recall@5
     verbose: true
     save_last: null
@@ -282,7 +348,6 @@ callbacks:
     every_n_epochs: null
     save_on_train_epoch_end: false
   early_stopping:
-    _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: ${callbacks.model_checkpoint.monitor}
     min_delta: 0.0
     patience: 10
@@ -297,20 +362,14 @@ callbacks:
 
 logger:
   csv:
-    _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-    save_dir: ${paths.output_dir}
     name: csv/
     prefix: ''
   wandb:
-    _target_: lightning.pytorch.loggers.wandb.WandbLogger
     name: ${now_tz:%Y-%m-%d_%H-%M-%S}
-    save_dir: ${paths.output_dir}
     project: GRID
     group: tiger
 
 trainer:
-  _target_: lightning.pytorch.trainer.Trainer
-  default_root_dir: ${paths.output_dir}
   min_steps: 1
   max_steps: 20000
   min_epochs: 0

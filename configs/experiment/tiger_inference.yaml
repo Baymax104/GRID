@@ -77,6 +77,18 @@ components:
       _target_: src.data.loading.datamodules.sequence.SequenceDataModule
       predict_dataloader_config: ${components.data_loading.predict_dataloader}
   model:
+    root:
+      _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
+      huggingface_model: ${components.model.huggingface_model}
+      feature_to_model_input_map: ${model.feature_to_model_input_map}
+      postprocessor: ${model.postprocessor}
+      aggregator: ${model.aggregator}
+      decoder: ${components.model.decoder}
+      num_hierarchies: ${model.num_hierarchies}
+      num_user_bins: ${model.num_user_bins}
+      codebooks: ${components.data_loading.predict_dataset.semantic_id_map.sequence_data}
+      mlp_layers: ${model.mlp_layers}
+      top_k_for_generation: ${model.top_k_for_generation}
     huggingface_model:
       _target_: transformers.T5EncoderModel
       config:
@@ -101,6 +113,39 @@ components:
         num_layers: 4
         is_decoder: true
         is_encoder_decoder: false
+  callbacks:
+    pickle_writer:
+      _target_: src.utils.inference_utils.LocalPickleWriter
+      output_dir: ${paths.output_dir}/pickle
+      flush_frequency: ${callbacks.pickle_writer.flush_frequency}
+      write_interval: ${callbacks.pickle_writer.write_interval}
+      should_merge_files_on_main: ${callbacks.pickle_writer.should_merge_files_on_main}
+      prediction_key_name: ${callbacks.pickle_writer.prediction_key_name}
+      prediction_name: ${callbacks.pickle_writer.prediction_name}
+  logger:
+    csv:
+      _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
+      save_dir: ${paths.output_dir}
+      name: ${logger.csv.name}
+      prefix: ${logger.csv.prefix}
+  trainer:
+    root:
+      _target_: lightning.pytorch.trainer.Trainer
+      default_root_dir: ${paths.output_dir}
+      min_steps: ${trainer.min_steps}
+      max_steps: ${trainer.max_steps}
+      max_epochs: ${trainer.max_epochs}
+      accelerator: ${trainer.accelerator}
+      devices: ${trainer.devices}
+      num_nodes: ${trainer.num_nodes}
+      precision: ${trainer.precision}
+      log_every_n_steps: ${trainer.log_every_n_steps}
+      val_check_interval: ${trainer.val_check_interval}
+      deterministic: ${trainer.deterministic}
+      accumulate_grad_batches: ${trainer.accumulate_grad_batches}
+      profiler: ${trainer.profiler}
+      strategy: ${trainer.strategy}
+      sync_batchnorm: ${trainer.sync_batchnorm}
 
 data_loading:
   features:
@@ -137,27 +182,21 @@ data_loading:
     drop_last: false
     persistent_workers: false
     pin_memory: false
-  datamodule: ${components.data_loading.datamodule}
+ 
 
 model:
-  _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
-  huggingface_model: ${components.model.huggingface_model}
   feature_to_model_input_map:
     sequence_data: input_ids
     user_id: user_id
   postprocessor: null
   aggregator: null
-  decoder: ${components.model.decoder}
   num_hierarchies: ${num_hierarchies}
   num_user_bins: null
-  codebooks: ${components.data_loading.predict_dataset.semantic_id_map.sequence_data}
   mlp_layers: 2
   top_k_for_generation: 10
 
 callbacks:
   pickle_writer:
-    _target_: src.utils.inference_utils.LocalPickleWriter
-    output_dir: ${paths.output_dir}/pickle
     flush_frequency: 100000
     write_interval: batch
     should_merge_files_on_main: true
@@ -174,13 +213,9 @@ paths:
   metadata_dir: ${paths.output_dir}/metadata
 logger:
   csv:
-    _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-    save_dir: ${paths.output_dir}
     name: csv/
     prefix: ''
 trainer:
-  _target_: lightning.pytorch.trainer.Trainer
-  default_root_dir: ${paths.output_dir}
   min_steps: 1
   max_steps: 80000
   max_epochs: 10
