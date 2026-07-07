@@ -6,7 +6,10 @@ defaults:
 - /callbacks@callbacks: sem_embeds_inference
 - /logger@logger: sem_embeds_inference
 - /trainer@trainer: sem_embeds_inference
+
 data_dir: ???
+devices: ???
+
 embedding_model: ${paths.pretrained_models_dir}/flan-t5-base
 run_mode: inference
 task_name: sem_embeds_inference
