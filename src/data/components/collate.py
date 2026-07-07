@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, Union
+from typing import Any
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -7,7 +7,7 @@ from src.data.components.data_models import (
     ItemData,
     LabelFunctionOutput,
     SequentialModelInputData,
-    SequentialModuleLabelData
+    SequentialModuleLabelData,
 )
 from src.data.utils import combine_list_of_tensor_dicts, pad_or_trim_sequence
 
@@ -19,16 +19,16 @@ def identity_collate_fn(batch: Any) -> Any:
 
 def collate_with_sid_causal_duplicate(
     # batch can be a list or a dict
-    batch: Union[list[dict[str, torch.Tensor]], dict[str, torch.Tensor]],
+    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
     sequence_field_name: str,
     sid_hierarchy: int,
     labels: dict[str, callable],  # type: ignore
     sequence_length: int = 200,
     masking_token: int = 1,
     padding_token: int = 0,
-    oov_token: Optional[int] = None,  # If oov_token is passed, we remove it from the sequence
+    oov_token: int | None = None,  # If oov_token is passed, we remove it from the sequence
     max_batch_size: int = 128,
-) -> Tuple[SequentialModelInputData, SequentialModuleLabelData]:
+) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
     """
     This collate_fn is used to create the generate contiguous sequences as data augmentation to improve the performance.
     It does three things
@@ -97,11 +97,11 @@ def collate_with_sid_causal_duplicate(
 
 def collate_fn_inference_for_sequence(
     # batch can be a list or a dict
-    batch: Union[list[dict[str, torch.Tensor]], dict[str, torch.Tensor]],
+    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
     id_field_name: str,
     sequence_length: int = 200,
     padding_token: int = 0,
-    oov_token: Optional[int] = None,  # If oov_token is passed, we remove it from the sequence
+    oov_token: int | None = None,  # If oov_token is passed, we remove it from the sequence
     **kwargs,
 ) -> SequentialModelInputData:
     """
@@ -160,14 +160,14 @@ def collate_fn_inference_for_sequence(
 
 def collate_fn_train(
     # batch can be a list or a dict
-    batch: Union[list[dict[str, torch.Tensor]], dict[str, torch.Tensor]],
+    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
     labels: dict[str, callable],
     sequence_length: int = 200,
     masking_token: int = 1,
     padding_token: int = 0,
-    oov_token: Optional[int] = None,  # If oov_token is passed, we remove it from the sequence
-    data_augmentation_functions: Optional[list[callable]] = None
-) -> Tuple[SequentialModelInputData, SequentialModuleLabelData]:
+    oov_token: int | None = None,  # If oov_token is passed, we remove it from the sequence
+    data_augmentation_functions: list[callable] | None = None
+) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
     """
     The collate function passed to dataloader.
     It can do training masking and padding for the input sequence.

@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import torch
 import transformers
@@ -20,15 +19,15 @@ class SequenceDatasetConfig:
         The raw data iterator.
     preprocessing_functions: list[callable]
         The list of preprocessing functions. Should be in the order they must be applied.
-    num_placeholder_tokens_map: Optional[dict]
+    num_placeholder_tokens_map: dict | None
         The number of placeholder tokens map.
     keep_user_id: bool
         Whether to keep the user id feature in the batches.
-    field_type_map: Optional[dict]
+    field_type_map: dict | None
         The field type map.
     min_sequence_length: int
         The minimum sequence length. Only works if iterating per row.
-    feature_map: Optional[dict]
+    feature_map: dict | None
         maps the feature names to the desired feature names.
     features_to_consider: list[str]
         List of features to consider. If not specified, consider all features.
@@ -44,10 +43,10 @@ class SequenceDatasetConfig:
     data_iterator: BaseIterator
     preprocessing_functions: list[callable]  # type: ignore
     keep_user_id: bool = False
-    num_placeholder_tokens_map: Optional[dict] = field(default_factory=dict)
-    field_type_map: Optional[dict] = field(default_factory=dict)
+    num_placeholder_tokens_map: dict | None = field(default_factory=dict)
+    field_type_map: dict | None = field(default_factory=dict)
     min_sequence_length: int = 10
-    feature_map: Optional[dict] = None
+    feature_map: dict | None = None
     features_to_consider: list[str] = field(default_factory=list)
     file_format: str = None
 
@@ -66,16 +65,16 @@ class SequenceDataloaderConfig:
         Path to the folder containingthe dataset files.
     dataset_config: SequenceDatasetConfig
         The dataset configuration.
-    labels: Dict[str, callable]
+    labels: dict[str, callable]
         A dictionary mapping from feature names to
     batch_size_per_device: list[callable]
         The batch size per dataloader, also per device (GPU).
     num_workers: int
         The number of workers per dataloader, also per device (GPU).
-    assign_files_by_size: Optional[dict]
+    assign_files_by_size: dict | None
         Whether to assign files to workers by file size to balance computation
         across workers.
-    oov_token: Optional[int]
+    oov_token: int | None
         The token used to represent OOV items.
     masking_token: int
         The token used to represent masked items.
@@ -106,8 +105,8 @@ class SequenceDataloaderConfig:
     assign_files_by_size: bool
     masking_token: int
     collate_fn: callable  # type: ignore
-    labels: Dict[str, callable] = field(default_factory=dict)  # type: ignore
-    oov_token: Optional[int] = -1
+    labels: dict[str, callable] = field(default_factory=dict)  # type: ignore
+    oov_token: int | None = -1
     sequence_length: int = 200
     padding_token: int = 0
     drop_last: bool = True
@@ -127,14 +126,14 @@ class SemanticIDDatasetConfig(SequenceDatasetConfig):
 
     Parameters:
     -----------
-    semantic_id_map: Optional[Dict[str, torch.Tensor]]
+    semantic_id_map: dict[str, torch.Tensor] | None
         The semantic id map from field name to a 2-D tensor.
     keep_user_id: bool
         Whether to keep the user id in the dataset. If set to True, the user id
         will be included in the dataset and can be used for inference or evaluation.
     """
 
-    semantic_id_map: Optional[Dict[str, torch.Tensor]] = None
+    semantic_id_map: dict[str, torch.Tensor] | None = None
     keep_user_id: bool = False
 
 
@@ -152,11 +151,11 @@ class TokenizerConfig:
         The padding strategy.
     truncation: bool
         Whether to truncate the sequences.
-    special_tokens: Optional[Dict[str, str]]
+    special_tokens: dict[str, str] | None
         The special tokens.
     add_special_tokens: bool
         Whether to add special tokens.
-    postprocess_eos_token: Optional[bool]
+    postprocess_eos_token: bool | None
         Whether to postprocess the eos token.
     """
 
@@ -164,9 +163,9 @@ class TokenizerConfig:
     max_length: int
     padding: str
     truncation: bool
-    special_tokens: Optional[Dict[str, str]] = field(default_factory=dict)
+    special_tokens: dict[str, str] | None = field(default_factory=dict)
     add_special_tokens: bool = True
-    postprocess_eos_token: Optional[bool] = False
+    postprocess_eos_token: bool | None = False
 
 
 @dataclass
@@ -183,18 +182,18 @@ class ItemDatasetConfig:
         The data iterator.
     keep_item_id: bool
         Whether to keep the item id in the data.
-    features_to_consider: Optional[List[str]]
+    features_to_consider: list[str] | None
         The features to consider.
-    feature_map: Optional[Dict[str, str]]
+    feature_map: dict[str, str] | None
         The map from raw feature name to the key to be used to store the feature in
         ItemTextData.transformed_features.
-    field_type_map: Optional[Dict]
+    field_type_map: dict | None
         The map from field name to the type of the field.
-    embedding_map: Optional[Dict[str, torch.Tensor]]
+    embedding_map: dict[str, torch.Tensor] | None
         The map from field name to the embedding tensor, where the embedding tensor
         is N x d where N is the number of unique IDs in the field and d is the embedding
         dimension.
-    num_placeholder_tokens_map: Optional[Dict[str, int]]
+    num_placeholder_tokens_map: dict[str, int] | None
         The map of the sparse ID field to the number of placeholder IDs in the field.
     """
 
@@ -202,11 +201,11 @@ class ItemDatasetConfig:
     preprocessing_functions: list[callable]  # type: ignore
     data_iterator: BaseIterator
     keep_item_id: bool = True
-    features_to_consider: Optional[List[str]] = None
-    feature_map: Optional[Dict[str, str]] = None
-    field_type_map: Optional[Dict] = None
-    embedding_map: Optional[Dict[str, torch.Tensor]] = None
-    num_placeholder_tokens_map: Optional[Dict[str, int]] = None
+    features_to_consider: list[str] | None = None
+    feature_map: dict[str, str] | None = None
+    field_type_map: dict | None = None
+    embedding_map: dict[str, torch.Tensor] | None = None
+    num_placeholder_tokens_map: dict[str, int] | None = None
 
 
 @dataclass
@@ -220,11 +219,11 @@ class ItemDataloaderConfig:
     assign_files_by_size: bool
 
     collate_fn: callable  # type: ignore
-    feature_to_input_name: Dict[str, str] = field(default_factory=dict)
+    feature_to_input_name: dict[str, str] = field(default_factory=dict)
     drop_last: bool = True
     pin_memory: bool = True
     should_shuffle_rows: bool = False
     persistent_workers: bool = False
     timeout: int = 0
-    oov_token: Optional[int] = 0
-    limit_files: Optional[int] = None
+    oov_token: int | None = 0
+    limit_files: int | None = None

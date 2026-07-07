@@ -47,7 +47,7 @@ exclude = [
     "openspec",
     "outputs",
     "pretrained_models",
-    "data",
+    "/data",
 ]
 
 [tool.ruff.lint]

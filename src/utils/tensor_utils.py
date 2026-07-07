@@ -290,7 +290,7 @@ def create_last_k_mask(sequence_length: int, last_item_index: torch.Tensor, last
         sequence_length (int): The length of the sequences.
         last_item_index (torch.Tensor) of shape (batch_size,).
             The tensor containing the indices of the last items in the each row
-        last_k (Optional[int]): The number of last K items to consider.
+        last_k (int | None): The number of last K items to consider.
             If None, all items are considered.
     Returns:
         torch.Tensor: A boolean tensor of shape (batch_size, sequence_length) with

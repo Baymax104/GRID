@@ -41,7 +41,7 @@ class MeanAggregation(AggregationStrategy):
         Initializes the MeanAggregation class with the specified number of last embeddings to consider.
 
         Args:
-            last_k Optional[int] = None
+            last_k (int | None, optional):
                 The number of last K embeddings to consider for aggregation. If None, all embeddings are considered.
         """
         self.last_k = last_k

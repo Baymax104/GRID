@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -9,7 +9,6 @@ from src.utils.file_utils import load_json
 from src.utils.tensor_utils import lookup_values_in_keyed_prediction_bundle
 from src.utils.utils import load_tokenize
 
-
 # These functions has similar parameters for processing dataset as a pipeline
 # Common parameters: [batch_or_row, features_to_apply]
 # batch_or_row: batch dictionary, {"key1": tensor([batch_size, ...]), "key2": tensor([batch_size, ...])}
@@ -18,7 +17,7 @@ from src.utils.utils import load_tokenize
 def convert_bytes_to_string(
     batch_or_row: dict[str, np.ndarray],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
     # For each feature to apply, cast its np.ndarray of bytes to string.
@@ -28,7 +27,7 @@ def convert_bytes_to_string(
     return batch_or_row
 
 
-def is_feature_in_features_to_apply(features_to_apply: Optional[list[str]], k: str) -> bool:
+def is_feature_in_features_to_apply(features_to_apply: list[str] | None, k: str) -> bool:
     if features_to_apply and k not in features_to_apply:
         return False
     return True
@@ -37,7 +36,7 @@ def is_feature_in_features_to_apply(features_to_apply: Optional[list[str]], k: s
 def filter_features_to_consider(
     batch_or_row: dict[str, Any],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ):
     """
@@ -74,7 +73,7 @@ def filter_features_to_consider(
 def convert_to_dense_numpy_array(
     batch_or_row: dict[str, Any],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
     """
@@ -108,7 +107,7 @@ def convert_to_dense_numpy_array(
 def map_feature_names(
     batch_or_row: dict[str, np.ndarray | torch.Tensor | Any],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ) -> dict[str, np.ndarray | torch.Tensor]:
     """
@@ -135,7 +134,7 @@ def map_feature_names(
 def convert_fields_to_tensors(
     batch_or_row: dict[str, np.ndarray],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ) -> dict[str, np.ndarray]:
     """
@@ -163,7 +162,7 @@ def convert_fields_to_tensors(
 def filter_sequence_length_row(
     row: dict[str, torch.Tensor],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs
 ) -> dict | None:
     """
@@ -188,7 +187,7 @@ def filter_sequence_length_row(
 def filter_empty_feature(
     row: dict[str, torch.Tensor],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs
 ) -> dict | None:
     """
@@ -214,8 +213,8 @@ def filter_empty_feature(
 def map_sparse_id_to_semantic_id(
     row: dict[str, torch.Tensor],
     dataset_config: DictConfig,
-    features_to_apply: Optional[list[str]] = None,
-    num_hierarchies: Optional[int] = None,
+    features_to_apply: list[str] | None = None,
+    num_hierarchies: int | None = None,
     **kwargs,
 ) -> dict[str, torch.Tensor]:
     """
@@ -262,7 +261,7 @@ def trim_sequence_row(
     dataset_config: DictConfig,
     sequence_length: int,
     should_trim_left: bool,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ) -> dict[str, Any]:
     """
@@ -281,7 +280,7 @@ def trim_sequence_row(
         sequence_length (int): The desired length to trim the sequences to.
         should_trim_left (bool): If True, trim the left side of the sequence.
             If False, trim the right side of the sequence.
-        features_to_apply (Optional[list[str]]): A list of feature names to apply the
+        features_to_apply (list[str] | None): A list of feature names to apply the
             trimming to. If empty, all features in the row will be trimmed.
     Returns:
         dict[str, Any]:
@@ -305,7 +304,7 @@ def trim_sequence_row(
 def tokenize_text_features(
     batch_or_row: dict[str, Any],
     tokenizer_config: TokenizerConfig,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -352,8 +351,8 @@ def tokenize_text_features(
 
 def preprocess_categorical_feature_to_idx(
     batch_or_row: dict[str, Any],
-    features_to_apply: Optional[list[str]] = None,
-    mapping_file: Optional[str] = "",
+    features_to_apply: list[str] | None = None,
+    mapping_file: str | None = "",
     **kwargs,
 ) -> dict[str, Any]:
     # Translate categorical features to indices by looking at the mapping provided.
@@ -367,7 +366,7 @@ def preprocess_categorical_feature_to_idx(
         raise ValueError("A valid path to the mapping file must be provided.")
 
     # Helper function to translate feature values to index
-    def translate_to_index(value: Union[str, list[str]]) -> Union[int, list[int]]:
+    def translate_to_index(value: str | list[str]) -> int | list[int]:
         if isinstance(value, list):
             return [category_to_idx.get(v, 0) for v in value]  # Translate each element in the list
         else:
@@ -392,7 +391,7 @@ def preprocess_categorical_feature_to_idx(
 def map_sparse_id_to_embedding(
     row: dict[str, Any],
     dataset_config=None,
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     sparse_id_field: str = "id",
     embedding_field_to_add: str = "embedding",
     **kwargs,
@@ -414,7 +413,7 @@ def map_sparse_id_to_embedding(
 
 def squeeze_tensor_in_place(
     batch_or_row: dict[str, Any],
-    features_to_apply: Optional[list[str]] = None,
+    features_to_apply: list[str] | None = None,
     **kwargs,
 ) -> dict[str, Any]:
     # Squeeze the dimensions of the features to apply

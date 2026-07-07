@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from urllib.parse import unquote, urlparse
 
 from pyarrow import parquet as pq
-from tfrecord.reader import example_loader
 from tfrecord.iterator_utils import shuffle_iterator
+from tfrecord.reader import example_loader
 
 from src.utils.decorators import retry
 from src.utils.file_utils import open_pyarrow_file
@@ -68,8 +68,7 @@ class ParquetDataIterator(BaseIterator):
                 parquet_file = pq.ParquetFile(f)
 
                 for batch in parquet_file.iter_batches(columns=self.features_to_consider, batch_size=self.buffer_size):
-                    for row in batch.to_pylist():
-                        yield row
+                    yield from batch.to_pylist()
 
     def shuffle(self, seed=42) -> BaseIterator:
         random.seed(seed)

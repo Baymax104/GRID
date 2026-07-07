@@ -1,4 +1,3 @@
-from typing import List
 
 from omegaconf import DictConfig
 from torch.utils.data import IterableDataset, get_worker_info
@@ -33,7 +32,7 @@ class BaseDataset:
         self.list_of_file_paths = []
         self.is_for_training = is_for_training
 
-    def set_list_of_files(self, list_of_files: List[str]):
+    def set_list_of_files(self, list_of_files: list[str]):
         self.list_of_file_paths = list_of_files
 
     def set_distributed_params(self, total_workers: int, global_worker_id: int):

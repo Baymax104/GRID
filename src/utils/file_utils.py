@@ -169,7 +169,7 @@ def replace_char_after_segment(
         path (str): The full path string to process
         char_to_replace (str): The character to be replaced
         replacement_char (str): The character to use as replacement
-        segment_to_find (Optional[str]): The path segment after which replacements
+        segment_to_find (str | None): The path segment after which replacements
                                         should occur. If None, replace in the entire string.
 
     Returns:

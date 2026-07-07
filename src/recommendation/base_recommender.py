@@ -4,11 +4,11 @@ import torch
 from torchmetrics.aggregation import BaseAggregator
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 
+from src.common.modules.transformer_base_module import TransformerBaseModule
 from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.common.modules.transformer_base_module import TransformerBaseModule
 
 
 class SemanticIDGenerativeRecommender(TransformerBaseModule):
@@ -76,7 +76,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         num_hierarchies (int): The number of hierarchies in the codebooks.
 
         Returns:
-        Tuple[torch.Tensor, torch.Tensor]: The modified ID embeddings and attention mask.
+        tuple[torch.Tensor, torch.Tensor]: The modified ID embeddings and attention mask.
         id_embeddings: The ID embeddings with the separator token injected of shape (batch_size, seq_len + num_items, emb_dim).
         attention_mask: The attention mask with the separator token injected of shape (batch_size, seq_len + num_items).
 

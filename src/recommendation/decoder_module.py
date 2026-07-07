@@ -24,7 +24,7 @@ class SemanticIDDecoderModule(torch.nn.Module):
         Parameters:
         decoder (transformers.PreTrainedModel): the encoder model (e.g., transformers.T5EncoderModel).
         decoder_mlp (torch.nn.Module): the mlp layers used to project the decoder output to the embedding table.
-        bos_token (Optional[torch.nn.Parameter]):
+        bos_token (torch.nn.Parameter | None):
             the bos token used to prompt the decoder.
             if None, then this means the decoder is used standalone without an encoder.
         """

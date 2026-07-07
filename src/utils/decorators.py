@@ -93,21 +93,21 @@ def retry(
     Decorator that can be added around a function to retry incase it fails i.e. throws some exceptions
 
     Args:
-        exception_to_check (Optional[Type]): the exception to check. may be a tuple of
+        exception_to_check (type | None): the exception to check. may be a tuple of
         exceptions to check. Defaults to Exception. i.e. catches everything
-        tries (Optional[int]): [description]. number of times to try (not retry) before giving up. Defaults to 5.
-        delay_s (Optional[int]): [description]. initial delay between retries in seconds. Defaults to 3.
-        backoff (Optional[int]): [description]. backoff multiplier e.g. value of 2 will double the delay
+        tries (int | None): [description]. number of times to try (not retry) before giving up. Defaults to 5.
+        delay_s (int | None): [description]. initial delay between retries in seconds. Defaults to 3.
+        backoff (int | None): [description]. backoff multiplier e.g. value of 2 will double the delay
             each retry. Defaults to 2.
-        max_delay_s (Optional[int]): [description]. maximum delay between retries in seconds. Defaults to None.
-        fn_execution_timeout_s (Optional[int]): Maximum time given before a single function
+        max_delay_s (int | None): [description]. maximum delay between retries in seconds. Defaults to None.
+        fn_execution_timeout_s (int | None): Maximum time given before a single function
             execution should time out. Defaults to None.
-        deadline_s (Optional[int]): [description]. Total time in seconds to spend retrying, fails if exceeds
+        deadline_s (int | None): [description]. Total time in seconds to spend retrying, fails if exceeds
             this time. Note this timeout can also stop the first execution, so ensure to provide
             a lot of extra room so retries can actually take place.
             If timeout occurs, src.common.utils.timeout.TimedOutException is raised.
             Defaults to None.
-        should_throw_original_exception (Optional[bool]): Defaults to False.
+        should_throw_original_exception (bool | None): Defaults to False.
     """
 
     def deco_retry(f) -> Callable[..., T]:

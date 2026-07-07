@@ -35,13 +35,13 @@ class JobCheckpointMetadata:
 
     Attributes:
         start_time (str): ISO formatted timestamp of when the job started. Defaults to the current time.
-        restarts (List[Dict[str, Any]]): List of dictionaries containing information about previous restarts.
+        restarts (list[dict[str, Any]]): List of dictionaries containing information about previous restarts.
         current_run (int): Counter for the current run number. Starts at 0 and increments with each restart.
-        used_ports (List[str]): List of ports that have been used by previous runs.
+        used_ports (list[str]): List of ports that have been used by previous runs.
         world_size (int): The total number of processes participating in the distributed job.
         node_rank (int): The rank of this node in the distributed job.
         master_addr (str): The address of the master node for distributed training.
-        original_args (List[str]): The original command-line arguments used to start the job.
+        original_args (list[str]): The original command-line arguments used to start the job.
 
     Methods:
         to_dict(): Converts the metadata object to a dictionary representation.

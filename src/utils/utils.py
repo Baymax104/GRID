@@ -150,7 +150,7 @@ def get_parent_module_and_attr(model: torch.nn.Module, module_name: str) -> tupl
         module_name (str): The full name of the module.
 
     Returns:
-        Tuple[torch.nn.Module, str]: The parent module and the attribute name.
+        tuple[torch.nn.Module, str]: The parent module and the attribute name.
     """
     parts = module_name.split(".")
     parent = model

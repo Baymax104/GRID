@@ -4,11 +4,11 @@ import torch
 import transformers
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 
+from src.common.components.model_output import OneKeyPerPredictionOutput
 from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.common.components.model_output import OneKeyPerPredictionOutput
 from src.recommendation.base_recommender import SemanticIDGenerativeRecommender
 from src.recommendation.decoder_module import SemanticIDDecoderModule
 from src.recommendation.encoder_module import SemanticIDEncoderModule
@@ -47,9 +47,9 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
             the shape of the codebooks should be (num_hierarchies, num_embeddings_per_hierarchy).
         num_hierarchies (int): the number of hierarchies in the codebooks.
         top_k_for_generation (int): the number of top-k candidates for generation.
-        num_user_bins (Optional[int]): the number of bins for user in the dataset (this number equals to the number of rows in the embedding table ).
-        mlp_layers (Optional[int]): the number of mlp layers in the encoder and decoder.
-        embedding_dim (Optional[int]): the dimension of the embeddings.
+        num_user_bins (int | None): the number of bins for user in the dataset (this number equals to the number of rows in the embedding table ).
+        mlp_layers (int | None): the number of mlp layers in the encoder and decoder.
+        embedding_dim (int | None): the dimension of the embeddings.
         should_check_prefix (bool): whether to check if the prefix is valid.
         """
 
@@ -213,11 +213,11 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         Forward pass for the decoder module.
         Parameters:
             attention_mask (torch.Tensor): The attention mask for the decoder.
-            future_ids (Optional[torch.Tensor]): The future IDs for the decoder.
-            encoder_output (Optional[torch.Tensor]): The output from the encoder.
-            attention_mask_for_encoder (Optional[torch.Tensor]): The attention mask for the encoder.
+            future_ids (torch.Tensor | None): The future IDs for the decoder.
+            encoder_output (torch.Tensor | None): The output from the encoder.
+            attention_mask_for_encoder (torch.Tensor | None): The attention mask for the encoder.
             use_cache (bool): Whether to use cache for past key values.
-            past_key_values (Optional[DynamicCache]): The cache for past key values.
+            past_key_values (DynamicCache | None): The cache for past key values.
         """
 
         # we generated something before and we need to shift the future_ids
@@ -371,8 +371,8 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
             attention_mask_encoder (torch.Tensor): The attention mask for the encoder.
             input_ids (torch.Tensor): The input IDs for the encoder.
             user_id (torch.Tensor): The user IDs for the encoder.
-            future_ids (Optional[torch.Tensor]): The future IDs for the decoder.
-            attention_mask_decoder (Optional[torch.Tensor]): The attention mask for the decoder.
+            future_ids (torch.Tensor | None): The future IDs for the decoder.
+            attention_mask_decoder (torch.Tensor | None): The attention mask for the decoder.
         """
 
         encoder_output, attention_mask_for_encoder = self.encoder_forward_pass(

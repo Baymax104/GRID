@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from lightning import LightningDataModule
 from lightning.pytorch.trainer.states import TrainerFn
@@ -18,10 +18,10 @@ class BaseDataModule(LightningDataModule, ABC):
 
     def __init__(
         self,
-        train_dataloader_config: Optional[DictConfig] = None,
-        val_dataloader_config: Optional[DictConfig] = None,
-        test_dataloader_config: Optional[DictConfig] = None,
-        predict_dataloader_config: Optional[DictConfig] = None,
+        train_dataloader_config: DictConfig | None = None,
+        val_dataloader_config: DictConfig | None = None,
+        test_dataloader_config: DictConfig | None = None,
+        predict_dataloader_config: DictConfig | None = None,
     ):
         super().__init__()
         self.save_hyperparameters(logger=False)
@@ -32,7 +32,7 @@ class BaseDataModule(LightningDataModule, ABC):
             TrainerFn.TESTING: test_dataloader_config,
             TrainerFn.PREDICTING: predict_dataloader_config,
         }
-        self.stage_to_file_map: Dict[TrainerFn, Dict[int, List[str]]] = {}
+        self.stage_to_file_map: dict[TrainerFn, dict[int, list[str]]] = {}
 
     def get_file_suffix_from_config(self, config: DictConfig) -> str:
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
@@ -133,8 +133,8 @@ class BaseDataModule(LightningDataModule, ABC):
     def predict_dataloader(self):
         return self.get_dataloader(stage=TrainerFn.PREDICTING)
 
-    def state_dict(self) -> Dict[Any, Any]:
+    def state_dict(self) -> dict[Any, Any]:
         return {}
 
-    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+    def load_state_dict(self, state_dict: dict[str, Any]) -> None:
         pass

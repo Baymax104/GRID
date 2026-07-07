@@ -1,7 +1,6 @@
 """LightningDataModule for sequential data pipelines."""
 
 from functools import partial
-from typing import Optional
 
 from omegaconf import DictConfig
 
@@ -13,10 +12,10 @@ class SequenceDataModule(BaseDataModule):
 
     def __init__(
         self,
-        train_dataloader_config: Optional[DictConfig] = None,
-        val_dataloader_config: Optional[DictConfig] = None,
-        test_dataloader_config: Optional[DictConfig] = None,
-        predict_dataloader_config: Optional[DictConfig] = None,
+        train_dataloader_config: DictConfig | None = None,
+        val_dataloader_config: DictConfig | None = None,
+        test_dataloader_config: DictConfig | None = None,
+        predict_dataloader_config: DictConfig | None = None,
     ):
         super().__init__(
             train_dataloader_config=train_dataloader_config,

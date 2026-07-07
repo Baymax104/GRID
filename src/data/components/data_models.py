@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union
 
 import torch
 
@@ -33,17 +32,17 @@ class SequentialModuleLabelData:
 
     Parameters
     ----------
-    labels: Dict[str, torch.Tensor]
+    labels: dict[str, torch.Tensor]
         Dictionary of label_name to label tensor.
         Label tensor is the shape of mask size # long tensor
-    label_location: Dict[str, torch.Tensor]
+    label_location: dict[str, torch.Tensor]
         Dictionary of label_name to label location tensor.
         Label location tensor is the shape of mask_size, 2 as it contains coordinates # long tensor
     """
 
-    labels: Dict[str, torch.Tensor] = field(default_factory=dict)
-    label_location: Dict[str, torch.Tensor] = field(default_factory=dict)
-    attention_mask: Dict[str, torch.Tensor] = field(default_factory=dict)
+    labels: dict[str, torch.Tensor] = field(default_factory=dict)
+    label_location: dict[str, torch.Tensor] = field(default_factory=dict)
+    attention_mask: dict[str, torch.Tensor] = field(default_factory=dict)
 
 
 @dataclass
@@ -52,9 +51,9 @@ class SequentialModelInputData:
 
     Parameters
     ----------
-    user_id_list: Union[torch.Tensor, List[str], None]
+    user_id_list: torch.Tensor | list[str] | None
         Tensor or list of user_ids.
-    transformed_sequences: Dict[str, torch.Tensor]
+    transformed_sequences: dict[str, torch.Tensor]
         Dictionary of sequence_name to sequence tensor.
         Sequence tensor is (batch_size_per_device x sequence length)
     mask: torch.Tensor
@@ -62,8 +61,8 @@ class SequentialModelInputData:
         (batch_size_per_device x sequence length)
     """
 
-    user_id_list: Union[torch.Tensor, List[str], None] = None
-    transformed_sequences: Dict[str, torch.Tensor] = field(default_factory=dict)
+    user_id_list: torch.Tensor | list[str] | None = None
+    transformed_sequences: dict[str, torch.Tensor] = field(default_factory=dict)
     mask: torch.Tensor = (
         None  # Single mask if needed as all sequences are padded the same way.
     )
@@ -75,14 +74,14 @@ class ItemData:
 
     Parameters
     ----------
-    item_ids: Union[torch.Tensor, List[str], None]
+    item_ids: torch.Tensor | list[str] | None
         The item ids.
-    transformed_features: Dict[str, torch.Tensor]
+    transformed_features: dict[str, torch.Tensor]
         The transformed features.
     """
 
-    item_ids: Union[torch.Tensor, List[str], None] = None
-    transformed_features: Dict[str, torch.Tensor] = field(default_factory=dict)
+    item_ids: torch.Tensor | list[str] | None = None
+    transformed_features: dict[str, torch.Tensor] = field(default_factory=dict)
 
 
 @dataclass
@@ -93,11 +92,11 @@ class ItemTextData(ItemData):
 
     Parameters
     ----------
-    text_tokens: Optional[torch.Tensor]
+    text_tokens: torch.Tensor | None
         The text tokens.
-    text_masks: Optional[torch.Tensor]
+    text_masks: torch.Tensor | None
         The text masks.
     """
 
-    text_tokens: Optional[torch.Tensor] = None
-    text_masks: Optional[torch.Tensor] = None
+    text_tokens: torch.Tensor | None = None
+    text_masks: torch.Tensor | None = None
