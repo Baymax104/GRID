@@ -21,7 +21,7 @@ class BaseClusteringModule(LightningModule):
         initializer: ClusteringInitializer,
         loss_function: nn.Module,
         optimizer: Callable[..., torch.optim.Optimizer],
-        scheduler: Callable[..., torch.optim.lr_scheduler._LRScheduler | None] = None,
+        scheduler: Callable[..., torch.optim.lr_scheduler._LRScheduler] | None = None,
         init_buffer_size: int = 1000,
         update_manually: bool = False,
     ):

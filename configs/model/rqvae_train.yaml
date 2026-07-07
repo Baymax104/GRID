@@ -84,5 +84,5 @@ reconstruction_loss_function:
   _target_: torch.nn.MSELoss
   reduction: mean
 training_loop_function:
-  _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
+  _target_: src.quantization.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
   _partial_: true

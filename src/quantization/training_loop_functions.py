@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import torch
 from pytorch_lightning import LightningModule
 
@@ -8,7 +10,7 @@ def scale_loss_by_world_size_for_initialization_training_loop(
     world_size: int,
     is_initialized: bool = True,
     initialization_optimizer_lr: float = 0.5,
-    initialization_optimizer: torch.optim.Optimizer = torch.optim.SGD,
+    initialization_optimizer: Callable[..., torch.optim.Optimizer] = torch.optim.SGD,
 ):
     """
     Training loop that scales the loss by the number of GPUs used for training during
@@ -76,6 +78,8 @@ def scale_loss_by_world_size_for_initialization_training_loop(
     else:
         # Use the default training loop
         opt = model.optimizers()
+        if isinstance(opt, list):
+            opt = opt[0]
     opt.zero_grad()
     model.manual_backward(loss)
     opt.step()

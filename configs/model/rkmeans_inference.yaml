@@ -13,7 +13,6 @@ root:
   optimizer: null
   scheduler: null
   quantization_layer_list: null
-  training_loop_function: ${model.training_loop_function}
   loss_function: null
   evaluator: null
 quantization_layer:
@@ -28,6 +27,3 @@ quantization_layer:
     distance_function: ${model.quantization_layer.distance_function}
     initialize_on_cpu: false
   init_buffer_size: ${model.root.init_buffer_size}
-training_loop_function:
-  _target_: src.common.components.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
-  _partial_: true

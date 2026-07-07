@@ -28,7 +28,6 @@ class TransformerBaseModule(LightningModule):
         scheduler: torch.optim.lr_scheduler._LRScheduler | None,
         loss_function: torch.nn.Module,
         evaluator: Evaluator,
-        training_loop_function: callable = None,
         feature_to_model_input_map: dict[str, str] = None,
         decoder: torch.nn.Module = None,
     ) -> None:
@@ -55,13 +54,9 @@ class TransformerBaseModule(LightningModule):
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.evaluator = evaluator
-        self.training_loop_function = training_loop_function
         # We use setters to set the prediction key and name.
         self._prediction_key_name = None
         self._prediction_name = None
-
-        if self.training_loop_function is not None:
-            self.automatic_optimization = False
 
         if self.evaluator:  # For inference, evaluator is not set.
             for metric_name, metric_object in self.evaluator.metrics.items():
@@ -240,11 +235,6 @@ class TransformerBaseModule(LightningModule):
             logger=True,
             sync_dist=True,
         )
-
-        # If a training loop function is passed, we call it with the module and the loss.
-        # otherwise we use the automatic optimization provided by lightning
-        if self.training_loop_function is not None:
-            self.training_loop_function(self, loss)
 
         return loss
 
