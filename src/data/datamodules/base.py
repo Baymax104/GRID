@@ -34,11 +34,23 @@ class BaseDataModule(LightningDataModule, ABC):
         }
         self.stage_to_file_map: dict[TrainerFn, dict[int, list[str]]] = {}
 
+    @staticmethod
+    def _get_data_reader_target(data_reader_factory):
+        return getattr(data_reader_factory, "func", data_reader_factory)
+
+    @staticmethod
+    def _get_shuffle_files(config: DictConfig) -> bool:
+        dataset_shuffle_files = getattr(config.dataset_config, "shuffle_files", None)
+        if dataset_shuffle_files is not None:
+            return dataset_shuffle_files
+        return getattr(config, "should_shuffle_rows", False)
+
     def get_file_suffix_from_config(self, config: DictConfig) -> str:
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
         if file_format:
             return file_format
-        return config.dataset_config.data_reader.get_file_suffix()
+        data_reader_target = self._get_data_reader_target(config.dataset_config.data_reader)
+        return data_reader_target.get_file_suffix()
 
     def setup(self, stage: str):
         if not hasattr(self, "trainer") or self.trainer is None:
@@ -63,7 +75,7 @@ class BaseDataModule(LightningDataModule, ABC):
                 list_of_files=list_of_files,
                 total_workers=self.trainer.world_size,
                 assign_by_size=config.assign_files_by_size,
-                should_shuffle_rows=getattr(config, "should_shuffle_rows", False),
+                shuffle_files=self._get_shuffle_files(config),
             )
 
     def _get_stage_config(self, stage: TrainerFn) -> DictConfig | None:
@@ -80,7 +92,7 @@ class BaseDataModule(LightningDataModule, ABC):
             dataset_config=curr_config.dataset_config,
             data_folder=curr_config.data_folder,
             list_of_file_paths=device_file_list,
-            global_worker_id=self.trainer.global_rank,
+            global_rank=self.trainer.global_rank,
             is_for_training=stage == TrainerFn.FITTING,
         )
 

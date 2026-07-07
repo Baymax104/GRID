@@ -16,10 +16,12 @@ class SequenceDatasetConfig:
     ----------
     user_id_field: str
         The user id field name.
-    data_reader: BaseDataReader
+    data_reader: Callable[..., BaseDataReader]
         The raw data reader.
     preprocessing_functions: list[callable]
         The list of preprocessing functions. Should be in the order they must be applied.
+    shuffle_files: bool
+        Whether to shuffle the order of files assigned to the current worker.
     num_placeholder_tokens_map: dict | None
         The number of placeholder tokens map.
     keep_user_id: bool
@@ -42,6 +44,8 @@ class SequenceDatasetConfig:
 
     user_id_field: str
     data_reader: Callable[..., BaseDataReader]
+    preprocessing_functions: list[callable] = field(default_factory=list)  # type: ignore
+    shuffle_files: bool = False
     keep_user_id: bool = False
     num_placeholder_tokens_map: dict | None = field(default_factory=dict)
     field_type_map: dict | None = field(default_factory=dict)
@@ -178,8 +182,10 @@ class ItemDatasetConfig:
         The item id field.
     preprocessing_functions: list[callable]
         The preprocessing functions to be applied to the data.
-    data_reader: BaseDataReader
-        The data reader.
+    data_reader: Callable[..., BaseDataReader]
+        The data reader factory.
+    shuffle_files: bool
+        Whether to shuffle the order of files assigned to the current worker.
     keep_item_id: bool
         Whether to keep the item id in the data.
     features_to_consider: list[str] | None
@@ -198,8 +204,9 @@ class ItemDatasetConfig:
     """
 
     item_id_field: str
-    preprocessing_functions: list[callable]  # type: ignore
-    data_reader: BaseDataReader
+    data_reader: Callable[..., BaseDataReader]
+    preprocessing_functions: list[callable] = field(default_factory=list)  # type: ignore
+    shuffle_files: bool = False
     keep_item_id: bool = True
     features_to_consider: list[str] | None = None
     feature_map: dict[str, str] | None = None
@@ -219,6 +226,7 @@ class ItemDataloaderConfig:
     assign_files_by_size: bool
 
     collate_fn: callable  # type: ignore
+    preprocessing_functions: list[callable] = field(default_factory=list)  # type: ignore
     feature_to_input_name: dict[str, str] = field(default_factory=dict)
     drop_last: bool = True
     pin_memory: bool = True

@@ -9,22 +9,15 @@ from src.utils.file_utils import load_json
 from src.utils.tensor_utils import lookup_values_in_keyed_prediction_bundle
 from src.utils.utils import load_tokenize
 
-# These functions has similar parameters for processing dataset as a pipeline
-# Common parameters: [batch_or_row, features_to_apply]
-# batch_or_row: batch dictionary, {"key1": tensor([batch_size, ...]), "key2": tensor([batch_size, ...])}
-# features_to_apply: feature key list, used for filtering feature to apply function
 
 def convert_bytes_to_string(
-    batch_or_row: dict[str, np.ndarray],
-    dataset_config: DictConfig,
+    row: dict[str, np.ndarray],
     features_to_apply: list[str] | None = None,
-    **kwargs,
 ) -> dict[str, np.ndarray]:
-    # For each feature to apply, cast its np.ndarray of bytes to string.
-    for k in batch_or_row:
+    for k in row:
         if is_feature_in_features_to_apply(features_to_apply, k):
-            batch_or_row[k] = batch_or_row[k].astype(str)
-    return batch_or_row
+            row[k] = row[k].astype(str)
+    return row
 
 
 def is_feature_in_features_to_apply(features_to_apply: list[str] | None, k: str) -> bool:
@@ -34,47 +27,21 @@ def is_feature_in_features_to_apply(features_to_apply: list[str] | None, k: str)
 
 
 def filter_features_to_consider(
-    batch_or_row: dict[str, Any],
-    dataset_config: DictConfig,
-    features_to_apply: list[str] | None = None,
-    **kwargs,
+    row: dict[str, Any],
+    features_to_consider: list[str] | None = None,
+    feature_map: dict[str, str] | None = None,
 ):
-    """
-    Rename dataset's feature key and filter features by features_to_consider
+    row = map_feature_names(row, feature_map=feature_map)
+    features_to_consider_set = set(features_to_consider or [])
 
-    Args:
-        batch_or_row: dataset
-        dataset_config: use features_to_consider
-        features_to_apply: unused
-        **kwargs: unused
-
-    Returns:
-        batch_or_row
-    """
-    batch_or_row = map_feature_names(batch_or_row, dataset_config)
-    features_to_consider = set(dataset_config.features_to_consider)
-
-    # add user_id and item_id to features_to_consider if the condition is met
-    if getattr(dataset_config, "keep_user_id", False):
-        if dataset_config.user_id_field not in features_to_consider:
-            features_to_consider.add(dataset_config.user_id_field)
-    if getattr(dataset_config, "keep_item_id", False):
-        if dataset_config.item_id_field not in features_to_consider:
-            features_to_consider.add(dataset_config.item_id_field)
-
-    # filter by features_to_consider
-    if len(dataset_config.features_to_consider):
-        # Given a batch or row, filter the features to consider.
-        return {k: v for k, v in batch_or_row.items() if k in features_to_consider}
-    # if not specified, we consider all features
-    return batch_or_row
+    if len(features_to_consider_set) > 0:
+        return {k: v for k, v in row.items() if k in features_to_consider_set}
+    return row
 
 
 def convert_to_dense_numpy_array(
-    batch_or_row: dict[str, Any],
-    dataset_config: DictConfig,
+    row: dict[str, Any],
     features_to_apply: list[str] | None = None,
-    **kwargs,
 ) -> dict[str, np.ndarray]:
     """
     Transform a record example to a dictionary of dense numpy arrays.
@@ -84,111 +51,95 @@ def convert_to_dense_numpy_array(
     to preserve compatibility with the downstream preprocessing pipeline.
 
     Args:
-        batch_or_row: dataset
-        dataset_config: unused
+        row: dataset row
         features_to_apply: feature key list for applying function
-        **kwargs: unused
 
     Returns:
-        batch_or_row
+        row
     """
-    for k in batch_or_row:
+    for k in row:
         if is_feature_in_features_to_apply(features_to_apply, k):
-            value = batch_or_row[k]
+            value = row[k]
             if isinstance(value, np.ndarray):
-                batch_or_row[k] = np.atleast_1d(value)
+                row[k] = np.atleast_1d(value)
             elif isinstance(value, list):
-                batch_or_row[k] = np.asarray(value)
+                row[k] = np.asarray(value)
             else:
-                batch_or_row[k] = np.atleast_1d(value)
-    return batch_or_row  # type: ignore
+                row[k] = np.atleast_1d(value)
+    return row
 
 
 def map_feature_names(
-    batch_or_row: dict[str, np.ndarray | torch.Tensor | Any],
-    dataset_config: DictConfig,
-    features_to_apply: list[str] | None = None,
-    **kwargs,
+    row: dict[str, np.ndarray | torch.Tensor | Any],
+    feature_map: dict[str, str] | None = None,
 ) -> dict[str, np.ndarray | torch.Tensor]:
     """
     Map the feature names to the desired feature names.
 
     Args:
-        batch_or_row: dataset
-        dataset_config: use feature_map
-        features_to_apply: unused
-        **kwargs: unused
+        row: dataset row
+        feature_map: optional rename map
 
     Returns:
-        batch_or_row
+        row
     """
-    if dataset_config.feature_map:
-        batch_or_row = {
-            v: batch_or_row[k]
-            for k, v in dataset_config.feature_map.items()
-            if k in batch_or_row
-        }
-    return batch_or_row
+    if feature_map:
+        row = {v: row[k] for k, v in feature_map.items() if k in row}
+    return row
 
 
 def convert_fields_to_tensors(
-    batch_or_row: dict[str, np.ndarray],
-    dataset_config: DictConfig,
+    row: dict[str, np.ndarray],
+    field_type_map: dict[str, torch.dtype] | None = None,
     features_to_apply: list[str] | None = None,
-    **kwargs,
-) -> dict[str, np.ndarray]:
+) -> dict[str, torch.Tensor]:
     """
-    Given a batch or row, convert all fields to torch tensors.
+    Given a row, convert all fields to torch tensors.
     Uses the field type map to determine the dtype, defaulting to torch.long if no dtype is specified.
 
     Args:
-        batch_or_row: dataset
-        dataset_config: use field_type_map
+        row: dataset row
+        field_type_map: field to dtype mapping
         features_to_apply: feature key list for applying function
-        **kwargs: unused
 
     Returns:
-        batch_or_row
+        row
     """
-    for k, v in batch_or_row.items():
+    field_type_map = field_type_map or {}
+    tensor_row = {}
+    for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             if isinstance(v, int) or isinstance(v, float):
                 v = [int(v)]
             # field_type_map value is like {"id": torch.int32, "text": torch.bytes}
-            batch_or_row[k] = torch.tensor(v, dtype=dataset_config.field_type_map.get(k, torch.long))  # type: ignore
-    return batch_or_row
+            tensor_row[k] = torch.tensor(v, dtype=field_type_map.get(k, torch.long))
+    return tensor_row
 
 
 def filter_sequence_length_row(
     row: dict[str, torch.Tensor],
-    dataset_config: DictConfig,
-    features_to_apply: list[str] | None = None,
-    **kwargs
-) -> dict | None:
+    min_sequence_length: int,
+) -> dict[str, torch.Tensor] | None:
     """
     This filters out rows that have fields with sequence length smaller than the min threshold.
     Only works for a row right now.
 
     Args:
         row: dataset row, aka. one sample
-        dataset_config: use min_sequence_length
-        features_to_apply: unused
-        **kwargs: unused
+        min_sequence_length:
 
     Returns:
         row or None
     """
     for _, tensor in row.items():
-        if len(tensor) < dataset_config.min_sequence_length:
+        if len(tensor) < min_sequence_length:
             return None
     return row
 
 
 def filter_empty_feature(
     row: dict[str, torch.Tensor],
-    dataset_config: DictConfig,
     features_to_apply: list[str] | None = None,
-    **kwargs
 ) -> dict | None:
     """
     This filters out rows that have fields with empty tensors.
@@ -196,9 +147,7 @@ def filter_empty_feature(
 
     Args:
         row: dataset row, aka. one sample
-        dataset_config: unused
         features_to_apply: feature key list for applying function
-        **kwargs:
 
     Returns:
         row or None
@@ -215,7 +164,6 @@ def map_sparse_id_to_semantic_id(
     dataset_config: DictConfig,
     features_to_apply: list[str] | None = None,
     num_hierarchies: int | None = None,
-    **kwargs,
 ) -> dict[str, torch.Tensor]:
     """
     Given a row of data, maps the sparse ids to semantic ids based on the id_map in the dataset config.
@@ -225,7 +173,6 @@ def map_sparse_id_to_semantic_id(
         dataset_config: use semantic_id_map
         features_to_apply: feature key list for applying function
         num_hierarchies: semantic id digits
-        **kwargs: unused
 
     Returns:
         row
@@ -258,11 +205,9 @@ def map_sparse_id_to_semantic_id(
 
 def trim_sequence_row(
     row: dict[str, Any],
-    dataset_config: DictConfig,
     sequence_length: int,
     should_trim_left: bool,
     features_to_apply: list[str] | None = None,
-    **kwargs,
 ) -> dict[str, Any]:
     """
     Trim the sequences in the row to the sequence_length.
@@ -276,7 +221,6 @@ def trim_sequence_row(
             value is a sequential object to be truncated. The value will be trimmed on
             the side determined by should_trim_left to the specified sequence_length in
             the first dimension.
-        dataset_config (DictConfig): The dataset configuration object.
         sequence_length (int): The desired length to trim the sequences to.
         should_trim_left (bool): If True, trim the left side of the sequence.
             If False, trim the right side of the sequence.
@@ -302,62 +246,44 @@ def trim_sequence_row(
 
 
 def tokenize_text_features(
-    batch_or_row: dict[str, Any],
+    row: dict[str, Any],
     tokenizer_config: TokenizerConfig,
     features_to_apply: list[str] | None = None,
-    **kwargs
 ) -> dict[str, Any]:
     """
     Tokenize text features. features_to_apply must contain only text features.
 
     Args:
-        batch_or_row: dataset
+        row: dataset row
         features_to_apply: feature key list for applying function
         tokenizer_config: tokenizer config
-        **kwargs: unused
 
     Returns:
-        batch_or_row containing text input_ids and attention_mask
+        row containing text input_ids and attention_mask
     """
     if not tokenizer_config:
         raise AttributeError("Tokenizer config not provided")
     tokenize = load_tokenize(config=tokenizer_config)
-    batch_or_row_masks = {}
-    for k, v in batch_or_row.items():
+    row_masks = {}
+    for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             k_mask = "_".join([k, "mask"])
-            if isinstance(v, np.ndarray) or isinstance(v, list):
-                # tokenize every sample in a batch
-                # [{"input_ids": tensor, "attention_mask": tensor}, ...] -> len = batch_size
-                tokenized_seq_list = [tokenize(s) for s in v]
+            tokenized_seq = tokenize(v)
+            row[k] = tokenized_seq["input_ids"].flatten()
+            row_masks[k_mask] = tokenized_seq["attention_mask"].flatten()
 
-                # text -> input_ids
-                # seq_length x token_seq_length x 1
-                batch_or_row[k] = torch.stack([seq["input_ids"].flatten() for seq in tokenized_seq_list])
-                # text_mask -> attention_mask
-                # seq_length x token_seq_length x 1
-                batch_or_row_masks[k_mask] = torch.stack(
-                    [seq["attention_mask"].flatten() for seq in tokenized_seq_list]
-                )
-            else:
-                # one row
-                tokenized_seq = tokenize(v)
-                batch_or_row[k] = tokenized_seq["input_ids"].flatten()  # token_seq_length
-                batch_or_row_masks[k_mask] = tokenized_seq["attention_mask"].flatten()  # token_seq_length
-
-    batch_or_row.update(batch_or_row_masks)
-    return batch_or_row
+    row.update(row_masks)
+    return row
 
 
 def preprocess_categorical_feature_to_idx(
-    batch_or_row: dict[str, Any],
+    row: dict[str, Any],
     features_to_apply: list[str] | None = None,
     mapping_file: str | None = "",
-    **kwargs,
 ) -> dict[str, Any]:
     # Translate categorical features to indices by looking at the mapping provided.
     # features_to_apply must contain name of the categorical features whose mapping is available in the mapping_file.
-    # This works for both rows and batches.
+    # This operates on a single row.
 
     # Load the mapping if a mapping file is provided
     if mapping_file:
@@ -368,37 +294,25 @@ def preprocess_categorical_feature_to_idx(
     # Helper function to translate feature values to index
     def translate_to_index(value: str | list[str]) -> int | list[int]:
         if isinstance(value, list):
-            return [category_to_idx.get(v, 0) for v in value]  # Translate each element in the list
+            return [category_to_idx.get(v, 0) for v in value]
         else:
-            return category_to_idx.get(value, 0)  # Default to 0 (e.g., '<OOV>') if not found
+            return category_to_idx.get(value, 0)
 
     features_to_apply = features_to_apply if features_to_apply else []
-    # Apply the mapping to the appropriate features
-    if isinstance(batch_or_row, list):
-        # If we are handling a single row or a batch of rows
-        for row in batch_or_row:
-            for feature in features_to_apply:
-                if feature in row:
-                    row[feature] = translate_to_index(row[feature])
-    else:
-        for feature in features_to_apply:
-            if feature in batch_or_row:
-                # if it's a sequence feature then process the entire sequence
-                batch_or_row[feature] = translate_to_index(batch_or_row[feature])
-    return batch_or_row
+    for feature in features_to_apply:
+        if feature in row:
+            row[feature] = translate_to_index(row[feature])
+    return row
 
 
 def map_sparse_id_to_embedding(
     row: dict[str, Any],
-    dataset_config=None,
-    features_to_apply: list[str] | None = None,
+    embedding_bundle: dict[str, Any] | None = None,
     sparse_id_field: str = "id",
     embedding_field_to_add: str = "embedding",
-    **kwargs,
 ) -> dict[str, Any]:
     # Map sparse id to pre-computed embedding
 
-    embedding_bundle = dataset_config.embedding_map.get(sparse_id_field, None)
     # predictions is an N x d tensor
     # where N is the number of unique items in the dataset
     # and d is the dimension of the embedding
@@ -407,32 +321,30 @@ def map_sparse_id_to_embedding(
             embedding_bundle, row[sparse_id_field]
         ).squeeze()
     else:
-        raise ValueError(f"Embedding map not found")
+        raise ValueError("Embedding map not found")
     return row
 
 
 def squeeze_tensor_in_place(
-    batch_or_row: dict[str, Any],
+    row: dict[str, Any],
     features_to_apply: list[str] | None = None,
-    **kwargs,
 ) -> dict[str, Any]:
-    # Squeeze the dimensions of the features to apply
-    # This squeeze is done in place, it does not create a new tensor
-    for k, v in batch_or_row.items():
+    # Squeeze row field values in place when they carry unnecessary extra dimensions.
+    for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             if isinstance(v, torch.Tensor):
                 if len(v.shape) == 1:
                     continue
-                batch_or_row[k] = v.squeeze_()
+                row[k] = v.squeeze_()
             elif isinstance(v, np.ndarray):
                 if len(v.shape) == 1:
                     continue
-                batch_or_row[k] = v.squeeze()
+                row[k] = v.squeeze()
             elif isinstance(v, list):
-                batch_or_row[k] = [
+                row[k] = [
                     item.squeeze_() if isinstance(item, torch.Tensor) and len(item.shape) > 1 else item
                     for item in v
                 ]
             else:
                 raise ValueError(f"Unsupported type for feature {k}: {type(v)}. Expected torch.Tensor or list.")
-    return batch_or_row
+    return row

@@ -17,6 +17,7 @@ class BaseDataset:
         self.global_rank = global_rank
         self.list_of_file_paths = list_of_file_paths
 
+    def _get_worker_context(self) -> tuple[int, int, int]:
         # set global dataloader worker id in process level
         # eg. world_size = 2, num_workers = 2
         # Process 0 (global_rank = 0)
@@ -28,14 +29,14 @@ class BaseDataset:
         worker_info = get_worker_info()
         worker_id = worker_info.id if worker_info is not None else 0
         num_workers = worker_info.num_workers if worker_info is not None else 1
-        self.local_dataloader_worker_id = worker_id
-        self.local_dataloader_worker_count = num_workers
-        self.global_dataloader_worker_id = global_rank * num_workers + worker_id
+        global_dataloader_worker_id = self.global_rank * num_workers + worker_id
+        return worker_id, num_workers, global_dataloader_worker_id
 
     def get_list_of_worker_files(self, shuffle: bool = False):
-        worker_files = self.list_of_file_paths[self.local_dataloader_worker_id :: self.local_dataloader_worker_count]
+        worker_id, num_workers, global_dataloader_worker_id = self._get_worker_context()
+        worker_files = self.list_of_file_paths[worker_id::num_workers]
         if shuffle:
-            random.seed(self.global_dataloader_worker_id)
+            random.seed(global_dataloader_worker_id)
             random.shuffle(worker_files)
         return worker_files
 
@@ -58,13 +59,14 @@ class SequenceDataset(BaseDataset, IterableDataset):
         super().__init__(list_of_file_paths=list_of_file_paths, global_rank=global_rank)
         self.dataset_config = dataset_config
         self.data_folder = data_folder
-        self.data_reader_class = dataset_config.data_reader
-        self.shuffle_files = dataset_config.shuffle_files
+        self.data_reader_factory = dataset_config.data_reader
+        self.preprocessing_functions = getattr(dataset_config, "preprocessing_functions", [])
+        self.shuffle_files = getattr(dataset_config, "shuffle_files", False)
         self.is_for_training = is_for_training
 
     def _load_data(self):
         current_worker_files = self.get_list_of_worker_files(shuffle=self.shuffle_files)
-        data_reader = self.data_reader_class(list_of_file_paths=current_worker_files)
+        data_reader = self.data_reader_factory(list_of_file_paths=current_worker_files)
         return data_reader.iterrows()
 
 
@@ -76,7 +78,7 @@ class SequenceDataset(BaseDataset, IterableDataset):
         while not finished_iteration:
             for row_or_batch in dataset_iterable:
                 # call preprocessing functions
-                for preprocessing_function in self.dataset_config.preprocessing_functions:
+                for preprocessing_function in self.preprocessing_functions:
                     row_or_batch = preprocessing_function(row_or_batch)
                     if row_or_batch is None:
                         break

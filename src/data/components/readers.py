@@ -21,8 +21,9 @@ class BaseDataReader(ABC):
         self.list_of_file_paths = list_of_file_paths
         self.shuffle_rows = shuffle_rows
 
+    @classmethod
     @abstractmethod
-    def get_file_suffix(self) -> str:
+    def get_file_suffix(cls) -> str:
         raise NotImplementedError("Must be implemented in child classes")
 
     @abstractmethod
@@ -94,5 +95,6 @@ class TFRecordReader(BaseDataReader):
             yield curr_example
             curr_example = self._get_next_example(dataset_iterator)
 
-    def get_file_suffix(self) -> str:
+    @classmethod
+    def get_file_suffix(cls) -> str:
         return "tfrecord.gz"

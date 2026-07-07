@@ -13,7 +13,7 @@ def assign_files_to_workers(
     list_of_files: list[str],
     total_workers: int,
     assign_by_size: bool,
-    should_shuffle_rows: bool,
+    shuffle_files: bool,
 ) -> tuple[dict[int, list[str]], bool]:
     """Assign each file path in `list_of_files` across workers.
 
@@ -35,7 +35,7 @@ def assign_files_to_workers(
     :param total_workers: The number of workers among which to assign files.
     :param assign_by_size: Whether to assign files to balance size (if True),
         or to assign randomly.
-    :param should_shuffle_rows: Whether to shuffle rows when assigning files.
+    :param shuffle_files: Whether to shuffle file ordering before assigning files.
 
     :return: A dictionary mapping worker indices to file paths and a boolean
         indicating whether files have been assigned to all workers (i.e. each
@@ -54,7 +54,7 @@ def assign_files_to_workers(
     if not assign_by_size:
         # files are assigned randomly to workers
         list_of_files = list_of_files.copy()
-        if should_shuffle_rows:
+        if shuffle_files:
             random.shuffle(list_of_files)
         worker_to_files = {
             worker_id: list_of_files[worker_id::total_workers]
