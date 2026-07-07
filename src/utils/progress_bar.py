@@ -1,47 +1,92 @@
+from typing import Any
+
 from lightning import Trainer
-from lightning.pytorch.callbacks import TQDMProgressBar
+from lightning.pytorch.callbacks import RichProgressBar
+from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTheme
 
 
-class OneBasedEpochProgressBar(TQDMProgressBar):
-    """TQDM progress bar that displays epoch numbers starting at 1.
+class StepBasedRichProgressBar(RichProgressBar):
+    """Rich progress bar that keeps train progress aligned with global steps."""
 
-    This only changes the user-facing description text. Lightning's internal
-    ``current_epoch`` and checkpoint semantics remain zero-based.
-    """
+    TRAIN_DESCRIPTION = "Train"
 
-    def _format_epoch_description(self, trainer: Trainer, prefix: str = "Epoch") -> str:
-        current_epoch = trainer.current_epoch + 1
+    def __init__(
+        self,
+        refresh_rate: int = 10,
+        leave: bool = False,
+        theme: RichProgressBarTheme = RichProgressBarTheme(),
+        console_kwargs: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(refresh_rate=refresh_rate, leave=leave, theme=theme, console_kwargs=console_kwargs)
+
+    def _resolve_train_total(self, trainer: Trainer) -> int | float | None:
+        max_steps = getattr(trainer, "max_steps", None)
+        if isinstance(max_steps, int) and max_steps > 0:
+            return max_steps
+
+        total_train_batches = self.total_train_batches
         max_epochs = getattr(trainer, "max_epochs", None)
-        if isinstance(max_epochs, int) and max_epochs > 0:
-            return f"{prefix} {current_epoch}/{max_epochs}"
-        return f"{prefix} {current_epoch}"
+        if isinstance(total_train_batches, (int, float)) and isinstance(max_epochs, int) and max_epochs > 0:
+            return total_train_batches * max_epochs
+        return total_train_batches
 
-    def _set_description(self, bar, trainer: Trainer, prefix: str = "Epoch") -> None:
-        if bar is None:
+    def _resolve_completed_steps(self, trainer: Trainer) -> int:
+        completed_steps = trainer.global_step
+        total = self._resolve_train_total(trainer)
+        if isinstance(total, (int, float)):
+            completed_steps = min(completed_steps, int(total))
+        return completed_steps
+
+    def _get_train_description(self, current_epoch: int) -> str:  # noqa: ARG002 - epoch intentionally ignored
+        return self.TRAIN_DESCRIPTION
+
+    def get_metrics(self, trainer: Trainer, pl_module: Any) -> dict[str, Any]:
+        items = super().get_metrics(trainer, pl_module)
+        items.pop("v_num", None)
+        return items
+
+    def on_train_epoch_start(self, trainer: Trainer, pl_module: Any) -> None:
+        if self.is_disabled:
             return
 
-        description = self._format_epoch_description(trainer, prefix=prefix)
-        if hasattr(bar, "set_description_str"):
-            bar.set_description_str(description)
-        else:
-            bar.set_description(description)
+        total_steps = self._resolve_train_total(trainer)
+        train_description = self._get_train_description(trainer.current_epoch)
 
-    def on_train_start(self, trainer: Trainer, pl_module) -> None:
-        super().on_train_start(trainer, pl_module)
-        self._set_description(self.train_progress_bar, trainer)
+        if self.train_progress_bar_id is not None and self._leave:
+            self._stop_progress()
+            self._init_progress(trainer)
+        if self.progress is not None:
+            if self.train_progress_bar_id is None:
+                self.train_progress_bar_id = self._add_task(total_steps, train_description)
+            else:
+                self.progress.reset(
+                    self.train_progress_bar_id,
+                    total=total_steps,
+                    completed=self._resolve_completed_steps(trainer),
+                    description=f"[{self.theme.description}]{train_description}" if self.theme.description else train_description,
+                    visible=True,
+                )
+        self.refresh()
 
-    def on_train_epoch_start(self, trainer: Trainer, pl_module) -> None:
-        super().on_train_epoch_start(trainer, pl_module)
-        self._set_description(self.train_progress_bar, trainer)
+    def on_train_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: Any,
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+    ) -> None:
+        if not self.is_disabled and self.train_progress_bar_id is None:
+            self._initialize_train_progress_bar_id()
+            if self.progress is not None and self.train_progress_bar_id is not None:
+                self.progress.update(
+                    self.train_progress_bar_id,
+                    total=self._resolve_train_total(trainer),
+                    description=f"[{self.theme.description}]{self.TRAIN_DESCRIPTION}"
+                    if self.theme.description
+                    else self.TRAIN_DESCRIPTION,
+                )
 
-    def on_validation_start(self, trainer: Trainer, pl_module) -> None:
-        super().on_validation_start(trainer, pl_module)
-        self._set_description(self.val_progress_bar, trainer, prefix="Validation Epoch")
-
-    def on_test_start(self, trainer: Trainer, pl_module) -> None:
-        super().on_test_start(trainer, pl_module)
-        self._set_description(self.test_progress_bar, trainer, prefix="Test Epoch")
-
-    def on_predict_start(self, trainer: Trainer, pl_module) -> None:
-        super().on_predict_start(trainer, pl_module)
-        self._set_description(self.predict_progress_bar, trainer, prefix="Predict Epoch")
+        self._update(self.train_progress_bar_id, self._resolve_completed_steps(trainer))
+        self._update_metrics(trainer, pl_module)
+        self.refresh()

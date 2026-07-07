@@ -76,6 +76,10 @@ class ResidualQuantization(LightningModule):
 
         self.current_layer = 0
         self.steps_per_layer = 0
+        self.layer_step_budgets: list[int] = []
+        self.layer_step_boundaries: list[int] = []
+        self.layer_training_schedule: list[int] = []
+        self.current_layer_schedule_index = 0
         self.optimizer = optimizer
         self.scheduler = scheduler
 
@@ -399,20 +403,26 @@ class ResidualQuantization(LightningModule):
 
         if (
             self.train_layer_wise
-            and self.global_step % self.steps_per_layer == 0  # reach the step per layer
+            and self.current_layer_schedule_index < len(self.layer_training_schedule) - 1
             and (
-                self.quantization_layer_list[self.current_layer].is_initialized  # current layer is initialized
-                or self.current_layer < 0  # or current layer is encoder layer
+                self.current_layer < 0  # encoder / reconstruction stage
+                or self.quantization_layer_list[self.current_layer].is_initialized  # current layer is initialized
             )
-            and self.current_layer < self.n_layers - 1  # current layer is in quantization layer range
+            and self.global_step + 1 >= self.layer_step_boundaries[self.current_layer_schedule_index]
         ):
             self.log_if_true(
-                f"Finished training layer {self.current_layer} of {self.n_layers}",
+                f"Finished training {self._format_layer_name(self.current_layer)} at global_step={self.global_step + 1}.",
                 self.verbose,
             )
-            self.current_layer += 1
+            self.current_layer_schedule_index += 1
+            self.current_layer = self.layer_training_schedule[self.current_layer_schedule_index]
 
         return loss
+
+    def _format_layer_name(self, layer_index: int) -> str:
+        if layer_index < 0:
+            return "reconstruction stage"
+        return f"layer {layer_index + 1}/{self.n_layers}"
 
     def on_train_start(self):
         """Lightning hook that is called when training begins."""
@@ -420,19 +430,39 @@ class ResidualQuantization(LightningModule):
             self.train_loss.reset()
 
         self.current_layer = 0
+        self.current_layer_schedule_index = 0
+        self.layer_step_budgets = []
+        self.layer_step_boundaries = []
+        self.layer_training_schedule = []
         for layer in self.quantization_layer_list:
             layer.on_train_start()
 
         if self.train_layer_wise:
             total_steps = self.trainer.max_steps
             if self.reconstruction_loss_function is None:
-                eff_n_layers = self.n_layers
+                self.layer_training_schedule = list(range(self.n_layers))
             else:
-                eff_n_layers = self.n_layers + 1
-                self.current_layer = -1
-            self.steps_per_layer = total_steps // eff_n_layers
+                self.layer_training_schedule = [-1, *range(self.n_layers)]
+
+            eff_n_layers = len(self.layer_training_schedule)
+            base_steps_per_layer = total_steps // eff_n_layers
+            remainder = total_steps % eff_n_layers
+            self.layer_step_budgets = [
+                base_steps_per_layer + (1 if layer_idx < remainder else 0) for layer_idx in range(eff_n_layers)
+            ]
+            cumulative_steps = 0
+            for budget in self.layer_step_budgets:
+                cumulative_steps += budget
+                self.layer_step_boundaries.append(cumulative_steps)
+
+            self.current_layer = self.layer_training_schedule[0]
+            self.steps_per_layer = base_steps_per_layer
+            schedule_as_text = ", ".join(
+                f"{self._format_layer_name(layer)}={budget}"
+                for layer, budget in zip(self.layer_training_schedule, self.layer_step_budgets, strict=False)
+            )
             self.log_if_true(
-                f"Training layers one-at-a-time, each for {self.steps_per_layer} steps."
+                f"Training layers one-at-a-time with step budget [{schedule_as_text}] (total={total_steps})."
                 " Ensure that early stopping callbacks are disabled.",
                 self.verbose,
             )

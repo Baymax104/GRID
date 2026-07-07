@@ -5,6 +5,7 @@ import hydra
 import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, ModelSummary
+from lightning.pytorch.callbacks.progress import ProgressBar
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, open_dict
 
@@ -15,6 +16,7 @@ from src.utils.file_utils import (
 )
 from src.utils.instantiators import instantiate_callbacks, instantiate_loggers
 from src.utils.logging_utils import DryRunLogger, finalize_loggers, log_hyperparameters
+from src.utils.progress_bar import StepBasedRichProgressBar
 from src.utils.pylogger import RankedLogger
 from src.utils.utils import has_class_object_inside_list
 
@@ -30,6 +32,19 @@ DRY_RUN_DISABLED_LOGGER_TARGETS = {
     "lightning.pytorch.loggers.csv_logs.CSVLogger",
     "lightning.pytorch.loggers.wandb.WandbLogger",
 }
+
+
+def ensure_training_progress_bar(callbacks: list[Callback], cfg: DictConfig) -> list[Callback]:
+    """Attach the default step-based progress bar for training runs if none is configured."""
+    if cfg.get("run_mode") != "train":
+        return callbacks
+
+    if any(isinstance(callback, ProgressBar) for callback in callbacks):
+        return callbacks
+
+    command_line_logger.info("Attaching default step-based Rich training progress bar.")
+    callbacks.append(StepBasedRichProgressBar())
+    return callbacks
 
 
 @dataclass
@@ -151,6 +166,7 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
 
     command_line_logger.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
+    callbacks = ensure_training_progress_bar(callbacks, cfg)
 
     command_line_logger.info("Instantiating loggers...")
     loggers: list[Logger] = instantiate_loggers(cfg.get("logger"))
