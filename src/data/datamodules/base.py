@@ -38,7 +38,7 @@ class BaseDataModule(LightningDataModule, ABC):
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
         if file_format:
             return file_format
-        return config.dataset_config.data_iterator.get_file_suffix()
+        return config.dataset_config.data_reader.get_file_suffix()
 
     def setup(self, stage: str):
         if not hasattr(self, "trainer") or self.trainer is None:
@@ -74,20 +74,16 @@ class BaseDataModule(LightningDataModule, ABC):
         return self.stage_to_config[stage]
 
     def _build_dataset(self, stage: TrainerFn, curr_config: DictConfig):
+        assert self.trainer is not None
+        device_file_list = self.stage_to_file_map[stage].get(self.trainer.global_rank, [])
         dataset = curr_config.dataset_class(
             dataset_config=curr_config.dataset_config,
             data_folder=curr_config.data_folder,
-            should_shuffle_rows=curr_config.should_shuffle_rows,
+            list_of_file_paths=device_file_list,
+            global_worker_id=self.trainer.global_rank,
             is_for_training=stage == TrainerFn.FITTING,
         )
 
-        assert self.trainer is not None
-        device_file_list = self.stage_to_file_map[stage].get(self.trainer.global_rank, [])
-        dataset.set_list_of_files(list_of_files=device_file_list)
-        dataset.set_distributed_params(
-            total_workers=self.trainer.world_size,
-            global_worker_id=self.trainer.global_rank,
-        )
         return dataset
 
     def _resolve_persistent_workers(self, curr_config: DictConfig) -> bool:

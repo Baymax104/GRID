@@ -1,7 +1,7 @@
 # @package _global_
 
-data_iterator:
-  _target_: src.data.components.iterators.TFRecordIterator
+data_reader:
+  _target_: src.data.components.readers.TFRecordReader
 dataset_class:
   _target_: src.data.components.datasets.SequenceDataset
   _partial_: true
@@ -38,7 +38,7 @@ predict_dataset:
     sequence_data:
       _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
       file_path: ${semantic_id_path}
-  data_iterator: ${data.data_iterator}
+  data_reader: ${data.data_reader}
   preprocessing_functions:
   - ${data.preprocessing.filter_features}
   - ${data.preprocessing.dense_array}

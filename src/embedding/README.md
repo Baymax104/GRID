@@ -21,7 +21,7 @@
 - `id` 用作 item 标识
 - `text` 是原始文本特征
 
-底层文件由 `TFRecordIterator` 读取，样本解析后首先表现为 `dict[str, tf.Tensor]`，其中常见是 `SparseTensor` / `RaggedTensor` 一类的 TensorFlow 结构。
+底层文件由 `TFRecordReader` 读取，样本解析后首先表现为 `dict[str, tf.Tensor]`，其中常见是 `SparseTensor` / `RaggedTensor` 一类的 TensorFlow 结构。
 
 ## 预处理顺序
 

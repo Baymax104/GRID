@@ -41,7 +41,7 @@ flowchart TB
 
 dataloader使用多线程时，主线程使用一个收集队列从worker的生产队列中收集数据，当收集够`batch_size`条数据时，触发`collate_fn`函数执行拼接逻辑
 
-当`iterate_per_row`为true时，调用Iterator(`TFRecordIterator`)的`iterrows`，返回形如`list[sample]`的迭代器
+当按行迭代时，调用数据读取器（`TFRecordReader`）的`iterrows`，返回形如`list[sample]`的迭代器
 
 此时，worker生产队列中的元素是单个样本，样本的批量拼接由dataloader完成(具体来说是`collate_fn`函数)，由`batch_size`控制大小
 

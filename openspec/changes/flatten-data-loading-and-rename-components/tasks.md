@@ -27,7 +27,7 @@
 - [x] 4.4 `git mv` `collate_functions.py` → `collate.py`
 - [x] 4.5 `git mv` `label_function.py` → `label_functions.py`
 - [x] 4.6 `git mv` `pre_processing.py` → `preprocessing.py`
-- [x] 4.7 `iterators.py` 保留不动
+- [x] 4.7 原始文件数据读取组件命名已由后续 change 收敛为 `readers.py`
 
 ## 5. 重命名类与更新重命名后的引用
 

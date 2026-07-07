@@ -46,9 +46,9 @@
 - **THEN** 这些函数 MUST 位于 `src/data/components/preprocessing.py`
 - **THEN** 该目录 MUST NOT 存在名为 `pre_processing.py` 的模块
 
-#### Scenario: 迭代器模块命名保留
-- **WHEN** 维护者查找原始文件数据迭代器
-- **THEN** 这些定义 MUST 位于 `src/data/components/iterators.py`
+#### Scenario: 原始文件数据读取器模块命名
+- **WHEN** 维护者查找原始文件数据读取器
+- **THEN** 这些定义 MUST 位于 `src/data/components/readers.py`
 
 ### Requirement: 序列数据集类 SHALL 命名为 SequenceDataset
 `src/data/components/datasets.py` 中的无界序列 IterableDataset 实现类 SHALL 命名为 `SequenceDataset`。

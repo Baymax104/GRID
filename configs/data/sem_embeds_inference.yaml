@@ -1,7 +1,7 @@
 # @package _global_
 
-data_iterator:
-  _target_: src.data.components.iterators.TFRecordIterator
+data_reader:
+  _target_: src.data.components.readers.TFRecordReader
 dataset_class:
   _target_: src.data.components.datasets.SequenceDataset
   _partial_: true
@@ -51,7 +51,7 @@ dataset:
   _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
   keep_item_id: true
-  data_iterator: ${data.data_iterator}
+  data_reader: ${data.data_reader}
   features_to_consider: ${extract_fields_from_list_of_dicts:${data.features},
     "name", False, "is_text", "True"}
   num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data.features},

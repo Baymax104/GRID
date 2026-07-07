@@ -12,7 +12,7 @@
   - `collate_functions.py` → `collate.py`
   - `label_function.py` → `label_functions.py`
   - `pre_processing.py` → `preprocessing.py`
-  - `iterators.py` 保留原名
+  - 原始文件数据读取组件后续统一收敛为 `readers.py`
 - 同步更新全部引用点：`configs/data/*.yaml` 的 Hydra `_target_`、外部 Python 模块的 import、`src/data/` 内部相互 import，以及 `AGENTS.md`、`src/data/README.md` 文档。
 - 为 `src/data/` 补一个空 `__init__.py`，与 `src/utils/`、`src/common/` 等同级包保持结构一致。
 

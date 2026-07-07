@@ -17,7 +17,7 @@
 **Non-Goals:**
 - 不拆分 `data_models.py`（原 `interfaces.py`）为 `configs.py` + `data_containers.py`——改动面与收益不匹配
 - 不改变任何模块的内部逻辑、函数签名、配置参数语义
-- 不调整 `iterators.py` 命名（已清晰）
+- 原始文件数据读取组件命名后续收敛为 `readers.py` 更贴近职责
 - 不处理 `src/data/exploration/` 下的 ipynb（无 loading 引用）
 - 不回改已实施变更 `extract-datamodule-base-and-split-files` 的 spec delta
 
@@ -43,7 +43,7 @@
 - `collate_functions.py` → `collate.py`：简洁，内容即 collate 函数集。
 - `label_function.py` → `label_functions.py`：单数改复数，与其他复数文件名一致。
 - `pre_processing.py` → `preprocessing.py`：去下划线，符合 Python 惯例（如 `sklearn.preprocessing`）。
-- `iterators.py` 保留：已清晰。
+- `readers.py`：用于承载原始文件数据读取器定义。
 
 ### D5: `src/data/` 补空 `__init__.py`
 - **选择**：新增空 `__init__.py`。

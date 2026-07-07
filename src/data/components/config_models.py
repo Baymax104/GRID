@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
+from typing import Callable
 
 import torch
 import transformers
 from torch.utils.data import IterableDataset
 
-from src.data.components.iterators import BaseIterator
+from src.data.components.readers import BaseDataReader
 
 
 @dataclass
@@ -15,8 +16,8 @@ class SequenceDatasetConfig:
     ----------
     user_id_field: str
         The user id field name.
-    data_iterator: RawDataIterator
-        The raw data iterator.
+    data_reader: BaseDataReader
+        The raw data reader.
     preprocessing_functions: list[callable]
         The list of preprocessing functions. Should be in the order they must be applied.
     num_placeholder_tokens_map: dict | None
@@ -32,16 +33,15 @@ class SequenceDatasetConfig:
     features_to_consider: list[str]
         List of features to consider. If not specified, consider all features.
     file_format: str
-        The file format of the dataset files. If not specified, the data iterator's `get_file_suffix`
+        The file format of the dataset files. If not specified, the data reader's `get_file_suffix`
         method will be used to determine the file format.
-        For example, if the data iterator reads tfrecord files at the first level of the data_folder,
+        For example, if the data reader reads tfrecord files at the first level of the data_folder,
         this can be set to "tfrecord.gz". If we want to retrieve all tfrecord files in subdirectories as well,
         we can set it to "*/*tfrecord.gz".
     """
 
     user_id_field: str
-    data_iterator: BaseIterator
-    preprocessing_functions: list[callable]  # type: ignore
+    data_reader: Callable[..., BaseDataReader]
     keep_user_id: bool = False
     num_placeholder_tokens_map: dict | None = field(default_factory=dict)
     field_type_map: dict | None = field(default_factory=dict)
@@ -178,8 +178,8 @@ class ItemDatasetConfig:
         The item id field.
     preprocessing_functions: list[callable]
         The preprocessing functions to be applied to the data.
-    data_iterator: BaseIterator
-        The data iterator.
+    data_reader: BaseDataReader
+        The data reader.
     keep_item_id: bool
         Whether to keep the item id in the data.
     features_to_consider: list[str] | None
@@ -199,7 +199,7 @@ class ItemDatasetConfig:
 
     item_id_field: str
     preprocessing_functions: list[callable]  # type: ignore
-    data_iterator: BaseIterator
+    data_reader: BaseDataReader
     keep_item_id: bool = True
     features_to_consider: list[str] | None = None
     feature_map: dict[str, str] | None = None
