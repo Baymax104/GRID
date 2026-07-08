@@ -11,6 +11,7 @@ embedding_path: ???
 embedding_dim: ???
 num_hierarchies: ???
 codebook_width: ???
+devices: ???
 run_mode: train
 task_name: rqvae_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
@@ -29,18 +30,4 @@ extras:
   ignore_warnings: false
   print_config_warnings: true
   print_config: true
-optim:
-  optimizer:
-    _target_: torch.optim.Adagrad
-    _partial_: true
-    lr: 0.001
-    weight_decay: 0.0
-  scheduler:
-    _target_: src.common.components.scheduler.WarmupLinearScheduler
-    _partial_: true
-    warmup_steps: 1000
-    min_ratio: 0.01
-    scheduler_steps: ${trainer.root.max_steps}
-eval:
-  evaluator:
-    placeholder_token_buffer: 0
+

@@ -16,7 +16,7 @@ root:
   reconstruction_loss_function: ${model.reconstruction_loss_function}
   reconstruction_loss_weight: 1.0
   training_loop_function: ${model.training_loop_function}
-  optimizer: ${optim.optimizer}
+  optimizer: ${model.optimizer}
   scheduler: null
   quantization_layer_list: null
 normalization_layer:
@@ -86,3 +86,16 @@ reconstruction_loss_function:
 training_loop_function:
   _target_: src.quantization.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
   _partial_: true
+optimizer:
+  _target_: torch.optim.Adagrad
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+scheduler:
+  _target_: src.common.components.scheduler.WarmupLinearScheduler
+  _partial_: true
+  warmup_steps: 1000
+  min_ratio: 0.01
+  scheduler_steps: ${trainer.root.max_steps}
+evaluator:
+  placeholder_token_buffer: 0

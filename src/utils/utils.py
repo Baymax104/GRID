@@ -6,8 +6,6 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
-from tokenizers.processors import TemplateProcessing
-from transformers.cache_utils import DynamicCache
 
 from src.data.components.config_models import TokenizerConfig
 from src.utils.pylogger import RankedLogger
@@ -193,16 +191,9 @@ def lightning_precision_to_dtype(precision: str) -> torch.dtype:
         )
 
 
-def load_tokenize(config: TokenizerConfig) -> Any:
+def load_tokenize(config: TokenizerConfig):
     """Load tokenizer and return a partial function for tokenization."""
     tokenizer = config.tokenizer
-    if hasattr(config, "special_tokens"):
-        tokenizer.add_special_tokens(config.special_tokens)
-    if config.postprocess_eos_token:
-        tokenizer._tokenizer.post_processor = TemplateProcessing(
-            single="$A " + tokenizer.eos_token,
-            special_tokens=[(tokenizer.eos_token, tokenizer.eos_token_id)],
-        )
     tokenize = partial(
         tokenizer,
         max_length=config.max_length,

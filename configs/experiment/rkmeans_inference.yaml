@@ -6,12 +6,15 @@ defaults:
 - /callbacks@callbacks: rkmeans_inference
 - /logger@logger: rkmeans_inference
 - /trainer@trainer: rkmeans_inference
+
 data_dir: ???
 embedding_path: ???
 codebook_width: ???
 num_hierarchies: ???
 embedding_dim: ???
 ckpt_path: ???
+devices: ???
+
 run_mode: inference
 task_name: rkmeans_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}

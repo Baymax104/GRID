@@ -106,7 +106,7 @@ def convert_fields_to_tensors(
         row
     """
     field_type_map = field_type_map or {}
-    tensor_row = dict(row)
+    tensor_row = {}
     for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             if isinstance(v, int) or isinstance(v, float):

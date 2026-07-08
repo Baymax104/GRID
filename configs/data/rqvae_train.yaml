@@ -1,53 +1,62 @@
 # @package _global_
 
-data_reader:
-  _target_: src.data.components.readers.TFRecordReader
 dataset_class:
   _target_: src.data.components.datasets.SequenceDataset
   _partial_: true
+
 collate:
   _target_: src.data.components.collate.collate_fn_items
   _partial_: true
-  item_id_field: ${data.dataset.item_id_field}
+  item_id_field: ${data.train_dataset_config.item_id_field}
   feature_to_input_name: ${data.feature_to_input_name}
-preprocessing:
-  filter_features:
-    _target_: src.data.components.preprocessing.filter_features_to_consider
+
+preprocessing_functions:
+  - _target_: src.data.components.preprocessing.filter_features_to_consider
     _partial_: true
-  dense_array:
-    _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
+    features_to_consider: [id]
+  - _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
     _partial_: true
-  convert_fields:
-    _target_: src.data.components.preprocessing.convert_fields_to_tensors
+  - _target_: src.data.components.preprocessing.convert_fields_to_tensors
     _partial_: true
-  sparse_to_embedding:
-    _target_: src.data.components.preprocessing.map_sparse_id_to_embedding
+    field_type_map:
+      id:
+        _target_: torch.__dict__.get
+        _args_:
+          - int32
+  - _target_: src.data.components.preprocessing.map_sparse_id_to_embedding
     _partial_: true
+    embedding_bundle:
+      _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
+      file_path: ${embedding_path}
     sparse_id_field: id
     embedding_field_to_add: embedding
-dataset:
+
+train_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
   keep_item_id: true
-  data_reader: ${data.data_reader}
-  features_to_consider: ${extract_fields_from_list_of_dicts:${data.features},
-    "name", False, "is_item_ids", "True"}
-  embedding_map:
-    id: ${data.features[0].embeddings}
-  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data.features},
-    "name", "num_placeholder_tokens"}
-  preprocessing_functions:
-  - ${data.preprocessing.filter_features}
-  - ${data.preprocessing.dense_array}
-  - ${data.preprocessing.convert_fields}
-  - ${data.preprocessing.sparse_to_embedding}
-  field_type_map: ${create_map_from_list_of_dicts:${data.features}, "name",
-    "type"}
+  shuffle_files: true
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: true
+  preprocessing_functions: ${data.preprocessing_functions}
+
+eval_dataset_config:
+  _target_: src.data.components.config_models.ItemDatasetConfig
+  item_id_field: id
+  keep_item_id: true
+  shuffle_files: false
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: false
+  preprocessing_functions: ${data.preprocessing_functions}
+
 train_dataloader:
   _target_: src.data.components.config_models.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
-  should_shuffle_rows: true
   batch_size_per_device: 2048
   num_workers: 12
   assign_files_by_size: false
@@ -56,13 +65,12 @@ train_dataloader:
   pin_memory: true
   persistent_workers: true
   collate_fn: ${data.collate}
-  dataset_config: ${data.dataset}
+  dataset_config: ${data.train_dataset_config}
   limit_files: null
 val_dataloader:
   _target_: src.data.components.config_models.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
-  should_shuffle_rows: false
   batch_size_per_device: 256
   num_workers: 2
   assign_files_by_size: true
@@ -71,13 +79,12 @@ val_dataloader:
   pin_memory: false
   persistent_workers: true
   collate_fn: ${data.collate}
-  dataset_config: ${data.dataset}
+  dataset_config: ${data.eval_dataset_config}
   limit_files: null
 test_dataloader:
   _target_: src.data.components.config_models.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
-  should_shuffle_rows: false
   batch_size_per_device: 256
   num_workers: 2
   assign_files_by_size: true
@@ -86,24 +93,13 @@ test_dataloader:
   pin_memory: false
   persistent_workers: true
   collate_fn: ${data.collate}
-  dataset_config: ${data.dataset}
+  dataset_config: ${data.eval_dataset_config}
   limit_files: null
 datamodule:
   _target_: src.data.datamodules.item.ItemDataModule
   train_dataloader_config: ${data.train_dataloader}
   val_dataloader_config: ${data.val_dataloader}
   test_dataloader_config: ${data.test_dataloader}
-features:
-- name: id
-  num_placeholder_tokens: 0
-  is_item_ids: true
-  embeddings:
-    _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
-    file_path: ${embedding_path}
-  type:
-    _target_: torch.__dict__.get
-    _args_:
-    - int32
 feature_to_input_name:
   id: item_ids
   text: text_tokens
