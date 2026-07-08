@@ -34,7 +34,6 @@ preprocessing_functions:
 train_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
-  keep_item_id: true
   shuffle_files: true
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
@@ -45,7 +44,6 @@ train_dataset_config:
 eval_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
-  keep_item_id: true
   shuffle_files: false
   data_reader:
     _target_: src.data.components.readers.TFRecordReader

@@ -57,7 +57,6 @@ class SequenceDataset(BaseDataset, IterableDataset):
         is_for_training: bool = True,
     ):
         super().__init__(list_of_file_paths=list_of_file_paths, global_rank=global_rank)
-        self.dataset_config = dataset_config
         self.data_folder = data_folder
         self.data_reader_factory = dataset_config.data_reader
         self.preprocessing_functions = getattr(dataset_config, "preprocessing_functions", [])

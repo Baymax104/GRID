@@ -54,7 +54,6 @@ preprocessing_functions:
 predict_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
-  keep_item_id: true
   shuffle_files: false
   preprocessing_functions: ${data.preprocessing_functions}
   data_reader:
@@ -90,24 +89,3 @@ tokenizer:
   tokenizer:
     _target_: transformers.AutoTokenizer.from_pretrained
     pretrained_model_name_or_path: ${embedding_model}
-
-features:
-- name: id
-  num_placeholder_tokens: 0
-  is_item_ids: true
-  type:
-    _target_: torch.__dict__.get
-    _args_:
-    - int32
-- name: text
-  type:
-    _target_: torch.__dict__.get
-    _args_:
-    - bytes
-  is_text: true
-- name: embedding
-  type:
-    _target_: torch.__dict__.get
-    _args_:
-    - float32
-  is_embedding: true

@@ -141,35 +141,6 @@ class SemanticIDDatasetConfig(SequenceDatasetConfig):
     keep_user_id: bool = False
 
 
-@dataclass
-class TokenizerConfig:
-    """The configuration class used to store the tokenizer configuration.
-
-    Parameters:
-    ----------
-    tokenizer: transformers.PreTrainedTokenizer
-        The tokenizer.
-    max_length: int
-        The maximum length of the tokenized sequences.
-    padding: str
-        The padding strategy.
-    truncation: bool
-        Whether to truncate the sequences.
-    special_tokens: dict[str, str] | None
-        The special tokens.
-    add_special_tokens: bool
-        Whether to add special tokens.
-    postprocess_eos_token: bool | None
-        Whether to postprocess the eos token.
-    """
-
-    tokenizer: transformers.PreTrainedTokenizer
-    max_length: int
-    padding: str
-    truncation: bool
-    special_tokens: dict[str, str] | None = field(default_factory=dict)
-    add_special_tokens: bool = True
-    postprocess_eos_token: bool | None = False
 
 
 @dataclass
@@ -186,14 +157,11 @@ class ItemDatasetConfig:
         The preprocessing functions to be applied to each row.
     shuffle_files: bool
         Whether to shuffle the order of files assigned to the current worker.
-    keep_item_id: bool
-        Whether to keep the item id in the data.
     """
 
     item_id_field: str
     data_reader: Callable[..., BaseDataReader]
     preprocessing_functions: list[callable] = field(default_factory=list)
-    keep_item_id: bool = True
     shuffle_files: bool = False
 
 
