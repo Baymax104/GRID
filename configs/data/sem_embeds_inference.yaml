@@ -1,76 +1,71 @@
 # @package _global_
 
-data_reader:
-  _target_: src.data.components.readers.TFRecordReader
 dataset_class:
   _target_: src.data.components.datasets.SequenceDataset
   _partial_: true
+
 collate:
   _target_: src.data.components.collate.collate_fn_items
   _partial_: true
-  item_id_field: ${data.dataset.item_id_field}
-  feature_to_input_name: ${data.predict_dataloader.feature_to_input_name}
-preprocessing:
-  filter_features:
-    _target_: src.data.components.preprocessing.filter_features_to_consider
+  item_id_field: id
+  feature_to_input_name:
+    id: item_ids
+    text: text_tokens
+    text_mask: text_mask
+    embedding: input_embedding
+
+preprocessing_functions:
+  - _target_: src.data.components.preprocessing.filter_features_to_consider
     _partial_: true
-  dense_array:
-    _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
-    _partial_: true
-    features_to_apply:
-    - id
-    - text
-  squeeze_text:
-    _target_: src.data.components.preprocessing.squeeze_tensor_in_place
+    features_to_consider: [id, text]
+  - _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
     _partial_: true
     features_to_apply:
-    - text
-  convert_id:
-    _target_: src.data.components.preprocessing.convert_fields_to_tensors
+      - id
+      - text
+  - _target_: src.data.components.preprocessing.squeeze_tensor_in_place
     _partial_: true
     features_to_apply:
-    - id
-  bytes_to_string:
-    _target_: src.data.components.preprocessing.convert_bytes_to_string
+      - text
+  - _target_: src.data.components.preprocessing.convert_fields_to_tensors
     _partial_: true
     features_to_apply:
-    - text
-  tokenize_text:
-    _target_: src.data.components.preprocessing.tokenize_text_features
+      - id
+    field_type_map:
+      id:
+        _target_: torch.__dict__.get
+        _args_:
+          - int32
+  - _target_: src.data.components.preprocessing.convert_bytes_to_string
     _partial_: true
     features_to_apply:
-    - text
+      - text
+  - _target_: src.data.components.preprocessing.tokenize_text_features
+    _partial_: true
+    features_to_apply:
+      - text
     tokenizer_config: ${data.tokenizer}
-  squeeze_tokenized:
-    _target_: src.data.components.preprocessing.squeeze_tensor_in_place
+  - _target_: src.data.components.preprocessing.squeeze_tensor_in_place
     _partial_: true
     features_to_apply:
-    - text
-    - text_mask
-dataset:
+      - text
+      - text_mask
+
+predict_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
   item_id_field: id
   keep_item_id: true
-  data_reader: ${data.data_reader}
-  features_to_consider: ${extract_fields_from_list_of_dicts:${data.features},
-    "name", False, "is_text", "True"}
-  num_placeholder_tokens_map: ${create_map_from_list_of_dicts:${data.features},
-    "name", "num_placeholder_tokens"}
-  preprocessing_functions:
-  - ${data.preprocessing.filter_features}
-  - ${data.preprocessing.dense_array}
-  - ${data.preprocessing.squeeze_text}
-  - ${data.preprocessing.convert_id}
-  - ${data.preprocessing.bytes_to_string}
-  - ${data.preprocessing.tokenize_text}
-  - ${data.preprocessing.squeeze_tokenized}
-  field_type_map: ${create_map_from_list_of_dicts:${data.features}, "name",
-    "type"}
+  shuffle_files: false
+  preprocessing_functions: ${data.preprocessing_functions}
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: false
+
 predict_dataloader:
   _target_: src.data.components.config_models.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
-  should_shuffle_rows: false
   batch_size_per_device: 8
   num_workers: 2
   assign_files_by_size: true
@@ -79,16 +74,14 @@ predict_dataloader:
   pin_memory: false
   persistent_workers: true
   collate_fn: ${data.collate}
-  dataset_config: ${data.dataset}
+  dataset_config: ${data.predict_dataset_config}
   limit_files: null
-  feature_to_input_name:
-    id: item_ids
-    text: text_tokens
-    text_mask: text_mask
-    embedding: input_embedding
+
+
 datamodule:
   _target_: src.data.datamodules.item.ItemDataModule
   predict_dataloader_config: ${data.predict_dataloader}
+
 tokenizer:
   max_length: 128
   padding: max_length
@@ -98,6 +91,7 @@ tokenizer:
   tokenizer:
     _target_: transformers.AutoTokenizer.from_pretrained
     pretrained_model_name_or_path: ${embedding_model}
+
 features:
 - name: id
   num_placeholder_tokens: 0

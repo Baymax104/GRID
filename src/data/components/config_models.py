@@ -180,43 +180,26 @@ class ItemDatasetConfig:
     ----------
     item_id_field: str
         The item id field.
-    preprocessing_functions: list[callable]
-        The preprocessing functions to be applied to the data.
     data_reader: Callable[..., BaseDataReader]
         The data reader factory.
+    preprocessing_functions: list[callable]
+        The preprocessing functions to be applied to each row.
     shuffle_files: bool
         Whether to shuffle the order of files assigned to the current worker.
     keep_item_id: bool
         Whether to keep the item id in the data.
-    features_to_consider: list[str] | None
-        The features to consider.
-    feature_map: dict[str, str] | None
-        The map from raw feature name to the key to be used to store the feature in
-        ItemTextData.transformed_features.
-    field_type_map: dict | None
-        The map from field name to the type of the field.
-    embedding_map: dict[str, torch.Tensor] | None
-        The map from field name to the embedding tensor, where the embedding tensor
-        is N x d where N is the number of unique IDs in the field and d is the embedding
-        dimension.
-    num_placeholder_tokens_map: dict[str, int] | None
-        The map of the sparse ID field to the number of placeholder IDs in the field.
     """
 
     item_id_field: str
     data_reader: Callable[..., BaseDataReader]
-    preprocessing_functions: list[callable] = field(default_factory=list)  # type: ignore
-    shuffle_files: bool = False
+    preprocessing_functions: list[callable] = field(default_factory=list)
     keep_item_id: bool = True
-    features_to_consider: list[str] | None = None
-    feature_map: dict[str, str] | None = None
-    field_type_map: dict | None = None
-    embedding_map: dict[str, torch.Tensor] | None = None
-    num_placeholder_tokens_map: dict[str, int] | None = None
+    shuffle_files: bool = False
 
 
 @dataclass
 class ItemDataloaderConfig:
+    """The dataloader configuration class for item-level pipelines."""
 
     dataset_class: IterableDataset
     data_folder: str
@@ -225,13 +208,10 @@ class ItemDataloaderConfig:
     num_workers: int
     assign_files_by_size: bool
 
-    collate_fn: callable  # type: ignore
-    preprocessing_functions: list[callable] = field(default_factory=list)  # type: ignore
+    collate_fn: callable
     feature_to_input_name: dict[str, str] = field(default_factory=dict)
     drop_last: bool = True
     pin_memory: bool = True
-    should_shuffle_rows: bool = False
     persistent_workers: bool = False
     timeout: int = 0
-    oov_token: int | None = 0
     limit_files: int | None = None

@@ -106,7 +106,7 @@ def convert_fields_to_tensors(
         row
     """
     field_type_map = field_type_map or {}
-    tensor_row = {}
+    tensor_row = dict(row)
     for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             if isinstance(v, int) or isinstance(v, float):
@@ -268,10 +268,12 @@ def tokenize_text_features(
     for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             k_mask = "_".join([k, "mask"])
+            if isinstance(v, np.ndarray) or isinstance(v, list):
+                v = str(v[0])
+            # one row
             tokenized_seq = tokenize(v)
             row[k] = tokenized_seq["input_ids"].flatten()
             row_masks[k_mask] = tokenized_seq["attention_mask"].flatten()
-
     row.update(row_masks)
     return row
 

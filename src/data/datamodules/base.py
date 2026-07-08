@@ -40,10 +40,7 @@ class BaseDataModule(LightningDataModule, ABC):
 
     @staticmethod
     def _get_shuffle_files(config: DictConfig) -> bool:
-        dataset_shuffle_files = getattr(config.dataset_config, "shuffle_files", None)
-        if dataset_shuffle_files is not None:
-            return dataset_shuffle_files
-        return getattr(config, "should_shuffle_rows", False)
+        return getattr(config.dataset_config, "shuffle_files", False)
 
     def get_file_suffix_from_config(self, config: DictConfig) -> str:
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
