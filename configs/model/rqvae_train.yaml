@@ -1,33 +1,50 @@
 # @package _global_
 
 root:
-  _target_: src.quantization.residual_quantization.ResidualQuantization
-  track_residuals: true
-  verbose: true
-  train_layer_wise: false
-  normalize_residuals: false
-  input_dim: ${embedding_dim}
+  _target_: src.quantization.residual_quantization_vae.ResidualQuantizationVAE
   n_layers: ${num_hierarchies}
+  n_clusters: ${codebook_width}
+  n_features: ${model.encoder.output_dim}
+  distance_function: ${model.distance_function}
+  initializer: ${model.initializer}
+  quantization_strategy: ${model.quantization_strategy}
+  loss_function: ${model.loss_function}
+  init_buffer_size: 3072
+  normalize_residuals: false
+  track_residuals: true
+  kmeans_max_iter: 1000
   normalization_layer: ${model.normalization_layer}
   encoder: ${model.encoder}
   decoder: ${model.decoder}
-  init_buffer_size: 3072
-  quantization_layer: ${model.quantization_layer}
   reconstruction_loss_function: ${model.reconstruction_loss_function}
   reconstruction_loss_weight: 1.0
   training_loop_function: ${model.training_loop_function}
   optimizer: ${model.optimizer}
   scheduler: null
-  quantization_layer_list: null
+distance_function:
+  _target_: src.common.components.distance_functions.SquaredEuclideanDistance
+initializer:
+  _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
+  n_clusters: ${codebook_width}
+  distance_function: ${model.distance_function}
+  initialize_on_cpu: false
+quantization_strategy:
+  _target_: src.common.components.quantization_strategies.STEQuantization
+  distance_function: ${model.distance_function}
+  compute_reconstruction_loss_embeddings: true
+loss_function:
+  _target_: src.common.components.loss_functions.BetaQuantizationLoss
+  beta: 0.25
+  reduction: mean
 normalization_layer:
   _target_: torch.nn.Sequential
   _args_:
   - _target_: torch.nn.BatchNorm1d
-    num_features: ${model.root.input_dim}
+    num_features: ${embedding_dim}
   - _target_: src.common.modules.normalize_layer.NormalizeLayer
 encoder:
   _target_: src.common.modules.mlp.MLP
-  input_dim: ${model.root.input_dim}
+  input_dim: ${embedding_dim}
   hidden_dim_list:
   - 768
   - 256
@@ -43,43 +60,10 @@ decoder:
   - 128
   - 256
   - 768
-  output_dim: ${model.root.input_dim}
+  output_dim: ${embedding_dim}
   activation:
     _target_: torch.nn.ReLU
     _partial_: true
-quantization_layer:
-  _target_: src.quantization.vector_quantization.VectorQuantization
-  n_clusters: ${codebook_width}
-  n_features: ${model.encoder.output_dim}
-  distance_function:
-    _target_: src.common.components.distance_functions.SquaredEuclideanDistance
-  quantization_strategy:
-    _target_: src.common.components.quantization_strategies.STEQuantization
-    distance_function: ${model.quantization_layer.distance_function}
-    compute_reconstruction_loss_embeddings: true
-  initializer:
-    _target_: src.common.components.clustering_initializers.ClusteringModuleInitializer
-    n_clusters: ${codebook_width}
-    initialize_on_cpu: false
-    clustering_module:
-      _target_: src.quantization.mini_batch_kmeans.MiniBatchKMeans
-      n_clusters: ${codebook_width}
-      n_features: ${model.quantization_layer.n_features}
-      distance_function: ${model.quantization_layer.distance_function}
-      initializer:
-        _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
-        n_clusters: ${codebook_width}
-        distance_function: ${model.quantization_layer.distance_function}
-        initialize_on_cpu: false
-      init_buffer_size: ${model.root.init_buffer_size}
-      update_manually: true
-    max_iter: 1000
-  init_buffer_size: ${model.root.init_buffer_size}
-  loss_function:
-    _target_: src.common.components.loss_functions.BetaQuantizationLoss
-    beta: 0.25
-    reduction: mean
-  optimizer: null
 reconstruction_loss_function:
   _target_: torch.nn.MSELoss
   reduction: mean
@@ -91,11 +75,3 @@ optimizer:
   _partial_: true
   lr: 0.001
   weight_decay: 0.0
-scheduler:
-  _target_: src.common.components.scheduler.WarmupLinearScheduler
-  _partial_: true
-  warmup_steps: 1000
-  min_ratio: 0.01
-  scheduler_steps: ${trainer.root.max_steps}
-evaluator:
-  placeholder_token_buffer: 0

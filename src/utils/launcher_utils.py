@@ -128,9 +128,6 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
             cfg.trainer.root.limit_test_batches = 0
             cfg.trainer.root.num_sanity_val_steps = 0
 
-            if cfg.get("model") and cfg.model.get("root") and "train_layer_wise" in cfg.model.root:
-                cfg.model.root.train_layer_wise = False
-
         if "run_test_after_training" in cfg:
             cfg.run_test_after_training = False
 

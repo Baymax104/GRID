@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
-from pytorch_lightning import LightningModule
 
 from src.common.components.distance_functions import DistanceFunction
 
@@ -153,73 +152,3 @@ class KMeansPlusPlusInitInitializer(ClusteringInitializer):
             centroids = centroids.to(old_device)  # noqa
 
         return centroids
-
-
-class ClusteringModuleInitializer(ClusteringInitializer):
-    """
-    Module to initialize clustering algorithm with the result of another
-    clustering algorithm.
-    """
-
-    def __init__(
-        self,
-        n_clusters: int,
-        clustering_module: LightningModule,
-        initialize_on_cpu: bool = False,
-        max_iter: int = 100,
-        atol: float = 1e-8,
-    ):
-        """
-        Initializes the KMeansInitializer class with the specified parameters.
-
-        Args:
-            n_clusters: Number of clusters to form.
-            clustering_module: An instance of a `BaseClusteringModule` to be used to
-                initialize the centroids.
-            initialize_on_cpu: Whether to move the tensors to the CPU for computing the
-                initialization. This is useful for large initialization buffer sizes for
-                which GPU memory might be a constraint. Otherwise, it is recommended to
-                keep the tensors on the GPU for faster computation.
-            max_iter: Maximum number of iterations to run the clustering module for.
-            atol: Absolute tolerance for convergence. If all elements of the centroids
-                do not change more than this value on consecutive iterations, the
-                initialization is considered converged.
-        """
-        super().__init__(n_clusters=n_clusters, initialize_on_cpu=initialize_on_cpu)
-
-        from src.quantization.base_clustering_module import (  # we import here to avoid circular imports
-            BaseClusteringModule,
-        )
-
-        assert isinstance(clustering_module, BaseClusteringModule), (
-            "clustering_module must be an instance of BaseClusteringModule"
-        )
-
-        self.clustering_module = clustering_module
-        self.max_iter = max_iter
-        self.atol = atol
-
-    def forward(self, buffer: torch.Tensor) -> torch.Tensor:
-        """
-        Initialize centroids using self.clustering_module.
-
-        Args:
-            buffer: Data points of shape (batch_size, n_features)
-
-        Returns:
-            Initialized centroids of shape (n_clusters, n_features)
-        """
-        self.clustering_module.on_train_start()
-        cur_centroids = self.clustering_module.get_centroids()
-        for step in range(self.max_iter):
-            # Perform a training step
-            self.clustering_module.model_step(buffer)
-            new_centroids = self.clustering_module.get_centroids()
-
-            # Check for convergence
-            if step > 0 and torch.allclose(cur_centroids, new_centroids, atol=self.atol):
-                print(f"Initialization converged after {step} iterations")
-                break
-            cur_centroids = new_centroids.clone()
-
-        return cur_centroids.detach()

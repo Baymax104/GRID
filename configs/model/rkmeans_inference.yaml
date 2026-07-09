@@ -1,25 +1,21 @@
 # @package _global_
 
 root:
-  _target_: src.quantization.residual_quantization.ResidualQuantization
-  track_residuals: true
-  train_layer_wise: true
-  normalize_residuals: true
+  _target_: src.quantization.residual_kmeans.ResidualKMeans
   n_layers: ${num_hierarchies}
-  init_buffer_size: 3072
-  quantization_layer: ${model.quantization_layer}
-  optimizer: null
-  scheduler: null
-  quantization_layer_list: null
-quantization_layer:
-  _target_: src.quantization.mini_batch_kmeans.MiniBatchKMeans
   n_clusters: ${codebook_width}
   n_features: ${embedding_dim}
-  distance_function:
-    _target_: src.common.components.distance_functions.SquaredEuclideanDistance
-  initializer:
-    _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
-    n_clusters: ${codebook_width}
-    distance_function: ${model.quantization_layer.distance_function}
-    initialize_on_cpu: false
-  init_buffer_size: ${model.root.init_buffer_size}
+  distance_function: ${model.distance_function}
+  initializer: ${model.initializer}
+  init_buffer_size: 3072
+  normalize_residuals: true
+  track_residuals: true
+  optimizer: null
+  scheduler: null
+distance_function:
+  _target_: src.common.components.distance_functions.SquaredEuclideanDistance
+initializer:
+  _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
+  n_clusters: ${codebook_width}
+  distance_function: ${model.distance_function}
+  initialize_on_cpu: false
