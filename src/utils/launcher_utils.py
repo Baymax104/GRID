@@ -20,7 +20,7 @@ from src.utils.progress_bar import StepBasedRichProgressBar
 from src.utils.pylogger import RankedLogger
 from src.utils.utils import has_class_object_inside_list
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 DRY_RUN_DISABLED_CALLBACK_TARGETS = {
     "lightning.pytorch.callbacks.ModelCheckpoint",
@@ -42,7 +42,7 @@ def ensure_training_progress_bar(callbacks: list[Callback], cfg: DictConfig) -> 
     if any(isinstance(callback, ProgressBar) for callback in callbacks):
         return callbacks
 
-    command_line_logger.info("Attaching default step-based Rich training progress bar.")
+    logger.info("Attaching default step-based Rich training progress bar.")
     callbacks.append(StepBasedRichProgressBar())
     return callbacks
 
@@ -87,9 +87,7 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
             last_modified = get_last_modified_file(folder_path=latest_ckpt_folder, suffix="*.ckpt")
             if len(last_modified) > 0:
                 ckpt_path = last_modified
-                command_line_logger.info(
-                    f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint."
-                )
+                logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
 
     cfg.ckpt_path = ckpt_path
     return cfg
@@ -100,21 +98,21 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
     if not cfg.get("dry_run", False):
         return cfg
 
-    command_line_logger.info("Applying dry run overrides: minimal execution without business result writes.")
+    logger.info("Applying dry run overrides: minimal execution without business result writes.")
 
     with open_dict(cfg):
         callback_definitions = cfg.get("callbacks")
         if callback_definitions:
             for name, cb_conf in callback_definitions.items():
                 if isinstance(cb_conf, DictConfig) and cb_conf.get("_target_") in DRY_RUN_DISABLED_CALLBACK_TARGETS:
-                    command_line_logger.info(f"Disabling callback for dry run: {name} <{cb_conf.get('_target_')}>")
+                    logger.info(f"Disabling callback for dry run: {name} <{cb_conf.get('_target_')}>")
                     callback_definitions[name] = None
 
         logger_definitions = cfg.get("logger")
         if logger_definitions:
             for name, lg_conf in logger_definitions.items():
                 if isinstance(lg_conf, DictConfig) and lg_conf.get("_target_") in DRY_RUN_DISABLED_LOGGER_TARGETS:
-                    command_line_logger.info(f"Disabling logger for dry run: {name} <{lg_conf.get('_target_')}>")
+                    logger.info(f"Disabling logger for dry run: {name} <{lg_conf.get('_target_')}>")
                     logger_definitions[name] = None
 
         cfg.trainer.root.log_every_n_steps = 1
@@ -155,23 +153,23 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
     cfg = apply_dry_run_overrides(cfg)
 
-    command_line_logger.info(f"Instantiating datamodule <{cfg.data.datamodule._target_}>")
+    logger.info(f"Instantiating datamodule <{cfg.data.datamodule._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data.datamodule)
 
-    command_line_logger.info(f"Instantiating model <{cfg.model.root._target_}>")
+    logger.info(f"Instantiating model <{cfg.model.root._target_}>")
     model: LightningModule = hydra.utils.instantiate(cfg.model.root)
 
-    command_line_logger.info("Instantiating callbacks...")
+    logger.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
     callbacks = ensure_training_progress_bar(callbacks, cfg)
 
-    command_line_logger.info("Instantiating loggers...")
+    logger.info("Instantiating loggers...")
     loggers: list[Logger] = instantiate_loggers(cfg.get("logger"))
     if cfg.get("dry_run", False) and len(loggers) == 0:
-        command_line_logger.info("Using DryRunLogger to satisfy Lightning logging without writing business results.")
+        logger.info("Using DryRunLogger to satisfy Lightning logging without writing business results.")
         loggers = [DryRunLogger()]
 
-    command_line_logger.info(f"Instantiating trainer <{cfg.trainer.root._target_}>")
+    logger.info(f"Instantiating trainer <{cfg.trainer.root._target_}>")
 
     enable_checkpointing = has_class_object_inside_list(callbacks, ModelCheckpoint)
     enable_model_summary = has_class_object_inside_list(callbacks, ModelSummary)
@@ -220,7 +218,7 @@ def pipeline_launcher(cfg: DictConfig):
         pipeline_modules: PipelineModules = initialize_pipeline_modules(cfg)
         # Log hyperparameters if loggers are present
         if len(pipeline_modules.loggers) > 0:
-            command_line_logger.info("Logging hyperparameters!")
+            logger.info("Logging hyperparameters!")
             log_hyperparameters(cfg, pipeline_modules.model, pipeline_modules.trainer)
         yield pipeline_modules
     except Exception as ex:

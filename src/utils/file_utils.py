@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from pathlib import Path
 from shutil import SameFileError
@@ -10,6 +9,9 @@ from lightning.fabric.utilities.types import _PATH
 from pyarrow import fs as pyarrow_fs
 
 from src.utils.decorators import retry
+from src.utils.pylogger import RankedLogger
+
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 @retry()
@@ -21,12 +23,12 @@ def get_file_size(file_path: str) -> int:
 @retry()
 def copy_to_remote(local_path: str, remote_path: str, recursive: bool = True) -> None:
     try:
-        logging.info(f"Copying {local_path} to {remote_path}")
+        logger.info(f"Copying {local_path} to {remote_path}")
         fs, _ = url_to_fs(remote_path)
         fs.put(local_path, remote_path, recursive=recursive)
-        logging.info(f"Finished copying {local_path} to {remote_path}")
+        logger.info(f"Finished copying {local_path} to {remote_path}")
     except SameFileError:
-        logging.warning(f"{local_path} and {remote_path} are the same. Skipping copy.")
+        logger.warning(f"{local_path} and {remote_path} are the same. Skipping copy.")
 
 
 @retry()

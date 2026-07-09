@@ -55,7 +55,9 @@ def collate_with_sid_causal_duplicate(
         batch = combine_list_of_tensor_dicts(batch)  # type: ignore
 
     # calculating the total number of contiguous sub-sequences in the batch
-    total_num_seqs = ((k := torch.tensor([s.shape[0] for s in batch[sequence_field_name]]) // sid_hierarchy) - 1) * k // 2
+    total_num_seqs = (
+        ((k := torch.tensor([s.shape[0] for s in batch[sequence_field_name]]) // sid_hierarchy) - 1) * k // 2
+    )
     total_num_seqs = torch.sum(total_num_seqs)
 
     if total_num_seqs > max_batch_size:
@@ -66,18 +68,14 @@ def collate_with_sid_causal_duplicate(
     new_batch = {field_name: [] for field_name in batch}
     current_idx = 0
     for row_index, sequence in enumerate(batch[sequence_field_name]):
-        end_indices = torch.arange(
-            2 * sid_hierarchy, sequence.shape[0] + 1, sid_hierarchy
-        )
+        end_indices = torch.arange(2 * sid_hierarchy, sequence.shape[0] + 1, sid_hierarchy)
         for end_index in end_indices:
             start_indices = torch.arange(
                 0, end_index - 2 * sid_hierarchy + 1, sid_hierarchy
             )  # we have a -2 here because we want to have at least two items in the sequence
             for start_index in start_indices:
                 if current_idx in select_seqs:
-                    new_batch[sequence_field_name].append(
-                        sequence[start_index:end_index]
-                    )
+                    new_batch[sequence_field_name].append(sequence[start_index:end_index])
                     for field_name in new_batch:
                         if field_name != sequence_field_name:
                             new_batch[field_name].append(batch[field_name][row_index])
@@ -129,9 +127,7 @@ def collate_fn_inference_for_sequence(
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
         current_sequence = field_sequence  # type: ignore
         # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
-        current_sequence = pad_sequence(
-            current_sequence, batch_first=True, padding_value=padding_token
-        )
+        current_sequence = pad_sequence(current_sequence, batch_first=True, padding_value=padding_token)
 
         # 2. padding or trimming the sequence to the desired length for training
         current_sequence = pad_or_trim_sequence(
@@ -155,7 +151,7 @@ def collate_fn_train(
     sequence_length: int = 200,
     masking_token: int = 1,
     padding_token: int = 0,
-    data_augmentation_functions: list[callable] | None = None
+    data_augmentation_functions: list[callable] | None = None,
 ) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
     """
     The collate function passed to dataloader.
@@ -188,9 +184,7 @@ def collate_fn_train(
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
         current_sequence = field_sequence  # type: ignore
         # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
-        current_sequence = pad_sequence(
-            current_sequence, batch_first=True, padding_value=padding_token
-        )
+        current_sequence = pad_sequence(current_sequence, batch_first=True, padding_value=padding_token)
 
         # 2. padding or trimming the sequence to the desired length for training
         current_sequence = pad_or_trim_sequence(
@@ -223,9 +217,7 @@ def collate_fn_train(
 
 
 def collate_fn_items(
-    rows: list[dict[str, torch.Tensor]],
-    item_id_field: str,
-    feature_to_input_name: dict[str, str]
+    rows: list[dict[str, torch.Tensor]], item_id_field: str, feature_to_input_name: dict[str, str]
 ) -> ItemBatch:
     """
     The collate function passed to the item dataloader.

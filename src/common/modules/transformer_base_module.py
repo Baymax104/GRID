@@ -15,7 +15,7 @@ from src.data.components.data_models import (
 )
 from src.utils.pylogger import RankedLogger
 
-console_logger = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 class TransformerBaseModule(LightningModule):
@@ -79,7 +79,7 @@ class TransformerBaseModule(LightningModule):
 
     @prediction_key_name.setter
     def prediction_key_name(self, value: str) -> None:
-        console_logger.debug(f"Setting prediction_key_name to {value}")
+        logger.debug(f"Setting prediction_key_name to {value}")
         self._prediction_key_name = value
 
     @property
@@ -88,7 +88,7 @@ class TransformerBaseModule(LightningModule):
 
     @prediction_name.setter
     def prediction_name(self, value: str) -> None:
-        console_logger.debug(f"Setting prediction_name to {value}")
+        logger.debug(f"Setting prediction_name to {value}")
         self._prediction_name = value
 
     def forward(

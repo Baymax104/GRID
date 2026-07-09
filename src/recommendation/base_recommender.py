@@ -1,5 +1,3 @@
-import logging
-
 import torch
 from torchmetrics.aggregation import BaseAggregator
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
@@ -9,6 +7,9 @@ from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
+from src.utils.pylogger import RankedLogger
+
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 class SemanticIDGenerativeRecommender(TransformerBaseModule):
@@ -51,7 +52,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
             self.codebooks = codebooks.t()
             assert self.codebooks.size(1) == num_hierarchies, "codebooks should be of shape (-1, num_hierarchies)"
         else:
-            logging.warning(
+            logger.warning(
                 "Not using pre-cached codebooks, please make sure that\n"
                 "1) dataset is properly pre-processed\n"
                 "2) num_hierarchies and  num_embeddings_per_hierarchy are proerly set\n"

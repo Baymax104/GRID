@@ -63,7 +63,9 @@ class StepBasedRichProgressBar(RichProgressBar):
                     self.train_progress_bar_id,
                     total=total_steps,
                     completed=self._resolve_completed_steps(trainer),
-                    description=f"[{self.theme.description}]{train_description}" if self.theme.description else train_description,
+                    description=f"[{self.theme.description}]{train_description}"
+                    if self.theme.description
+                    else train_description,
                     visible=True,
                 )
         self.refresh()

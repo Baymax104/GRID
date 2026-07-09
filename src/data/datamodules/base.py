@@ -1,6 +1,5 @@
 """Shared LightningDataModule helpers for file-backed iterable datasets."""
 
-import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -11,6 +10,9 @@ from omegaconf import DictConfig
 from src.data.components.dataloaders import DataloaderWithIterationRetry
 from src.data.utils import assign_files_to_workers
 from src.utils.file_utils import list_files
+from src.utils.pylogger import RankedLogger
+
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 class BaseDataModule(LightningDataModule, ABC):
@@ -96,7 +98,7 @@ class BaseDataModule(LightningDataModule, ABC):
 
     def _resolve_persistent_workers(self, curr_config: DictConfig) -> bool:
         if curr_config.num_workers == 0:
-            logging.warning(
+            logger.warning(
                 "num_workers is set to 0, persistent_workers will be set to False as persistent workers require num_workers > 0"
             )
             return False

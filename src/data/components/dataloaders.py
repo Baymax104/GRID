@@ -10,7 +10,7 @@ from torch.utils.data.dataloader import (
 
 from src.utils.pylogger import RankedLogger
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=False)
+logger = RankedLogger(__name__, rank_zero_only=False)
 
 
 class _MultiProcessingDataLoaderIterWithRetry(_MultiProcessingDataLoaderIter):
@@ -34,7 +34,7 @@ class _MultiProcessingDataLoaderIterWithRetry(_MultiProcessingDataLoaderIter):
             # if the timeout is reached. We need a way to differentiate and only retry if there is a timeout.
             if end_time - start_time < timeout or retries + 1 == self._max_retries:
                 return False, None
-            command_line_logger.warning(f"Retrying after timeout... Retry {retries + 1}/{self._max_retries}")
+            logger.warning(f"Retrying after timeout... Retry {retries + 1}/{self._max_retries}")
             retries += 1
         return False, None
 

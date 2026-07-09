@@ -38,9 +38,7 @@ class LabelFunction(ABC):
         """
         raise NotImplementedError("Need to implement in the child class.")
 
-    def get_input_attention_mask(
-        self, sequence: torch.Tensor, padding_token: int
-    ) -> torch.Tensor:
+    def get_input_attention_mask(self, sequence: torch.Tensor, padding_token: int) -> torch.Tensor:
         """
         Function to get the input attention mask for the input sequence.
         Defaults to returning the mask for the non-padding tokens but
@@ -59,6 +57,7 @@ class LabelFunction(ABC):
         A tensor of size (batch_size, sequence_length) with 1s for non-padding tokens and 0s for padding tokens.
         """
         return sequence != padding_token
+
 
 class Identity(LabelFunction):
     """
@@ -94,9 +93,7 @@ class Identity(LabelFunction):
         labels = sequence[content_mask]
         label_location = content_mask.nonzero()
 
-        return LabelFunctionOutput(
-            sequence=sequence, labels=labels, label_location=label_location
-        )
+        return LabelFunctionOutput(sequence=sequence, labels=labels, label_location=label_location)
 
 
 class NextKTokenMasking(LabelFunction):
@@ -116,9 +113,7 @@ class NextKTokenMasking(LabelFunction):
         """
         self.next_k = next_k
 
-    def transform_label(
-        self, sequence: torch.Tensor, padding_token: int, masking_token: int
-    ) -> LabelFunctionOutput:
+    def transform_label(self, sequence: torch.Tensor, padding_token: int, masking_token: int) -> LabelFunctionOutput:
         """
         For each row of sequence, we save the original last next_k tokens as labels and replace them with 1 masking token and next_k - 1 padding tokens.
         For all the next_k tokens, we use the first masked token as the label prediction.
@@ -159,18 +154,12 @@ class NextKTokenMasking(LabelFunction):
 
         # for each row, we select [label_start_indices, label_start_indices + 1, ..., label_start_indices + next_k - 1]
         label_col_offset = torch.arange(self.next_k)  # shape: (next_k,)
-        label_col_indices = (
-            label_start_indices.unsqueeze(1) + label_col_offset
-        )  # shape: (batch_size, next_k)
-        label_col_indices = label_col_indices.reshape(
-            -1
-        )  # shape: (batch_size * next_k,)
+        label_col_indices = label_start_indices.unsqueeze(1) + label_col_offset  # shape: (batch_size, next_k)
+        label_col_indices = label_col_indices.reshape(-1)  # shape: (batch_size * next_k,)
 
         # To get the row indices, we repeat each row index next_k times
         row_orig_indices = torch.arange(sequence.size(0))  # shape: (batch_size,)
-        row_interleaved_indices = row_orig_indices.repeat_interleave(
-            self.next_k
-        )  # shape: (batch_size * next_k,)
+        row_interleaved_indices = row_orig_indices.repeat_interleave(self.next_k)  # shape: (batch_size * next_k,)
 
         labels = sequence[row_interleaved_indices, label_col_indices]
 

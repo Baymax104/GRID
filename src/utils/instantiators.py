@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 import src.utils.logging_utils as logging_utils
 from src.utils.pylogger import RankedLogger
 
-log = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 def instantiate_callbacks(callbacks_cfg: DictConfig) -> list[Callback]:
@@ -18,7 +18,7 @@ def instantiate_callbacks(callbacks_cfg: DictConfig) -> list[Callback]:
     callbacks: list[Callback] = []
 
     if not callbacks_cfg:
-        log.warning("No callback configs found! Skipping..")
+        logger.warning("No callback configs found! Skipping..")
         return callbacks
 
     if not isinstance(callbacks_cfg, DictConfig):
@@ -26,7 +26,7 @@ def instantiate_callbacks(callbacks_cfg: DictConfig) -> list[Callback]:
 
     for _, cb_conf in callbacks_cfg.items():
         if isinstance(cb_conf, DictConfig) and "_target_" in cb_conf:
-            log.info(f"Instantiating callback <{cb_conf._target_}>")
+            logger.info(f"Instantiating callback <{cb_conf._target_}>")
             callbacks.append(hydra.utils.instantiate(cb_conf))
 
     return callbacks
@@ -41,7 +41,7 @@ def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
     logger: list[Logger] = []
 
     if not logger_cfg:
-        log.warning("No logger configs found! Skipping...")
+        logger.warning("No logger configs found! Skipping...")
         return logger
 
     if not isinstance(logger_cfg, DictConfig):
@@ -49,11 +49,11 @@ def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
 
     for name, lg_conf in logger_cfg.items():
         if name == "wandb":
-            log.info("Authenticating to W&B!")
+            logger.info("Authenticating to W&B!")
             logging_utils.login_wandb()
 
         if isinstance(lg_conf, DictConfig) and "_target_" in lg_conf:
-            log.info(f"Instantiating logger <{lg_conf._target_}>")
+            logger.info(f"Instantiating logger <{lg_conf._target_}>")
             logger.append(hydra.utils.instantiate(lg_conf))
 
     return logger

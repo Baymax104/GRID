@@ -5,7 +5,7 @@ from torch.utils.data import IterableDataset, get_worker_info
 
 from src.utils.pylogger import RankedLogger
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 class BaseDataset:
@@ -67,7 +67,6 @@ class SequenceDataset(BaseDataset, IterableDataset):
         current_worker_files = self.get_list_of_worker_files(shuffle=self.shuffle_files)
         data_reader = self.data_reader_factory(list_of_file_paths=current_worker_files)
         return data_reader.iterrows()
-
 
     def __iter__(self):
         dataset_iterable = self._load_data()

@@ -9,7 +9,7 @@ from omegaconf import DictConfig, OmegaConf
 from src.utils.file_utils import open_local_or_remote
 from src.utils.pylogger import RankedLogger
 
-log = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 @rank_zero_only
@@ -42,7 +42,7 @@ def print_config_tree(
 
     # add fields from `print_order` to queue
     for field in print_order:
-        queue.append(field) if field in cfg else log.warning(
+        queue.append(field) if field in cfg else logger.warning(
             f"Field '{field}' not found in config. Skipping '{field}' config printing..."
         )
 

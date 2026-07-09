@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -13,11 +12,12 @@ from torchmetrics import MeanMetric
 from src.common.components.loss_functions import WeightedSquaredError
 from src.common.components.model_output import OneKeyPerPredictionOutput
 from src.data.components.data_models import ItemBatch
+from src.utils.pylogger import RankedLogger
+
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-def _compute_squared_euclidean_distance(
-    x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256
-) -> torch.Tensor:
+def _compute_squared_euclidean_distance(x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256) -> torch.Tensor:
     """Compute squared Euclidean distances between rows of x and rows of y."""
     assert x.dim() == 2, f"Data must be 2D, got {x.dim()} dimensions"
     assert y.dim() == 2, f"Data must be 2D, got {y.dim()} dimensions"
@@ -148,17 +148,16 @@ class ResidualQuantizationVAE(LightningModule):
         self.decoder = decoder if decoder is not None else nn.Identity()
 
         # Per-layer parameters and state
-        self.centroids_list = nn.ParameterList([
-            nn.Parameter(torch.zeros(n_clusters, n_features), requires_grad=True)
-            for _ in range(n_layers)
-        ])
+        self.centroids_list = nn.ParameterList(
+            [nn.Parameter(torch.zeros(n_clusters, n_features), requires_grad=True) for _ in range(n_layers)]
+        )
         self.init_buffers: list[torch.Tensor] = [torch.tensor([]) for _ in range(n_layers)]
         self.is_initialized_list: list[bool] = [False for _ in range(n_layers)]
         self.is_initial_step_list: list[bool] = [False for _ in range(n_layers)]
         self.init_centroids_list: list[torch.Tensor | None] = [None for _ in range(n_layers)]
 
         if self.training_loop_function is not None:
-            logging.info(f"Device {self.device}: Using custom training loop function")
+            logger.info(f"Device {self.device}: Using custom training loop function")
             self.automatic_optimization = False
 
         # Metrics
@@ -206,9 +205,7 @@ class ResidualQuantizationVAE(LightningModule):
         starting points for the VQ-STE gradient training.
         """
         if buffer.shape[0] < self.n_clusters:
-            raise ValueError(
-                f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}."
-            )
+            raise ValueError(f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}.")
 
         # Step 1: K-Means++ initialization
         centroids = _kmeans_plus_plus_init(buffer, self.n_clusters, self.initialize_on_cpu)
@@ -231,7 +228,7 @@ class ResidualQuantizationVAE(LightningModule):
             centroids[mask] = centroids[mask] - (centroids[mask] - mask_target) * centroid_weights.unsqueeze(1)
 
             if step > 0 and torch.allclose(prev_centroids, centroids, atol=self.kmeans_atol):
-                logging.info(f"K-Means convergence for layer {layer_idx} after {step} iterations")
+                logger.info(f"K-Means convergence for layer {layer_idx} after {step} iterations")
                 break
             prev_centroids = centroids.clone()
 
@@ -295,9 +292,7 @@ class ResidualQuantizationVAE(LightningModule):
             loss,
         )
 
-    def _predict_layer(
-        self, layer_idx: int, batch: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def _predict_layer(self, layer_idx: int, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         batch = batch.to(self.device)
         with torch.no_grad():
             centroids = self.centroids_list[layer_idx].data
@@ -329,18 +324,12 @@ class ResidualQuantizationVAE(LightningModule):
 
             train_layer = False
             if self.trainer.state.fn == TrainerFn.FITTING:
-                if (
-                    self.is_initialized_list[idx]
-                    and not self.is_initialized_list[-1]
-                ):
+                if self.is_initialized_list[idx] and not self.is_initialized_list[-1]:
                     # Already initialized but not all layers ready → freeze
                     train_layer = False
                 elif idx == 0:
                     train_layer = True
-                elif (
-                    self.is_initialized_list[idx - 1]
-                    or self.is_initial_step_list[idx - 1]
-                ):
+                elif self.is_initialized_list[idx - 1] or self.is_initial_step_list[idx - 1]:
                     train_layer = True
 
             if train_layer:
@@ -386,10 +375,7 @@ class ResidualQuantizationVAE(LightningModule):
     def training_step(self, model_input: ItemBatch) -> torch.Tensor:
         cluster_ids, all_residuals, quantization_loss, reconstruction_loss = self.model_step(model_input)
 
-        loss = (
-            self.quantization_loss_weight * quantization_loss
-            + self.reconstruction_loss_weight * reconstruction_loss
-        )
+        loss = self.quantization_loss_weight * quantization_loss + self.reconstruction_loss_weight * reconstruction_loss
         self.train_loss(loss)
         self.train_quantization_loss(quantization_loss)
         self.train_reconstruction_loss(reconstruction_loss)
@@ -436,7 +422,9 @@ class ResidualQuantizationVAE(LightningModule):
                 )
                 train_dict_to_log.update(
                     {
-                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(self, f"train_layer_coverages_{layer_idx}")
+                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(
+                            self, f"train_layer_coverages_{layer_idx}"
+                        )
                         for layer_idx in range(self.n_layers)
                     }
                 )
@@ -477,7 +465,7 @@ class ResidualQuantizationVAE(LightningModule):
             self.init_buffers[idx] = torch.tensor([], device=self.device)
             self.centroids_list[idx] = self.centroids_list[idx].to(self.device)
 
-        logging.info(f"Device {self.device}: Training all layers simultaneously")
+        logger.info(f"Device {self.device}: Training all layers simultaneously")
 
         self.train_first_residuals_norm_ratio.reset()
         self.train_last_residuals_norm_ratio.reset()

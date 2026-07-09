@@ -31,7 +31,7 @@ from src.utils.restart_job_utils import (
     save_metadata_to_local_or_remote,
 )
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -112,10 +112,10 @@ class RestartAndLoadCheckpointCallback(Callback):
 
     def on_exception(self, trainer, pl_module, exception) -> None:
         """Handle exceptions by saving state and initiating restart if needed."""
-        command_line_logger.error(f"Exception caught: {exception}")
-        command_line_logger.error(f"Stack trace: {traceback.format_exc()}")
+        logger.error(f"Exception caught: {exception}")
+        logger.error(f"Stack trace: {traceback.format_exc()}")
 
-        command_line_logger.info("Cleaning up and handling restart logic")
+        logger.info("Cleaning up and handling restart logic")
 
         self.metadata.current_run = get_attribute_from_metadata_file(self.metadata_path, "current_run")
 
@@ -127,7 +127,7 @@ class RestartAndLoadCheckpointCallback(Callback):
             ).to_dict()
         )
         self.metadata.current_run += 1
-        command_line_logger.info(f"Restarting job. Current metadata: {self.metadata}")
+        logger.info(f"Restarting job. Current metadata: {self.metadata}")
         self._save_metadata()  # noqa
 
         # Clean up resources
@@ -136,7 +136,7 @@ class RestartAndLoadCheckpointCallback(Callback):
     def _cleanup_resources(self, trainer: Trainer, exception: BaseException) -> None:
         clean_up_resources(trainer, exception)
 
-        command_line_logger.info("Resources cleaned up.")
+        logger.info("Resources cleaned up.")
         os._exit(1)
 
 

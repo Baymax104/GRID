@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 import torch
+
 from src.utils.file_utils import load_json
 from src.utils.tensor_utils import lookup_values_in_keyed_prediction_bundle
 from src.utils.utils import load_tokenize
@@ -339,8 +340,7 @@ def squeeze_tensor_in_place(
                 row[k] = v.squeeze()
             elif isinstance(v, list):
                 row[k] = [
-                    item.squeeze_() if isinstance(item, torch.Tensor) and len(item.shape) > 1 else item
-                    for item in v
+                    item.squeeze_() if isinstance(item, torch.Tensor) and len(item.shape) > 1 else item for item in v
                 ]
             else:
                 raise ValueError(f"Unsupported type for feature {k}: {type(v)}. Expected torch.Tensor or list.")

@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 
 
 class WeightedSquaredError(torch.nn.Module):

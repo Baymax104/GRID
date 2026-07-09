@@ -56,10 +56,7 @@ def assign_files_to_workers(
         list_of_files = list_of_files.copy()
         if shuffle_files:
             random.shuffle(list_of_files)
-        worker_to_files = {
-            worker_id: list_of_files[worker_id::total_workers]
-            for worker_id in range(total_workers)
-        }
+        worker_to_files = {worker_id: list_of_files[worker_id::total_workers] for worker_id in range(total_workers)}
         return worker_to_files, False
 
     # Otherwise, assign files to workers balancing by file size
@@ -79,9 +76,7 @@ def assign_files_to_workers(
     return worker_to_files, False
 
 
-def pad_or_trim_sequence(
-    padded_sequence: torch.Tensor, sequence_length: int, padding_token: int = 0
-) -> torch.Tensor:
+def pad_or_trim_sequence(padded_sequence: torch.Tensor, sequence_length: int, padding_token: int = 0) -> torch.Tensor:
     """Pad or trim the input sequence to the desired length."""
 
     # truncation
@@ -104,18 +99,13 @@ def pad_or_trim_sequence(
     # additional padding
     if padded_sequence.size(1) < sequence_length:
         padding_tensor = (
-            padding_token
-            * torch.ones(
-                (padded_sequence.shape[0], sequence_length - padded_sequence.size(1))
-            ).long()
+            padding_token * torch.ones((padded_sequence.shape[0], sequence_length - padded_sequence.size(1))).long()
         )
         padded_sequence = torch.cat([padded_sequence, padding_tensor], dim=-1)
     return padded_sequence
 
 
-def combine_list_of_tensor_dicts(
-    list_of_dicts: list[dict[str, torch.Tensor]]
-) -> dict[str, list[torch.Tensor]]:
+def combine_list_of_tensor_dicts(list_of_dicts: list[dict[str, torch.Tensor]]) -> dict[str, list[torch.Tensor]]:
     batch = defaultdict(list)
     for sequence in list_of_dicts:
         for field_name, field_sequence in sequence.items():
@@ -127,16 +117,8 @@ def convert_all_tensors_to_device(object, device):
     if isinstance(object, torch.Tensor):
         return object.to(device)
     elif isinstance(object, dict):
-        return {
-            k: convert_all_tensors_to_device(v, device)
-            for k, v in object.items()
-            if v is not None and v != object
-        }
+        return {k: convert_all_tensors_to_device(v, device) for k, v in object.items() if v is not None and v != object}
     elif isinstance(object, list):
-        return [
-            convert_all_tensors_to_device(v, device)
-            for v in object
-            if v is not None and v != object
-        ]
+        return [convert_all_tensors_to_device(v, device) for v in object if v is not None and v != object]
     else:
         return object

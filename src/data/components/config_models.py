@@ -84,8 +84,6 @@ class SequenceDataloaderConfig:
     timeout: int = 0
 
 
-
-
 @dataclass
 class ItemDatasetConfig:
     """The configuration class used to store the item dataset configuration.

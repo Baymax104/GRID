@@ -63,9 +63,7 @@ class SequentialModelInputData:
 
     user_id_list: torch.Tensor | list[str] | None = None
     transformed_sequences: dict[str, torch.Tensor] = field(default_factory=dict)
-    mask: torch.Tensor = (
-        None  # Single mask if needed as all sequences are padded the same way.
-    )
+    mask: torch.Tensor = None  # Single mask if needed as all sequences are padded the same way.
 
 
 @dataclass

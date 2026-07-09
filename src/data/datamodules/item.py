@@ -1,6 +1,5 @@
 """LightningDataModule for item-level pipelines."""
 
-
 from omegaconf import DictConfig
 
 from src.data.datamodules.base import BaseDataModule

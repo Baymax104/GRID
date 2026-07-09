@@ -24,7 +24,7 @@ from src.utils.file_utils import (
 )
 from src.utils.pylogger import RankedLogger
 
-command_line_logger = RankedLogger(__name__, rank_zero_only=True)
+logger = RankedLogger(__name__, rank_zero_only=True)
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -108,13 +108,13 @@ def load_metadata_from_local_or_remote(metadata_path: str) -> JobCheckpointMetad
     Returns:
         JobCheckpointMetadata: The loaded metadata if file exists, otherwise an empty metadata object.
     """
-    command_line_logger.info(f"Trying to load metadata from {metadata_path}")
+    logger.info(f"Trying to load metadata from {metadata_path}")
     if file_exists_local_or_remote(metadata_path):
         metadata_dict = load_json(metadata_path)
-        command_line_logger.info(f"Metadata loaded successfully from {metadata_path}")
+        logger.info(f"Metadata loaded successfully from {metadata_path}")
         return JobCheckpointMetadata(**metadata_dict)
     else:
-        command_line_logger.warning(f"Metadata file not found at {metadata_path}. Creating empty metadata.")
+        logger.warning(f"Metadata file not found at {metadata_path}. Creating empty metadata.")
         return JobCheckpointMetadata()
 
 
@@ -133,7 +133,7 @@ def save_metadata_to_local_or_remote(metadata: JobCheckpointMetadata, metadata_p
         - Info message indicating where metadata is being saved
     """
 
-    command_line_logger.info(f"Saving metadata to {metadata_path}. {metadata.to_dict()}")
+    logger.info(f"Saving metadata to {metadata_path}. {metadata.to_dict()}")
 
     # Convert metadata to JSON string
     json_content = json.dumps(metadata.to_dict(), indent=2)
@@ -167,7 +167,7 @@ def get_attribute_from_metadata_file(metadata_path: str, attribute: str) -> Any:
     """
     metadata = load_metadata_from_local_or_remote(metadata_path)
     attribute_value = getattr(metadata, attribute, None)
-    command_line_logger.info(f"Retrieved {attribute}: {attribute_value} from metadata {metadata_path}")
+    logger.info(f"Retrieved {attribute}: {attribute_value} from metadata {metadata_path}")
     return attribute_value
 
 
@@ -194,15 +194,15 @@ def _is_process_running(proc: psutil.Process) -> bool:
 def clean_up_resources(trainer: Trainer | None = None, exception: BaseException | None = None) -> None:
     """Clean up distributed processes and CUDA resources."""
     if dist.is_initialized():
-        command_line_logger.info("Cleaning up distributed process group")
+        logger.info("Cleaning up distributed process group")
         dist.destroy_process_group()
 
     if torch.cuda.is_available():
-        command_line_logger.info("Clearing CUDA cache")
+        logger.info("Clearing CUDA cache")
         torch.cuda.empty_cache()
 
     if trainer is not None:
-        command_line_logger.info("Tearing down trainer")
+        logger.info("Tearing down trainer")
         trainer.strategy.on_exception(exception)
         launcher = trainer.strategy.launcher if trainer.strategy is not None else None
         trainer._teardown()

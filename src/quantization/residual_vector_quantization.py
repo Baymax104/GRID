@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -13,11 +12,12 @@ from torchmetrics import MeanMetric
 from src.common.components.loss_functions import WeightedSquaredError
 from src.common.components.model_output import OneKeyPerPredictionOutput
 from src.data.components.data_models import ItemBatch
+from src.utils.pylogger import RankedLogger
+
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-def _compute_squared_euclidean_distance(
-    x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256
-) -> torch.Tensor:
+def _compute_squared_euclidean_distance(x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256) -> torch.Tensor:
     """Compute squared Euclidean distances between rows of x and rows of y."""
     assert x.dim() == 2, f"Data must be 2D, got {x.dim()} dimensions"
     assert y.dim() == 2, f"Data must be 2D, got {y.dim()} dimensions"
@@ -140,17 +140,16 @@ class ResidualVectorQuantization(LightningModule):
         self.current_layer_schedule_index = 0
 
         # Per-layer parameters and state
-        self.centroids_list = nn.ParameterList([
-            nn.Parameter(torch.zeros(n_clusters, n_features), requires_grad=True)
-            for _ in range(n_layers)
-        ])
+        self.centroids_list = nn.ParameterList(
+            [nn.Parameter(torch.zeros(n_clusters, n_features), requires_grad=True) for _ in range(n_layers)]
+        )
         self.init_buffers: list[torch.Tensor] = [torch.tensor([]) for _ in range(n_layers)]
         self.is_initialized_list: list[bool] = [False for _ in range(n_layers)]
         self.is_initial_step_list: list[bool] = [False for _ in range(n_layers)]
         self.init_centroids_list: list[torch.Tensor | None] = [None for _ in range(n_layers)]
 
         if self.training_loop_function is not None:
-            logging.info(f"Device {self.device}: Using custom training loop function")
+            logger.info(f"Device {self.device}: Using custom training loop function")
             self.automatic_optimization = False
 
         # Metrics
@@ -191,12 +190,8 @@ class ResidualVectorQuantization(LightningModule):
     @rank_zero_only
     def _compute_initial_centroids(self, layer_idx: int, buffer: torch.Tensor) -> None:
         if buffer.shape[0] < self.n_clusters:
-            raise ValueError(
-                f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}."
-            )
-        self.init_centroids_list[layer_idx] = _kmeans_plus_plus_init(
-            buffer, self.n_clusters, self.initialize_on_cpu
-        )
+            raise ValueError(f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}.")
+        self.init_centroids_list[layer_idx] = _kmeans_plus_plus_init(buffer, self.n_clusters, self.initialize_on_cpu)
 
     def _initialization_step(
         self, layer_idx: int, batch: torch.Tensor
@@ -258,9 +253,7 @@ class ResidualVectorQuantization(LightningModule):
             loss,
         )
 
-    def _predict_layer(
-        self, layer_idx: int, batch: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def _predict_layer(self, layer_idx: int, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         batch = batch.to(self.device)
         with torch.no_grad():
             centroids = self.centroids_list[layer_idx].data
@@ -360,7 +353,9 @@ class ResidualVectorQuantization(LightningModule):
                 )
                 train_dict_to_log.update(
                     {
-                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(self, f"train_layer_coverages_{layer_idx}")
+                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(
+                            self, f"train_layer_coverages_{layer_idx}"
+                        )
                         for layer_idx in range(self.n_layers)
                     }
                 )
@@ -393,13 +388,10 @@ class ResidualVectorQuantization(LightningModule):
 
         if (
             self.current_layer_schedule_index < len(self.layer_training_schedule) - 1
-            and (
-                self.current_layer < 0
-                or self.is_initialized_list[self.current_layer]
-            )
+            and (self.current_layer < 0 or self.is_initialized_list[self.current_layer])
             and self.global_step + 1 >= self.layer_step_boundaries[self.current_layer_schedule_index]
         ):
-            logging.info(
+            logger.info(
                 f"Device {self.device}: Finished training {self._format_layer_name(self.current_layer)} at global_step={self.global_step + 1}.",
             )
             self.current_layer_schedule_index += 1
@@ -446,7 +438,7 @@ class ResidualVectorQuantization(LightningModule):
             f"{self._format_layer_name(layer)}={budget}"
             for layer, budget in zip(self.layer_training_schedule, self.layer_step_budgets, strict=False)
         )
-        logging.info(
+        logger.info(
             f"Device {self.device}: Training layers one-at-a-time with step budget [{schedule_as_text}] (total={total_steps})."
             " Ensure that early stopping callbacks are disabled."
         )

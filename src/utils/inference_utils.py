@@ -1,5 +1,4 @@
 import datetime
-import logging
 import os
 import pickle
 from typing import Any, Literal
@@ -11,9 +10,10 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 from src.common.components.model_output import ModelOutput
 from src.utils.decorators import retry
 from src.utils.file_utils import sync_file
+from src.utils.pylogger import RankedLogger
 from src.utils.tensor_utils import merge_list_of_keyed_tensors_to_single_tensor
 
-log = logging.getLogger(__name__)
+logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 class BaseBufferedWriter(BasePredictionWriter):
@@ -45,7 +45,7 @@ class BaseBufferedWriter(BasePredictionWriter):
 
     def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
         self.global_rank = trainer.global_rank if trainer.global_rank else 0
-        log.info(f"Rank {self.global_rank} initialized for inference.")
+        logger.info(f"Rank {self.global_rank} initialized for inference.")
         # If the module does not have the prediction_key_name or prediction_name attributes,
         # we don't do anything as it might be using the previous interface.
         # If the module has the attributes and they are set, we also don't change it as they
@@ -75,7 +75,7 @@ class BaseBufferedWriter(BasePredictionWriter):
             self.rows_buffer.clear()
 
         else:
-            log.info("Buffer is empty, nothing to flush.")
+            logger.info("Buffer is empty, nothing to flush.")
 
     def _flush_buffer(self) -> None:
         """Override this method to implement the logic for flushing the buffer."""
@@ -88,7 +88,7 @@ class BaseBufferedWriter(BasePredictionWriter):
             model_output: The ModelOutput object containing the predictions.
         """
         if model_output is None:
-            log.warning(
+            logger.warning(
                 f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch."
             )
             return
@@ -150,7 +150,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         We'll flush any remaining rows in the buffer.
         """
         self.flush_buffer()
-        log.info(f"Rank {self.global_rank} finished writing predictions.")
+        logger.info(f"Rank {self.global_rank} finished writing predictions.")
         # TODO (clark): technically write_on_epoch_end should handle this correctly
         # but if we don't do this as well here, the number of rows in the final BQ table will
         # always be a multiplier of flush_frequency
@@ -205,7 +205,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         if torch.distributed.is_available() and torch.distributed.is_initialized():
             torch.distributed.barrier()
         else:
-            log.info("Distributed not available, skipping distributed barrier.")
+            logger.info("Distributed not available, skipping distributed barrier.")
 
     @retry()
     def _flush_buffer(self):
@@ -215,7 +215,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         with open(self._local_file_path(file_path=file_path), "wb") as f:
             pickle.dump(self.rows_buffer, f)
 
-        log.info(
+        logger.info(
             f"Global Rank: {self.global_rank} wrote {len(self.rows_buffer)} rows to {self._local_file_path(file_path=file_path)}."
         )
 
@@ -231,11 +231,11 @@ class LocalPickleWriter(BaseBufferedWriter):
 
         self._distributed_barrier()
         if self.global_rank != 0:
-            log.info(f"Rank {self.global_rank} exits on predict end.")
+            logger.info(f"Rank {self.global_rank} exits on predict end.")
             return
 
         if self.should_merge_files_on_main and self.global_rank == 0:
-            log.info("Merging pickle files on main process.")
+            logger.info("Merging pickle files on main process.")
             self._merge_files()
 
         # conducting post-processing functions on the main process
@@ -256,7 +256,7 @@ class LocalPickleWriter(BaseBufferedWriter):
             os.remove(os.path.join(self.output_dir, file))
         with open(os.path.join(self.output_dir, "merged_predictions.pkl"), "wb") as f:
             pickle.dump(merged_data, f)
-        log.info(f"Merged {len(merged_data)} rows into merged_predictions.pkl.")
+        logger.info(f"Merged {len(merged_data)} rows into merged_predictions.pkl.")
 
         if self.should_merge_list_of_keyed_tensors_to_single_tensor:
             merged_data_tensor = merge_list_of_keyed_tensors_to_single_tensor(
@@ -266,7 +266,7 @@ class LocalPickleWriter(BaseBufferedWriter):
             )
             cpu_bundle = {k: v.cpu() for k, v in merged_data_tensor.items()}
             torch.save(cpu_bundle, os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
-            log.info(
+            logger.info(
                 "Merged %s keyed rows into merged_predictions_tensor.pt. as keyed prediction bundle",
                 len(cpu_bundle["keys"]),
             )
