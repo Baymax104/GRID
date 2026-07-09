@@ -10,12 +10,81 @@ from torch import nn
 from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
-from src.common.components.clustering_initializers import ClusteringInitializer
-from src.common.components.distance_functions import DistanceFunction
 from src.common.components.loss_functions import WeightedSquaredError
 from src.common.components.model_output import OneKeyPerPredictionOutput
-from src.common.components.quantization_strategies import QuantizationStrategy
 from src.data.components.data_models import ItemBatch
+
+
+def _compute_squared_euclidean_distance(
+    x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256
+) -> torch.Tensor:
+    """Compute squared Euclidean distances between rows of x and rows of y."""
+    assert x.dim() == 2, f"Data must be 2D, got {x.dim()} dimensions"
+    assert y.dim() == 2, f"Data must be 2D, got {y.dim()} dimensions"
+    assert x.size(1) == y.size(1), "Data must have the same number of columns"
+
+    n1 = x.shape[0]
+    if batch_size is None or batch_size >= n1:
+        x_expanded = x.unsqueeze(1)
+        y_expanded = y.unsqueeze(0)
+        return torch.sum((x_expanded - y_expanded).pow(2), dim=2)
+
+    all_sq_distances = []
+    num_batches = (n1 + batch_size - 1) // batch_size
+    for i in range(num_batches):
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, n1)
+        x_batch = x[start_idx:end_idx]
+        x_batch_expanded = x_batch.unsqueeze(1)
+        y_expanded = y.unsqueeze(0)
+        sq_diffs_batch = (x_batch_expanded - y_expanded).pow(2)
+        all_sq_distances.append(torch.sum(sq_diffs_batch, dim=2))
+    return torch.cat(all_sq_distances, dim=0)
+
+
+def _kmeans_plus_plus_init(
+    buffer: torch.Tensor,
+    n_clusters: int,
+    initialize_on_cpu: bool = False,
+    distance_fn: Callable = _compute_squared_euclidean_distance,
+) -> torch.Tensor:
+    """Initialize centroids using the k-means++ algorithm."""
+    if initialize_on_cpu:
+        old_device = buffer.device
+        buffer = buffer.to("cpu")
+
+    n_samples = buffer.shape[0]
+    n_features = buffer.shape[1]
+    centroids = torch.zeros((n_clusters, n_features), dtype=buffer.dtype, device=buffer.device)
+
+    first_centroid_idx = torch.randint(0, n_samples, (1,), device=buffer.device)
+    centroids[0] = buffer[first_centroid_idx]
+
+    for i in range(1, n_clusters):
+        min_distances = torch.min(distance_fn(buffer, centroids[:i]), dim=1)[0]
+        if min_distances.sum() == 0:
+            centroids[i:] = buffer[torch.randint(0, n_samples, (n_clusters - i,), device=buffer.device)]
+            break
+        next_centroid_idx = torch.multinomial(min_distances, num_samples=1)
+        centroids[i] = buffer[next_centroid_idx]
+
+    if initialize_on_cpu:
+        centroids = centroids.to(old_device)  # noqa
+
+    return centroids
+
+
+def _ste_quantize(
+    codebook: torch.Tensor,
+    batch: torch.Tensor,
+    distance_fn: Callable = _compute_squared_euclidean_distance,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Quantize using the Straight-Through Estimator (STE)."""
+    dists = distance_fn(batch, codebook)
+    ids = torch.argmin(dists, dim=-1)
+    embeddings = codebook[ids]
+    reconstruction_loss_embeddings = batch + (embeddings - batch).detach()
+    return ids, embeddings, reconstruction_loss_embeddings
 
 
 class ResidualQuantizationVAE(LightningModule):
@@ -34,11 +103,9 @@ class ResidualQuantizationVAE(LightningModule):
         n_layers: int,
         n_clusters: int,
         n_features: int,
-        distance_function: DistanceFunction,
-        initializer: ClusteringInitializer,
-        quantization_strategy: QuantizationStrategy,
         loss_function: nn.Module | None = None,
         init_buffer_size: int = 1000,
+        initialize_on_cpu: bool = False,
         normalize_residuals: bool = False,
         training_loop_function: Callable | None = None,
         quantization_loss_weight: float = 1.0,
@@ -58,10 +125,8 @@ class ResidualQuantizationVAE(LightningModule):
         self.n_layers = n_layers
         self.n_clusters = n_clusters
         self.n_features = n_features
-        self.distance_function = distance_function
-        self.initializer = initializer
-        self.quantization_strategy = quantization_strategy
         self.init_buffer_size = init_buffer_size
+        self.initialize_on_cpu = initialize_on_cpu
         self.normalize_residuals = normalize_residuals
         self.training_loop_function = training_loop_function
         self.quantization_loss_weight = quantization_loss_weight
@@ -146,14 +211,14 @@ class ResidualQuantizationVAE(LightningModule):
             )
 
         # Step 1: K-Means++ initialization
-        centroids = self.initializer(buffer)
+        centroids = _kmeans_plus_plus_init(buffer, self.n_clusters, self.initialize_on_cpu)
 
         # Step 2: Iterative K-Means refinement (mini-batch K-Means with manual update)
         cluster_counts = torch.zeros(self.n_clusters, device=buffer.device)
         prev_centroids = centroids.clone()
 
         for step in range(self.kmeans_max_iter):
-            distances = self.distance_function.compute(buffer, centroids)
+            distances = _compute_squared_euclidean_distance(buffer, centroids)
             assignments = torch.argmin(distances, dim=1)
             assignments_one_hot = nn.functional.one_hot(assignments, self.n_clusters).float().detach()
             batch_cluster_counts = torch.sum(assignments_one_hot, dim=0)
@@ -195,7 +260,7 @@ class ResidualQuantizationVAE(LightningModule):
 
         init_centroids = self.init_centroids_list[layer_idx]
         loss = self.init_loss_function(self.centroids_list[layer_idx], init_centroids)
-        distances = self.distance_function.compute(batch, init_centroids)
+        distances = _compute_squared_euclidean_distance(batch, init_centroids)
         assignments = torch.argmin(distances, dim=1).to(self.device)
         return assignments, init_centroids[assignments], loss
 
@@ -203,7 +268,7 @@ class ResidualQuantizationVAE(LightningModule):
         self, layer_idx: int, batch: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         codebook = self.centroids_list[layer_idx]
-        ids, embeddings, reconstruction_loss_embeddings = self.quantization_strategy.quantize(
+        ids, embeddings, reconstruction_loss_embeddings = _ste_quantize(
             codebook=codebook,
             batch=batch,
         )
@@ -236,7 +301,7 @@ class ResidualQuantizationVAE(LightningModule):
         batch = batch.to(self.device)
         with torch.no_grad():
             centroids = self.centroids_list[layer_idx].data
-            distances = self.distance_function.compute(batch, centroids)
+            distances = _compute_squared_euclidean_distance(batch, centroids)
             assignments = torch.argmin(distances, dim=1)
             return assignments, centroids[assignments]
 

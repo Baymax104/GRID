@@ -7,8 +7,6 @@ semantic_embedding_model:
     pretrained_model_name_or_path: ${embedding_model}
   aggregator:
     _target_: src.common.modules.embedding_aggregator.EmbeddingAggregator
-    aggregation_strategy:
-      _target_: src.common.components.aggregation_strategy.MeanAggregation
 root:
   _target_: src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
   semantic_embedding_model_input_map:

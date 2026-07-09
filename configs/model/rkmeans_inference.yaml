@@ -5,17 +5,9 @@ root:
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${embedding_dim}
-  distance_function: ${model.distance_function}
-  initializer: ${model.initializer}
   init_buffer_size: 3072
+  initialize_on_cpu: false
   normalize_residuals: true
   track_residuals: true
   optimizer: null
   scheduler: null
-distance_function:
-  _target_: src.common.components.distance_functions.SquaredEuclideanDistance
-initializer:
-  _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
-  n_clusters: ${codebook_width}
-  distance_function: ${model.distance_function}
-  initialize_on_cpu: false

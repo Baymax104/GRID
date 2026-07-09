@@ -5,11 +5,9 @@ root:
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${model.encoder.output_dim}
-  distance_function: ${model.distance_function}
-  initializer: ${model.initializer}
-  quantization_strategy: ${model.quantization_strategy}
   loss_function: ${model.loss_function}
   init_buffer_size: 3072
+  initialize_on_cpu: false
   normalize_residuals: false
   track_residuals: true
   kmeans_max_iter: 1000
@@ -21,17 +19,6 @@ root:
   training_loop_function: ${model.training_loop_function}
   optimizer: ${model.optimizer}
   scheduler: null
-distance_function:
-  _target_: src.common.components.distance_functions.SquaredEuclideanDistance
-initializer:
-  _target_: src.common.components.clustering_initializers.KMeansPlusPlusInitInitializer
-  n_clusters: ${codebook_width}
-  distance_function: ${model.distance_function}
-  initialize_on_cpu: false
-quantization_strategy:
-  _target_: src.common.components.quantization_strategies.STEQuantization
-  distance_function: ${model.distance_function}
-  compute_reconstruction_loss_embeddings: true
 loss_function:
   _target_: src.common.components.loss_functions.BetaQuantizationLoss
   beta: 0.25

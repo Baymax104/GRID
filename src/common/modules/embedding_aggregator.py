@@ -1,21 +1,19 @@
 import torch
 import torch.nn as nn
 
-from src.common.components.aggregation_strategy import AggregationStrategy
+from src.utils.tensor_utils import create_last_k_mask
 
 
 class EmbeddingAggregator(nn.Module):
-    """
-    Embedding aggregator function.
-    this determines how user embeddings are aggregated to form the final user embedding.
+    """Embedding aggregator that computes mean aggregation over token embeddings.
 
     Args:
-        aggregation_strategy: aggregation function
+        last_k: If specified, only the last K embeddings are considered for aggregation.
     """
 
-    def __init__(self, aggregation_strategy: AggregationStrategy):
+    def __init__(self, last_k: int | None = None):
         super().__init__()
-        self.aggregation_strategy = aggregation_strategy
+        self.last_k = last_k
 
     def forward(
         self,
@@ -25,24 +23,28 @@ class EmbeddingAggregator(nn.Module):
         # embeddings: (batch_size, sequence_length, embedding_dim)
         # attention_mask: (batch_size, sequence_length)
 
-        # get last token index for each sample
-        # we -1 here because the token index starts from 0
-        # length = sum([1, 1, 1, ..., 0, 0]) and index = length - 1
         last_item_index = attention_mask.sum(dim=1) - 1
 
-        # The following 3 steps are equivalent to
-        # row_ids = torch.arange(embeddings.size(0))
-        # but in a way that is traceable with Fx.
-        # row_ids = [0, 1, 2, ..., batch_size - 1]
-
-        # 1. Create a dummy tensor with the same batch shape as attention_mask
-        dummy_tensor_for_batch_shape = attention_mask[:, 0]  # Shape (batch_size,)
-
-        # 2. Use torch.ones_like to create a tensor of ones with that shape.
-        # Note that torch.ones is not traceable in Fx, so we use torch.ones_like.
+        # row_ids = [0, 1, 2, ..., batch_size - 1] (traceable with Fx)
+        dummy_tensor_for_batch_shape = attention_mask[:, 0]
         ones_tensor = torch.ones_like(dummy_tensor_for_batch_shape, dtype=torch.long)
-
-        # 3. Use cumsum to get the 0 to batch_size - 1 sequence
         row_ids = torch.cumsum(ones_tensor, dim=0) - 1
 
-        return self.aggregation_strategy.aggregate(embeddings, row_ids, last_item_index)
+        return _mean_aggregate(embeddings, row_ids, last_item_index, self.last_k)
+
+
+def _mean_aggregate(
+    embeddings: torch.Tensor,
+    row_ids: torch.Tensor,
+    last_item_index: torch.Tensor,
+    last_k: int | None = None,
+) -> torch.Tensor:
+    """Aggregate embeddings by computing their mean over the last K tokens per row."""
+    embeddings = embeddings[row_ids]
+    mask = create_last_k_mask(embeddings.size(1), last_item_index, last_k)
+    mask = mask.to(dtype=embeddings.dtype, device=embeddings.device)
+
+    masked_embeddings = embeddings * mask.unsqueeze(2)
+    sum_embeddings = torch.sum(masked_embeddings, dim=1)
+    count = torch.sum(mask, dim=1).clamp(min=1).unsqueeze(1)
+    return sum_embeddings / count
