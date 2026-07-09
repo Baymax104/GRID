@@ -69,23 +69,23 @@ class SequentialModelInputData:
 
 
 @dataclass
-class ItemData:
+class ItemBatch:
     """The data class used to wrap a batch of item features.
 
     Parameters
     ----------
-    item_ids: torch.Tensor | list[str] | None
+    item_ids: torch.Tensor
         The item ids.
-    transformed_features: dict[str, torch.Tensor]
+    features: dict[str, torch.Tensor]
         The transformed features.
     """
 
-    item_ids: torch.Tensor | list[str] | None = None
-    transformed_features: dict[str, torch.Tensor] = field(default_factory=dict)
+    item_ids: torch.Tensor
+    features: dict[str, torch.Tensor] = field(default_factory=dict)
 
 
 @dataclass
-class ItemTextData(ItemData):
+class ItemTextBatch(ItemBatch):
     """The data class used to wrap a batch of items with text features for training/testing.
 
     It is a child class of ItemData, with additional text tokens and text masks.

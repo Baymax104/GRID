@@ -19,10 +19,10 @@ log = logging.getLogger(__name__)
 class BaseBufferedWriter(BasePredictionWriter):
     def __init__(
         self,
+        prediction_key_name: str,
+        prediction_name: str,
         flush_frequency: int = 5000,
         write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
-        prediction_key_name: str | None = None,
-        prediction_name: str | None = None,
     ):
         """
         Args:
@@ -92,7 +92,7 @@ class BaseBufferedWriter(BasePredictionWriter):
                 f"Rank {self.global_rank} received an empty model output. Skipping this batch. This is expected if the batch is a dummy batch."
             )
             return
-        rows = model_output.list_of_row_format
+        rows: list[dict[str, Any]] = model_output.list_of_row_format
 
         if len(rows) + len(self.rows_buffer) < self.flush_frequency:
             self.rows_buffer.extend(rows)

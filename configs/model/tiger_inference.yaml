@@ -11,7 +11,9 @@ root:
   decoder: ${model.decoder}
   num_hierarchies: ${num_hierarchies}
   num_user_bins: null
-  codebooks: ${data.predict_dataset.semantic_id_map.sequence_data}
+  codebooks:
+    _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
+    file_path: ${semantic_id_path}
   mlp_layers: 2
   top_k_for_generation: 10
 huggingface_model:

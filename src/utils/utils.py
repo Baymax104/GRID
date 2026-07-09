@@ -7,7 +7,6 @@ import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
 
-from src.data.components.config_models import TokenizerConfig
 from src.utils.pylogger import RankedLogger
 from src.utils.rich_utils import print_config_tree
 
@@ -191,7 +190,7 @@ def lightning_precision_to_dtype(precision: str) -> torch.dtype:
         )
 
 
-def load_tokenize(config: TokenizerConfig):
+def load_tokenize(config: Any):
     """Load tokenizer and return a partial function for tokenization."""
     tokenizer = config.tokenizer
     tokenize = partial(

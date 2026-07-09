@@ -53,7 +53,6 @@ preprocessing_functions:
 
 predict_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
-  item_id_field: id
   shuffle_files: false
   preprocessing_functions: ${data.preprocessing_functions}
   data_reader:

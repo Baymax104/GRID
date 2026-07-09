@@ -7,7 +7,7 @@ dataset_class:
 collate:
   _target_: src.data.components.collate.collate_fn_items
   _partial_: true
-  item_id_field: ${data.predict_dataset_config.item_id_field}
+  item_id_field: id
   feature_to_input_name: ${data.feature_to_input_name}
 
 preprocessing_functions:
@@ -33,7 +33,6 @@ preprocessing_functions:
 
 predict_dataset_config:
   _target_: src.data.components.config_models.ItemDatasetConfig
-  item_id_field: id
   shuffle_files: false
   data_reader:
     _target_: src.data.components.readers.TFRecordReader

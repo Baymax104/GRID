@@ -163,20 +163,16 @@ def merge_list_of_keyed_tensors_to_single_tensor(
     Converts a list of dictionaries of keyed predictions into a compact keyed prediction bundle.
     e.g.,
     data = [
-        [
-            {
-                'user_id': 123,
-                'semantic_id': torch.tensor([21, 32, 124]),
-                other features.....,
-            }
-        ],
-        [
-            {
-                'user_id': 456,
-                'semantic_id': torch.tensor([11, 22, 33]),
-                other features.....,
-            }
-        ]
+        {
+            'user_id': 123,
+            'semantic_id': torch.tensor([21, 32, 124]),
+            other features.....,
+        },
+        {
+            'user_id': 456,
+            'semantic_id': torch.tensor([11, 22, 33]),
+            other features.....,
+        }
     ]
     output:
     {

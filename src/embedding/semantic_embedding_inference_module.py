@@ -4,15 +4,14 @@ from lightning import LightningModule
 from torch import nn
 
 from src.common.components.model_output import OneKeyPerPredictionOutput
-from src.data.components.data_models import ItemData
+from src.data.components.data_models import ItemBatch
 
 
 class SemanticEmbeddingInferenceModule(LightningModule):
     def __init__(
         self,
         semantic_embedding_model: nn.Module | transformers.PreTrainedModel,
-        semantic_embedding_model_input_map: dict[str, str] | None = None,
-        **kwargs,
+        semantic_embedding_model_input_map: dict[str, str],
     ) -> None:
         """
         Initialize the SemanticEmbeddingInferenceModule.
@@ -34,7 +33,7 @@ class SemanticEmbeddingInferenceModule(LightningModule):
             param.requires_grad = False
         self.semantic_embedding_model_input_map = semantic_embedding_model_input_map
 
-    def forward(self, model_input: ItemData) -> torch.Tensor:
+    def forward(self, model_input: ItemBatch) -> torch.Tensor:
         """
         Get the semantic embeddings from the input data.
 
@@ -45,19 +44,19 @@ class SemanticEmbeddingInferenceModule(LightningModule):
             semantic_embeddings: The semantic embeddings.
                 Shape (batch_size, n_features)
         """
-        semantic_embedding_model_input_name_to_feature = {
-            input_embedding_model_input_name: model_input.transformed_features[feature_name]
-            for input_embedding_model_input_name, feature_name in self.semantic_embedding_model_input_map.items()
+        semantic_embedding_model_arg_to_feature = {
+            embedding_model_arg: model_input.features[feature_name]
+            for embedding_model_arg, feature_name in self.semantic_embedding_model_input_map.items()
         }
         with torch.no_grad():
-            semantic_embeddings = self.semantic_embedding_model(**semantic_embedding_model_input_name_to_feature)
+            semantic_embeddings = self.semantic_embedding_model(**semantic_embedding_model_arg_to_feature)
         return semantic_embeddings
 
-    def model_step(self, model_input: ItemData) -> torch.Tensor:
+    def model_step(self, model_input: ItemBatch) -> torch.Tensor:
         semantic_embeddings = self.forward(model_input)
         return semantic_embeddings
 
-    def predict_step(self, batch: ItemData) -> OneKeyPerPredictionOutput:
+    def predict_step(self, batch: ItemBatch) -> OneKeyPerPredictionOutput:
         """
         Perform a single prediction step on a batch of data.
 

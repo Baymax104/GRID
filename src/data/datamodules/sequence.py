@@ -31,5 +31,4 @@ class SequenceDataModule(BaseDataModule):
             sequence_length=curr_config.sequence_length,
             masking_token=curr_config.masking_token,
             padding_token=curr_config.padding_token,
-            oov_token=getattr(curr_config, "oov_token", None),
         )

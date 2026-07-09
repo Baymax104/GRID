@@ -4,7 +4,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 
 from src.data.components.data_models import (
-    ItemData,
+    ItemBatch,
     LabelFunctionOutput,
     SequentialModelInputData,
     SequentialModuleLabelData,
@@ -26,7 +26,6 @@ def collate_with_sid_causal_duplicate(
     sequence_length: int = 200,
     masking_token: int = 1,
     padding_token: int = 0,
-    oov_token: int | None = None,  # If oov_token is passed, we remove it from the sequence
     max_batch_size: int = 128,
 ) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
     """
@@ -46,7 +45,6 @@ def collate_with_sid_causal_duplicate(
         sequence_length: The length of the sequence to be padded or trimmed to. (not used in this function, passed to collate_fn_train)
         masking_token: The token used for masking. (not used in this function, passed to collate_fn_train)
         padding_token: The token used for padding. (not used in this function, passed to collate_fn_train)
-        oov_token: If oov_token is passed, we remove it from the sequence. (not used in this function, passed to collate_fn_train)
         max_batch_size: The maximum batch size to be used after the data augmentation.
 
     Returns:
@@ -91,7 +89,6 @@ def collate_with_sid_causal_duplicate(
         sequence_length=sequence_length,
         masking_token=masking_token,
         padding_token=padding_token,
-        oov_token=oov_token,
     )
 
 
@@ -101,7 +98,6 @@ def collate_fn_inference_for_sequence(
     id_field_name: str,
     sequence_length: int = 200,
     padding_token: int = 0,
-    oov_token: int | None = None,  # If oov_token is passed, we remove it from the sequence
     **kwargs,
 ) -> SequentialModelInputData:
     """
@@ -113,7 +109,6 @@ def collate_fn_inference_for_sequence(
             loading the data per row, or a dictionary of tensors, in the case we were loading the data per batch.
         sequence_length: The length of the sequence to be padded or trimmed to.
         padding_token: The token used for padding.
-        oov_token: If oov_token is passed, we remove it from the sequence.
         id_field_name: The name of the field that contains the id of the user/item. This is used to
             map the predictions back to the original id.
 
@@ -133,11 +128,6 @@ def collate_fn_inference_for_sequence(
 
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
         current_sequence = field_sequence  # type: ignore
-        if oov_token:
-            # removing the oov token # TODO (Clark): in the future we can add special OOV handling
-            current_sequence = [
-                sequence[sequence != oov_token] for sequence in field_sequence
-            ]
         # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
         current_sequence = pad_sequence(
             current_sequence, batch_first=True, padding_value=padding_token
@@ -165,7 +155,6 @@ def collate_fn_train(
     sequence_length: int = 200,
     masking_token: int = 1,
     padding_token: int = 0,
-    oov_token: int | None = None,  # If oov_token is passed, we remove it from the sequence
     data_augmentation_functions: list[callable] | None = None
 ) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
     """
@@ -179,7 +168,6 @@ def collate_fn_train(
         sequence_length: The length of the sequence to be padded or trimmed to.
         masking_token: The token used for masking.
         padding_token: The token used for padding.
-        oov_token: If oov_token is passed, we remove it from the sequence.
         data_augmentation_functions: The list of functions to apply to augment the data.
 
     Returns:
@@ -199,11 +187,6 @@ def collate_fn_train(
     for field_name, field_sequence in batch.items():  # type: ignore
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
         current_sequence = field_sequence  # type: ignore
-        if oov_token:
-            # removing the oov token # TODO (Clark): in the future we can add special OOV handling
-            current_sequence = [
-                sequence[sequence != oov_token] for sequence in field_sequence
-            ]
         # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
         current_sequence = pad_sequence(
             current_sequence, batch_first=True, padding_value=padding_token
@@ -240,17 +223,15 @@ def collate_fn_train(
 
 
 def collate_fn_items(
-    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
+    rows: list[dict[str, torch.Tensor]],
     item_id_field: str,
-    feature_to_input_name: dict[str, str],  # type: ignore
-) -> ItemData:
+    feature_to_input_name: dict[str, str]
+) -> ItemBatch:
     """
     The collate function passed to the item dataloader.
 
     Args:
-        batch: The batch of data to be collated. Can be a list of dictionaries,
-            in the case we loaded the data per row, or a dictionary of tensors,
-            in the case loaded the data per batch.
+        rows: The batch of row to be collated.
         item_id_field: The name of the field in the batch that contains the item IDs.
         feature_to_input_name: The mapping from raw feature name to input feature name in ItemData.
 
@@ -259,20 +240,22 @@ def collate_fn_items(
             in the field `item_ids` and a dictionary mapping feature names to value tensors
             stacked along the batch dimension.
     """
-    # concat data rows if batch is a list of row
-    if isinstance(batch, list):
-        batch: dict[str, list[torch.Tensor]] = combine_list_of_tensor_dicts(batch)
-        # In this case, value is a list of tensors, each representing the
-        # features of a single item. We stack these tensors along the batch
-        # dimension to create a single tensor for the batch of items.
-        batch: dict[str, torch.Tensor] = {k: torch.stack(v, dim=0) for k, v in batch.items()}
 
+    # In this case, value is a list of tensors, each representing the
+    # features of a single item. We stack these tensors along the batch
+    # dimension to create a single tensor for the batch of items.
+    batch: dict[str, list[torch.Tensor]] = combine_list_of_tensor_dicts(rows)
+    batch: dict[str, torch.Tensor] = {k: torch.stack(v, dim=0) for k, v in batch.items()}
 
-    model_input_data = ItemData()
+    if item_id_field not in batch:
+        raise AttributeError(f"Item ID field not found in batch: {item_id_field}")
+
+    item_ids = batch[item_id_field]
+    model_input_data = ItemBatch(item_ids=item_ids)
     for field_name, field_value in batch.items():
         if field_name == item_id_field:
-            model_input_data.item_ids = field_value
-        else:
-            model_input_data.transformed_features[feature_to_input_name[field_name]] = field_value
+            continue
+        new_name = feature_to_input_name[field_name]
+        model_input_data.features[new_name] = field_value
 
     return model_input_data

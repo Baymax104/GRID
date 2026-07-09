@@ -11,7 +11,7 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.common.components.model_output import OneKeyPerPredictionOutput
-from src.data.components.data_models import ItemData
+from src.data.components.data_models import ItemBatch
 from src.quantization.base_clustering_module import BaseClusteringModule
 
 
@@ -34,9 +34,7 @@ class ResidualQuantization(LightningModule):
         scheduler: Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
         train_layer_wise: bool = False,
         track_residuals: bool = False,
-        verbose: bool = False,
-        **kwargs,
-    ) -> None:
+    ):
         """
         Initialize the Residual Quantization module.
 
@@ -57,7 +55,6 @@ class ResidualQuantization(LightningModule):
             train_layer_wise: Whether to train the layers one at a time. If true, each layer
                 will be trained for the same, plus or minus one, number of steps.
             track_residuals: Whether to track residuals at each layer.
-            verbose: Whether to log progress during training.
         """
         super().__init__()
         self.save_hyperparameters(
@@ -82,11 +79,7 @@ class ResidualQuantization(LightningModule):
         self.current_layer_schedule_index = 0
         self.optimizer = optimizer
         self.scheduler = scheduler
-
-        self.verbose = verbose
-        self.log_if_true("Verbose mode enabled", self.verbose)
-        # We always track residuals if verbose mode is enabled
-        self.track_residuals = track_residuals or self.verbose
+        self.track_residuals = track_residuals
 
         self.normalization_layer = normalization_layer if normalization_layer is not None else nn.Identity()
         self.encoder = encoder if encoder is not None else nn.Identity()
@@ -100,7 +93,7 @@ class ResidualQuantization(LightningModule):
 
         self.training_loop_function = training_loop_function
         if self.training_loop_function is not None:
-            self.log_if_true("Using custom training loop function", self.verbose)
+            logging.info(f"Device {self.device}: Using custom training loop function")
             self.automatic_optimization = False
         self.train_layer_wise = train_layer_wise
         self.normalize_residuals = normalize_residuals
@@ -112,21 +105,19 @@ class ResidualQuantization(LightningModule):
         self.train_loss = MeanMetric()
         self.train_quantization_loss = MeanMetric()
         self.train_reconstruction_loss = MeanMetric()
-        if self.verbose:
-            # Note that if normalize_residuals is True, the residuals norm metrics below are uninformative
-            self.train_first_residuals_norm_ratio = MeanMetric()
-            self.train_last_residuals_norm_ratio = MeanMetric()
-            self.first_centroids_norm = MeanMetric()
-            self.last_centroids_norm = MeanMetric()
-            self.train_frac_unique_ids = MeanMetric()
-            self.train_mse = MeanMetric()
-            for layer_idx in range(self.n_layers):
-                # We use MeanMetric to track the fraction of unique ids and the
-                # entropy of the cluster ids for each layer
-                # Note that we don't need to move these metrics to the device here,
-                # because they will be moved to the device in the training_step method
-                setattr(self, f"train_layer_coverages_{layer_idx}", MeanMetric())
-                setattr(self, f"train_layer_id_entropy_{layer_idx}", MeanMetric())
+        self.train_first_residuals_norm_ratio = MeanMetric()
+        self.train_last_residuals_norm_ratio = MeanMetric()
+        self.first_centroids_norm = MeanMetric()
+        self.last_centroids_norm = MeanMetric()
+        self.train_frac_unique_ids = MeanMetric()
+        self.train_mse = MeanMetric()
+        for layer_idx in range(self.n_layers):
+            # We use MeanMetric to track the fraction of unique ids and the
+            # entropy of the cluster ids for each layer
+            # Note that we don't need to move these metrics to the device here,
+            # because they will be moved to the device in the training_step method
+            setattr(self, f"train_layer_coverages_{layer_idx}", MeanMetric())
+            setattr(self, f"train_layer_id_entropy_{layer_idx}", MeanMetric())
 
         self.val_loss = MeanMetric()
         self.val_first_residuals_norm_ratio = MeanMetric()
@@ -257,7 +248,7 @@ class ResidualQuantization(LightningModule):
 
         return cluster_ids, all_residuals, quantized_embeddings, quantization_loss
 
-    def model_step(self, model_input: ItemData) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def model_step(self, model_input: ItemBatch) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform a forward pass and compute the loss for a single batch.
 
@@ -273,7 +264,7 @@ class ResidualQuantization(LightningModule):
             quantization_loss: The cumulative loss from the quantization layers.
             reconstruction_loss: The reconstruction loss.
         """
-        input_embeddings = model_input.transformed_features["input_embedding"].to(self.device)
+        input_embeddings = model_input.features["input_embedding"].to(self.device)
         normalized_input_embeddings = self.normalization_layer(input_embeddings)
         encoded_embeddings = self.encoder(normalized_input_embeddings)
         cluster_ids, all_residuals, quantized_embeddings, quantization_loss = self.forward(encoded_embeddings)
@@ -298,7 +289,7 @@ class ResidualQuantization(LightningModule):
             reconstruction_loss,
         )
 
-    def training_step(self, model_input: ItemData) -> torch.Tensor:
+    def training_step(self, model_input: ItemBatch) -> torch.Tensor:
         """
         Perform a single training step on a batch of data.
 
@@ -320,8 +311,8 @@ class ResidualQuantization(LightningModule):
         }
 
         with torch.no_grad():
-            if self.verbose and self.global_step % self.trainer.log_every_n_steps == 0:
-                # Compute verbose ID statistics
+            if self.global_step % self.trainer.log_every_n_steps == 0:
+                # Compute ID statistics
                 (
                     train_first_residuals_norm_ratio,
                     train_last_residuals_norm_ratio,
@@ -334,7 +325,7 @@ class ResidualQuantization(LightningModule):
                 ) = self._compute_output_stats(
                     cluster_ids=cluster_ids,
                     all_residuals=all_residuals,
-                    input_embeddings=model_input.transformed_features["input_embedding"],
+                    input_embeddings=model_input.features["input_embedding"],
                 )
                 # Update the metrics
                 self.train_first_residuals_norm_ratio(train_first_residuals_norm_ratio)
@@ -410,9 +401,8 @@ class ResidualQuantization(LightningModule):
             )
             and self.global_step + 1 >= self.layer_step_boundaries[self.current_layer_schedule_index]
         ):
-            self.log_if_true(
-                f"Finished training {self._format_layer_name(self.current_layer)} at global_step={self.global_step + 1}.",
-                self.verbose,
+            logging.info(
+                f"Device {self.device}: Finished training {self._format_layer_name(self.current_layer)} at global_step={self.global_step + 1}.",
             )
             self.current_layer_schedule_index += 1
             self.current_layer = self.layer_training_schedule[self.current_layer_schedule_index]
@@ -461,26 +451,24 @@ class ResidualQuantization(LightningModule):
                 f"{self._format_layer_name(layer)}={budget}"
                 for layer, budget in zip(self.layer_training_schedule, self.layer_step_budgets, strict=False)
             )
-            self.log_if_true(
-                f"Training layers one-at-a-time with step budget [{schedule_as_text}] (total={total_steps})."
-                " Ensure that early stopping callbacks are disabled.",
-                self.verbose,
+            logging.info(
+                f"Device {self.device}: Training layers one-at-a-time with step budget [{schedule_as_text}] (total={total_steps})."
+                " Ensure that early stopping callbacks are disabled."
             )
         else:
-            self.log_if_true("Training all layers simultaneously", self.verbose)
+            logging.info("Device {self.device}: Training all layers simultaneously")
 
-        if self.verbose:
-            self.train_first_residuals_norm_ratio.reset()
-            self.train_last_residuals_norm_ratio.reset()
-            self.train_frac_unique_ids.reset()
-            self.first_centroids_norm.reset()
-            self.last_centroids_norm.reset()
-            self.train_mse.reset()
-            for layer_idx in range(self.n_layers):
-                layer_frac_unique_metric = getattr(self, f"train_layer_coverages_{layer_idx}")
-                layer_id_entropy_metric = getattr(self, f"train_layer_id_entropy_{layer_idx}")
-                layer_frac_unique_metric.reset()
-                layer_id_entropy_metric.reset()
+        self.train_first_residuals_norm_ratio.reset()
+        self.train_last_residuals_norm_ratio.reset()
+        self.train_frac_unique_ids.reset()
+        self.first_centroids_norm.reset()
+        self.last_centroids_norm.reset()
+        self.train_mse.reset()
+        for layer_idx in range(self.n_layers):
+            layer_frac_unique_metric = getattr(self, f"train_layer_coverages_{layer_idx}")
+            layer_id_entropy_metric = getattr(self, f"train_layer_id_entropy_{layer_idx}")
+            layer_frac_unique_metric.reset()
+            layer_id_entropy_metric.reset()
 
     def _compute_output_stats(
         self,
@@ -552,7 +540,7 @@ class ResidualQuantization(LightningModule):
 
     def eval_step(
         self,
-        batch: ItemData,
+        batch: ItemBatch,
         loss_to_aggregate: MeanMetric,
         first_residuals_norm_ratio_metric: MeanMetric,
         last_residuals_norm_ratio_metric: MeanMetric,
@@ -585,14 +573,14 @@ class ResidualQuantization(LightningModule):
         ) = self._compute_output_stats(
             cluster_ids=cluster_ids,
             all_residuals=all_residuals,
-            input_embeddings=batch.transformed_features["input_embedding"],
+            input_embeddings=batch.features["input_embedding"],
         )
         last_residuals_norm_ratio_metric(last_residuals_norm_ratio)
         first_residuals_norm_ratio_metric(first_residuals_norm_ratio)
         frac_unique_ids_metric(frac_unique_ids)
         mse_metric(mse)
 
-    def validation_step(self, batch: ItemData, batch_idx: int):
+    def validation_step(self, batch: ItemBatch, batch_idx: int):
         """
         Perform a single validation step on a batch of data.
 
@@ -634,7 +622,7 @@ class ResidualQuantization(LightningModule):
         self.val_frac_unique_ids.reset()
         self.val_mse.reset()
 
-    def test_step(self, batch: ItemData, batch_idx: int) -> None:
+    def test_step(self, batch: ItemBatch, batch_idx: int) -> None:
         """
         Perform a single test step on a batch of data.
 
@@ -676,7 +664,7 @@ class ResidualQuantization(LightningModule):
         self.test_frac_unique_ids.reset()
         self.test_mse.reset()
 
-    def predict_step(self, batch: ItemData) -> OneKeyPerPredictionOutput:
+    def predict_step(self, batch: ItemBatch) -> OneKeyPerPredictionOutput:
         """
         Perform a single prediction step on a batch of data.
 
@@ -750,7 +738,3 @@ class ResidualQuantization(LightningModule):
         # We do not save the input embedding cache as this can be very large
         return super().on_save_checkpoint(checkpoint)
 
-    def log_if_true(self, message: str, condition: bool) -> None:
-        """Log a message if condition is True."""
-        if condition:
-            logging.info(f"Device {self.device}: {message}")

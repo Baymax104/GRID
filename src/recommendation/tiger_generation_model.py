@@ -27,9 +27,9 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
     def __init__(
         self,
         codebooks: torch.Tensor,
-        embedding_dim: int,
         num_hierarchies: int,
-        num_embeddings_per_hierarchy: int,
+        num_embeddings_per_hierarchy: int | None = None,
+        embedding_dim: int | None = None,
         top_k_for_generation: int = 10,
         num_user_bins: int | None = None,
         mlp_layers: int | None = None,
