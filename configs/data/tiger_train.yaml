@@ -3,16 +3,19 @@
 dataset_class:
   _target_: src.data.components.datasets.SequenceDataset
   _partial_: true
+
 train_label:
   sequence_data:
     transform:
       _target_: src.data.components.label_functions.NextKTokenMasking
       next_k: ${model.root.num_hierarchies}
+
 eval_label:
   sequence_data:
     transform:
       _target_: src.data.components.label_functions.NextKTokenMasking
       next_k: ${model.root.num_hierarchies}
+
 preprocessing_functions:
 - _target_: src.data.components.preprocessing.filter_features_to_consider
   _partial_: true
@@ -40,15 +43,18 @@ preprocessing_functions:
   features_to_apply:
   - sequence_data
   num_hierarchies: ${model.root.num_hierarchies}
+
 train_collate:
   _target_: src.data.components.collate.collate_with_sid_causal_duplicate
   _partial_: true
   sequence_field_name: sequence_data
   sid_hierarchy: ${model.root.num_hierarchies}
   max_batch_size: 32
+
 eval_collate:
   _target_: src.data.components.collate.collate_fn_train
   _partial_: true
+
 train_dataset_config:
   _target_: src.data.components.config_models.SemanticIDDatasetConfig
   data_reader:
@@ -57,6 +63,7 @@ train_dataset_config:
     shuffle_rows: true
   shuffle_files: true
   preprocessing_functions: ${data.preprocessing_functions}
+
 eval_dataset_config:
   _target_: src.data.components.config_models.SemanticIDDatasetConfig
   data_reader:
@@ -65,6 +72,7 @@ eval_dataset_config:
     shuffle_rows: false
   shuffle_files: false
   preprocessing_functions: ${data.preprocessing_functions}
+
 train_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
@@ -82,6 +90,7 @@ train_dataloader:
   collate_fn: ${data.train_collate}
   dataset_config: ${data.train_dataset_config}
   pin_memory: true
+
 val_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
@@ -99,6 +108,7 @@ val_dataloader:
   collate_fn: ${data.eval_collate}
   dataset_config: ${data.eval_dataset_config}
   pin_memory: false
+
 test_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
@@ -116,6 +126,7 @@ test_dataloader:
   collate_fn: ${data.eval_collate}
   dataset_config: ${data.eval_dataset_config}
   pin_memory: false
+
 datamodule:
   _target_: src.data.datamodules.sequence.SequenceDataModule
   train_dataloader_config: ${data.train_dataloader}

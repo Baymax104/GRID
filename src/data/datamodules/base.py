@@ -24,7 +24,6 @@ class BaseDataModule(LightningDataModule, ABC):
         predict_dataloader_config: DictConfig | None = None,
     ):
         super().__init__()
-        self.save_hyperparameters(logger=False)
 
         self.stage_to_config = {
             TrainerFn.FITTING: train_dataloader_config,
