@@ -3,7 +3,7 @@ import transformers
 from lightning import LightningModule
 from torch import nn
 
-from src.common.components.model_output import OneKeyPerPredictionOutput
+from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
 
 
@@ -56,27 +56,21 @@ class SemanticEmbeddingInferenceModule(LightningModule):
         semantic_embeddings = self.forward(model_input)
         return semantic_embeddings
 
-    def predict_step(self, batch: ItemBatch) -> OneKeyPerPredictionOutput:
+    def predict_step(self, batch: ItemBatch) -> ModelOutput:
         """
         Perform a single prediction step on a batch of data.
 
         Save the semantic embeddings of the input items and the corresponding item ids
-        in a OneKeyAcrossPredictionsOutput object.
+        in a ModelOutput object.
 
         Args:
             batch: A batch of data of ItemData type.
 
         Returns:
-            model_output: A SharedKeyAcrossPredictionsOutput object containing the item
+            model_output: A ModelOutput object containing the item
                 ids as keys and the semantic embeddings as predictions.
         """
         semantic_embeddings = self.model_step(batch)
         item_ids = [item_id.item() if isinstance(item_id, torch.Tensor) else item_id for item_id in batch.item_ids]
 
-        model_output = OneKeyPerPredictionOutput(
-            keys=item_ids,
-            predictions=semantic_embeddings,
-            key_name="item_id",
-            prediction_name="embedding",
-        )
-        return model_output
+        return ModelOutput(keys=item_ids, predictions=semantic_embeddings)

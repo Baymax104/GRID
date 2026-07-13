@@ -4,7 +4,7 @@ import torch
 import transformers
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 
-from src.common.components.model_output import OneKeyPerPredictionOutput
+from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
@@ -35,8 +35,6 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         mlp_layers: int | None = None,
         should_check_prefix: bool = False,
         should_add_sep_token: bool = True,
-        prediction_key_name: str = "user_id",
-        prediction_value_name: str = "semantic_ids",
         **kwargs,
     ):
         """
@@ -124,9 +122,6 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
         self.sep_token = (
             torch.nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True) if should_add_sep_token else None
         )
-        # the key value names for the prediction output
-        self.prediction_key_name = prediction_key_name
-        self.prediction_value_name = prediction_value_name
 
     def encoder_forward_pass(
         self,
@@ -416,13 +411,7 @@ class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):
     def predict_step(self, batch: SequentialModelInputData):
         generated_sids, _ = self.model_step(batch)
         ids = [id_.item() if isinstance(id, torch.Tensor) else id for id_ in batch.user_id_list]
-        model_output = OneKeyPerPredictionOutput(
-            keys=ids,
-            predictions=generated_sids,
-            key_name=self.prediction_key_name,
-            prediction_name=self.prediction_value_name,
-        )
-        return model_output
+        return ModelOutput(keys=ids, predictions=generated_sids)
 
     def model_step(
         self,

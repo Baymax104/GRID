@@ -7,7 +7,6 @@ from torchmetrics import MeanMetric
 from torchmetrics.aggregation import BaseAggregator
 
 from src.common.components.eval_metrics import Evaluator
-from src.common.components.model_output import SharedKeyAcrossPredictionsOutput
 from src.common.modules.embedding_aggregator import EmbeddingAggregator
 from src.data.components.data_models import (
     SequentialModelInputData,
@@ -54,9 +53,6 @@ class TransformerBaseModule(LightningModule):
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.evaluator = evaluator
-        # We use setters to set the prediction key and name.
-        self._prediction_key_name = None
-        self._prediction_name = None
 
         if self.evaluator:  # For inference, evaluator is not set.
             for metric_name, metric_object in self.evaluator.metrics.items():
@@ -72,24 +68,6 @@ class TransformerBaseModule(LightningModule):
         self.decoder = decoder
         self.aggregator = aggregator
         self.feature_to_model_input_map = feature_to_model_input_map if feature_to_model_input_map else {}
-
-    @property
-    def prediction_key_name(self) -> str | None:
-        return self._prediction_key_name
-
-    @prediction_key_name.setter
-    def prediction_key_name(self, value: str):
-        logger.debug(f"Setting prediction_key_name to {value}")
-        self._prediction_key_name = value
-
-    @property
-    def prediction_name(self) -> str | None:
-        return self._prediction_name
-
-    @prediction_name.setter
-    def prediction_name(self, value: str):
-        logger.debug(f"Setting prediction_name to {value}")
-        self._prediction_name = value
 
     def forward(
         self,
@@ -286,30 +264,3 @@ class TransformerBaseModule(LightningModule):
         and second is a SequentialModuleLabelData object.
         """
         self.eval_step(batch, self.test_loss)
-
-    def predict_step(
-        self,
-        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
-        batch_idx: int,
-    ):
-        """
-        Perform a single prediction step on a batch of data from the test set.
-
-        :param
-
-        Args:
-            batch: A batch of data (tuple) where first object is a SequentialModelInputData object
-                and second is a SequentialModuleLabelData object.
-            batch_idx: batch index
-        """
-        model_input: SequentialModelInputData = batch[0]
-        model_output_before_aggregation, _ = self.model_step(model_input=model_input)
-
-        model_output_after_aggregation = self.aggregator(model_output_before_aggregation, model_input.mask)
-        model_output = SharedKeyAcrossPredictionsOutput(
-            key=batch_idx,
-            predictions=model_output_after_aggregation,
-            key_name=self.prediction_key_name,
-            prediction_name=self.prediction_name,
-        )
-        return model_output

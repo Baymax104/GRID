@@ -10,7 +10,7 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.common.components.loss_functions import WeightedSquaredError
-from src.common.components.model_output import OneKeyPerPredictionOutput
+from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
 from src.utils.pylogger import RankedLogger
 
@@ -587,16 +587,11 @@ class ResidualVectorQuantization(LightningModule):
         self.test_frac_unique_ids.reset()
         self.test_mse.reset()
 
-    def predict_step(self, batch: ItemBatch) -> OneKeyPerPredictionOutput:
+    def predict_step(self, batch: ItemBatch) -> ModelOutput:
         cluster_ids, _, _ = self.model_step(batch)
         assert batch.item_ids is not None, "Item ids not provided."
         item_ids = [item_id.item() if isinstance(item_id, torch.Tensor) else item_id for item_id in batch.item_ids]
-        return OneKeyPerPredictionOutput(
-            keys=item_ids,
-            predictions=cluster_ids,
-            key_name="item_id",
-            prediction_name="cluster_ids",
-        )
+        return ModelOutput(keys=item_ids, predictions=cluster_ids)
 
     # ------------------------------------------------------------------ #
     # Optimizer / Checkpoint
