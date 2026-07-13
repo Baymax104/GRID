@@ -1,7 +1,5 @@
-## Purpose
+## MODIFIED Requirements
 
-规范 `src/utils/` 包中工具函数的导入方式，要求存储库模块从具体的子模块导入工具符号，而非通过包级动态导出。同时要求 utils 内部模块使用直接的兄弟子模块导入，避免通过包根路径间接引用。
-## Requirements
 ### Requirement: Repository callers SHALL import utility symbols from concrete submodules
 Repository modules that currently depend on `src.utils` root re-exports SHALL import required symbols from their defining submodules instead of relying on package-level aggregation.
 
@@ -15,4 +13,3 @@ Modules inside `src/utils` SHALL avoid importing sibling modules through `src.ut
 #### Scenario: Internal sibling import does not route through package root
 - **WHEN** a maintainer inspects import statements inside `src/utils/*.py`
 - **THEN** modules such as `logging_utils.py`, `rich_utils.py`, `startup.py`, and `model_utils.py` MUST prefer direct sibling submodule imports over `from src.utils import ...` patterns for internal dependencies
-
