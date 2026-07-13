@@ -5,9 +5,6 @@ pickle_writer:
   output_dir: ${paths.output_dir}/pickle
   flush_frequency: 100000
   write_interval: batch
-  should_merge_files_on_main: true
-  prediction_key_name: item_id
-  prediction_name: cluster_ids
   post_processing_functions:
-  - _target_: src.utils.tensor_utils.deduplicate_rows_in_tensor
+  - _target_: src.common.components.postprocessing.deduplicate_rows_in_tensor
     _partial_: true

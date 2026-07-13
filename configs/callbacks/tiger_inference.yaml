@@ -5,6 +5,3 @@ pickle_writer:
   output_dir: ${paths.output_dir}/pickle
   flush_frequency: 100000
   write_interval: batch
-  should_merge_files_on_main: true
-  prediction_key_name: user_id
-  prediction_name: semantic_ids

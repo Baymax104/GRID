@@ -5,7 +5,3 @@ pickle_writer:
   output_dir: ${paths.output_dir}/pickle
   flush_frequency: 64
   write_interval: batch
-  should_merge_files_on_main: true
-  prediction_key_name: item_id
-  prediction_name: embedding
-  should_merge_list_of_keyed_tensors_to_single_tensor: true
