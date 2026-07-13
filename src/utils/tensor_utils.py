@@ -5,7 +5,7 @@ import torch
 from src.utils.file_utils import open_local_or_remote
 
 
-def _validate_keyed_prediction_bundle(bundle: dict[str, Any]) -> None:
+def _validate_keyed_prediction_bundle(bundle: dict[str, Any]):
     if "keys" not in bundle or "predictions" not in bundle:
         raise ValueError("Keyed prediction bundle must contain 'keys' and 'predictions'.")
 
@@ -86,72 +86,6 @@ def lookup_values_in_keyed_prediction_bundle(
     gathered = bundle["predictions"][row_indices]
     prediction_shape = bundle["predictions"].shape[1:]
     return gathered.reshape(*lookup_keys.shape, *prediction_shape)
-
-
-def locations_to_index_tuple(locations: torch.Tensor, num_dims: int = 2) -> tuple:
-    """
-    Convert a tensor of locations to a tuple of index tensors for advanced indexing.
-
-    Args:
-        locations (torch.Tensor): A tensor of shape `[L, D]` where `L` is the number of
-            locations and `D >= num_dims`.
-        num_dims (int): The number of dimensions to extract. The first num_dims columns of
-            the locations tensor are used. We explicitly specify this to make the
-            function call traceable.
-
-    Returns:
-        Tuple: A tuple of `num_dims` tensors, each of shape `[L]` representing the
-            indices for one dimension.
-
-    Example:
-        >>> locations = torch.tensor([[0, 10], [1, 20], [2, 5]])
-        >>> locations_to_index_tuple(locations, num_dims=2)
-        (tensor([0, 1, 2]), tensor([10, 20,  5]))
-
-        >>> locations = torch.tensor([[0, 10], [1, 20], [2, 5]])
-        >>> locations_to_index_tuple(locations, num_dims=1)
-        (tensor([0, 1, 2]))
-    """
-    return tuple(locations[:, i] for i in range(num_dims))
-
-
-def extract_locations(data: torch.tensor, locations: torch.tensor, num_dims: int = 2) -> torch.tensor:
-    """
-    Extracts the elements from a tensor at the specified indices.
-
-    Args:
-        data (torch.tensor): The input tensor of N dimensions from which to extract elements.
-        locations (torch.tensor): Tensor of shape [L, D] where L is the number of
-        elements where each D dimensional row reprecents the first D dimensions
-        of the data tensor to extract.
-        num_dims (int): The number of dimensions to extract. The first num_dims columns of
-        the locations tensors are used. We need to specify to make this function call traceable.
-
-    Returns:
-        torch.tensor: A tensor of shape [L,...] with total N-num_dims+1 dimensions
-        containing the extracted elements.
-
-    Example:
-        >>> data = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-        >>> locations = torch.tensor([[0, 1], [1, 2]])
-        >>> extract_locations(data, locations, num_dims=2)
-        tensor([2, 6]) # (Index 0,1 gives 2 (First row, second column); Index 1,2 gives 6 (Second row, third column))
-
-        >>> locations = torch.tensor([[0, 1], [2, 0]])
-        >>> extract_locations(data, locations, num_dims=1)
-        tensor([[1, 2, 3], [7, 8, 9]])
-        # (num_dims = 1 implies we are extracting based on the first dimension only.
-        # Thus, we get the first row (from [0,1] as 1 is ignored) and the third row
-        # (from [2,0] as 0 is ignored) of the data tensor.
-    """
-
-    # Separate the locations for each of the first D dimensions
-    index_tuple = locations_to_index_tuple(locations=locations, num_dims=num_dims)
-
-    # Use indexing with a tuple of index tensors
-    extracted_values = data[index_tuple]
-
-    return extracted_values
 
 
 def merge_list_of_keyed_tensors_to_single_tensor(
@@ -238,72 +172,3 @@ def deduplicate_rows_in_tensor(file_path: str | None = None, return_tensor: bool
     else:
         torch.save({"keys": bundle["keys"], "predictions": result}, file_path)
         return None
-
-
-def transpose_tensor_from_file(
-    file_path: str | None = None,
-    return_tensor: bool = False,
-    dim1: int = -2,
-    dim2: int = -1,
-) -> None | dict[str, Any]:
-    """
-    Transposes the `predictions` tensor inside a keyed prediction bundle according to designated dimensions.
-
-    Note: keyed bundles require the first dimension of `predictions` to stay aligned with `keys`.
-    This helper therefore raises if the transposed result breaks that invariant.
-
-    Args:
-        file_path: Optional; Path to a file containing the tensor data.
-        return_tensor: If True, returns the modified tensor; otherwise, saves it to the file.
-        dim1: The first dimension to transpose (default: -2).
-        dim2: The second dimension to transpose (default: -1).
-    Returns:
-        If return_tensor is True, returns the modified tensor. If False, saves the modified tensor to the file.
-    """
-    if not file_path.endswith(".pt"):
-        return None
-    bundle = load_keyed_prediction_bundle(file_path)
-    data = bundle["predictions"]
-
-    # Transpose the tensor
-    result = data.transpose(dim1, dim2)
-    bundle["predictions"] = result
-    _validate_keyed_prediction_bundle(bundle)
-    if return_tensor:
-        return bundle
-    else:
-        torch.save({"keys": bundle["keys"], "predictions": result}, file_path)
-        return None
-
-
-def create_last_k_mask(sequence_length: int, last_item_index: torch.Tensor, last_k: int | None = None) -> torch.tensor:
-    """
-    Creates a mask to select the last K items of sequences.
-    If a sequence has less than K items, all items are considered for the row.
-    If last_k is None, all items are considered for all rows.
-
-    Args:
-        sequence_length (int): The length of the sequences.
-        last_item_index (torch.Tensor) of shape (batch_size,).
-            The tensor containing the indices of the last items in the each row
-        last_k (int | None): The number of last K items to consider.
-            If None, all items are considered.
-    Returns:
-        torch.Tensor: A boolean tensor of shape (batch_size, sequence_length) with
-            True for the last K items in each row and False for the rest.
-    """
-
-    if last_k is None:
-        start_index = torch.zeros_like(last_item_index)
-    else:
-        if last_k < 1:
-            raise ValueError("last_k must be None or greater than or equal to 1")
-        start_index = torch.clamp(last_item_index - last_k + 1, min=0)  # Shape (batch_size,)
-
-    indices = (
-        torch.arange(sequence_length, device=last_item_index.device).unsqueeze(0).expand(last_item_index.size(0), -1)
-    )  # shape (batch_size, sequence_length)
-
-    # Shape (batch_size, sequence_length)
-    mask = (indices >= start_index.unsqueeze(1)) & (indices <= last_item_index.unsqueeze(1))
-    return mask

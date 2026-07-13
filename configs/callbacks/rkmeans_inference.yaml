@@ -1,7 +1,7 @@
 # @package _global_
 
 pickle_writer:
-  _target_: src.utils.inference_utils.LocalPickleWriter
+  _target_: src.common.components.prediction_writers.LocalPickleWriter
   output_dir: ${paths.output_dir}/pickle
   flush_frequency: 100000
   write_interval: batch

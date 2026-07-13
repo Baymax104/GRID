@@ -43,7 +43,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         self.prediction_key_name = prediction_key_name
         self.prediction_name = prediction_name
 
-    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str):
         self.global_rank = trainer.global_rank if trainer.global_rank else 0
         logger.info(f"Rank {self.global_rank} initialized for inference.")
         # If the module does not have the prediction_key_name or prediction_name attributes,
@@ -68,7 +68,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         ):
             pl_module.prediction_name = self.prediction_name
 
-    def flush_buffer(self) -> None:
+    def flush_buffer(self):
         """Flush the buffer and then clear it."""
         if self.rows_buffer:
             self._flush_buffer()
@@ -77,7 +77,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         else:
             logger.info("Buffer is empty, nothing to flush.")
 
-    def _flush_buffer(self) -> None:
+    def _flush_buffer(self):
         """Override this method to implement the logic for flushing the buffer."""
         raise NotImplementedError("You need to implement the `_flush_buffer` method in your subclass.")
 
@@ -114,7 +114,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         batch: Any,
         batch_idx: int,
         dataloader_idx: int,
-    ) -> None:
+    ):
         """
         Called at the end of each prediction batch.
         We'll accumulate rows in the buffer and only write to BigQuery
@@ -128,7 +128,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         pl_module: LightningModule,
         predictions: list[ModelOutput],
         batch_indices: list[list[int]],
-    ) -> None:
+    ):
         """
         Called at the end of a prediction epoch.
         We'll continue to buffer predictions from all batches in this epoch
@@ -144,7 +144,7 @@ class BaseBufferedWriter(BasePredictionWriter):
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-    ) -> None:
+    ):
         """
         Called at the end of the prediction process.
         We'll flush any remaining rows in the buffer.
@@ -224,7 +224,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-    ) -> None:
+    ):
         assert trainer.global_rank is not None, "Global rank was not provided."
 
         super().on_predict_end(trainer, pl_module)

@@ -1,13 +1,10 @@
-import json
 import os
 from importlib.util import find_spec
 from typing import Any
 
 from dotenv import load_dotenv
-from lightning import LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from lightning_utilities.core.rank_zero import rank_zero_only
-from omegaconf import DictConfig, OmegaConf
 
 from src.utils.pylogger import RankedLogger
 
@@ -39,15 +36,11 @@ class DryRunLogger(Logger):
     def log_hyperparams(self, params, *args, **kwargs):
         return None
 
-    def log_metrics(self, metrics: dict[str, float], step=None) -> None:
+    def log_metrics(self, metrics: dict[str, float], step=None):
         pass
 
     def finalize(self, status: str):
         return None
-
-
-def convert_dict_to_json_string(data: dict) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2)
 
 
 @rank_zero_only
@@ -67,7 +60,7 @@ def login_wandb():
 
 
 @rank_zero_only
-def finalize_loggers(trainer: Any, status=END_RUN) -> None:
+def finalize_loggers(trainer: Any, status=END_RUN):
     """
     Finalize loggers after training is done.
 
@@ -85,47 +78,3 @@ def finalize_loggers(trainer: Any, status=END_RUN) -> None:
         if wandb.run:
             log.info("Closing wandb!")
             wandb.finish()
-
-
-@rank_zero_only
-def log_hyperparameters(cfg: DictConfig, model: LightningModule, trainer: Trainer) -> None:
-    """
-    Controls which config parts are saved by Lightning loggers.
-
-    Args:
-        cfg: A DictConfig object containing the main config.
-        model: The Lightning model.
-        trainer: The Lightning trainer.
-
-    Additional saves:
-        - Number of model parameters
-    """
-    hparams = {}
-    # We resolve the configs to get the actual paths for logging.
-    cfg = OmegaConf.to_container(cfg, resolve=True)
-
-    if not trainer.logger:
-        log.warning("Logger not found! Skipping hyperparameter logging...")
-        return
-
-    hparams["paths"] = cfg["paths"]
-    hparams["model"] = cfg["model"]
-
-    # save number of model parameters
-    hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
-    hparams["model/params/trainable"] = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    hparams["model/params/non_trainable"] = sum(p.numel() for p in model.parameters() if not p.requires_grad)
-
-    hparams["data"] = cfg["data"]
-    hparams["trainer"] = cfg["trainer"]
-
-    hparams["callbacks"] = cfg.get("callbacks")
-    hparams["extras"] = cfg.get("extras")
-
-    hparams["task_name"] = cfg.get("task_name")
-    hparams["ckpt_path"] = cfg.get("ckpt_path")
-    hparams["seed"] = cfg.get("seed")
-
-    # send hparams to all loggers
-    for logger in trainer.loggers:
-        logger.log_hyperparams(hparams)

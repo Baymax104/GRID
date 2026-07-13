@@ -181,14 +181,14 @@ class ResidualVectorQuantization(LightningModule):
     # Per-layer VQ logic (inlined from BaseClusteringModule + VectorQuantization)
     # ------------------------------------------------------------------ #
 
-    def _buffer_points(self, layer_idx: int, batch: torch.Tensor) -> None:
+    def _buffer_points(self, layer_idx: int, batch: torch.Tensor):
         batch = batch.detach()
         buf = self.init_buffers[layer_idx]
         n_to_add = min(self.init_buffer_size - buf.shape[0], batch.shape[0])
         self.init_buffers[layer_idx] = torch.cat([buf, batch[:n_to_add]], dim=0)
 
     @rank_zero_only
-    def _compute_initial_centroids(self, layer_idx: int, buffer: torch.Tensor) -> None:
+    def _compute_initial_centroids(self, layer_idx: int, buffer: torch.Tensor):
         if buffer.shape[0] < self.n_clusters:
             raise ValueError(f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}.")
         self.init_centroids_list[layer_idx] = _kmeans_plus_plus_init(buffer, self.n_clusters, self.initialize_on_cpu)
@@ -556,7 +556,7 @@ class ResidualVectorQuantization(LightningModule):
         self.val_frac_unique_ids.reset()
         self.val_mse.reset()
 
-    def test_step(self, batch: ItemBatch, batch_idx: int) -> None:
+    def test_step(self, batch: ItemBatch, batch_idx: int):
         self.eval_step(
             batch,
             self.test_loss,

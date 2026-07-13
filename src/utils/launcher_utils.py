@@ -14,18 +14,17 @@ from src.utils.file_utils import (
     has_no_extension,
     list_subfolders,
 )
-from src.utils.instantiators import instantiate_callbacks, instantiate_loggers
-from src.utils.logging_utils import DryRunLogger, finalize_loggers, log_hyperparameters
-from src.utils.progress_bar import StepBasedRichProgressBar
+from src.utils.logging_utils import DryRunLogger, finalize_loggers
 from src.utils.pylogger import RankedLogger
-from src.utils.utils import has_class_object_inside_list
+from src.utils.rich_utils import StepBasedRichProgressBar
+from utils import logging_utils
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 DRY_RUN_DISABLED_CALLBACK_TARGETS = {
     "lightning.pytorch.callbacks.ModelCheckpoint",
     "lightning.pytorch.callbacks.EarlyStopping",
-    "src.utils.inference_utils.LocalPickleWriter",
+    "src.common.components.prediction_writers.LocalPickleWriter",
 }
 
 DRY_RUN_DISABLED_LOGGER_TARGETS = {
@@ -85,7 +84,7 @@ def update_cfg_with_most_recent_checkpoint_path(cfg: DictConfig) -> DictConfig:
             # We take the first one, which is the most recent one.
             latest_ckpt_folder = checkpoint_folders[0]
             last_modified = get_last_modified_file(folder_path=latest_ckpt_folder, suffix="*.ckpt")
-            if len(last_modified) > 0:
+            if last_modified:
                 ckpt_path = last_modified
                 logger.info(f"Found most recent checkpoint path: {ckpt_path}. Starting job from this checkpoint.")
 
@@ -132,6 +131,56 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
     return cfg
 
 
+def instantiate_callbacks(callbacks_cfg: DictConfig) -> list[Callback]:
+    """Instantiates callbacks from config.
+
+    :param callbacks_cfg: A DictConfig object containing callback configurations.
+    :return: A list of instantiated callbacks.
+    """
+    callbacks: list[Callback] = []
+
+    if not callbacks_cfg:
+        logger.warning("No callback configs found! Skipping..")
+        return callbacks
+
+    if not isinstance(callbacks_cfg, DictConfig):
+        raise TypeError("Callbacks config must be a DictConfig!")
+
+    for _, cb_conf in callbacks_cfg.items():
+        if isinstance(cb_conf, DictConfig) and "_target_" in cb_conf:
+            logger.info(f"Instantiating callback <{cb_conf._target_}>")
+            callbacks.append(hydra.utils.instantiate(cb_conf))
+
+    return callbacks
+
+
+def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
+    """Instantiates loggers from config.
+
+    :param logger_cfg: A DictConfig object containing logger configurations.
+    :return: A list of instantiated loggers.
+    """
+    loggers: list[Logger] = []
+
+    if not logger_cfg:
+        logger.warning("No logger configs found! Skipping...")
+        return loggers
+
+    if not isinstance(logger_cfg, DictConfig):
+        raise TypeError("Logger config must be a DictConfig!")
+
+    for name, lg_conf in logger_cfg.items():
+        if name == "wandb":
+            logger.info("Authenticating to W&B!")
+            logging_utils.login_wandb()
+
+        if isinstance(lg_conf, DictConfig) and "_target_" in lg_conf:
+            logger.info(f"Instantiating logger <{lg_conf._target_}>")
+            loggers.append(hydra.utils.instantiate(lg_conf))
+
+    return loggers
+
+
 def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     """
     Initialize and instantiate various objects required for running pipelines.
@@ -171,8 +220,8 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
 
     logger.info(f"Instantiating trainer <{cfg.trainer.root._target_}>")
 
-    enable_checkpointing = has_class_object_inside_list(callbacks, ModelCheckpoint)
-    enable_model_summary = has_class_object_inside_list(callbacks, ModelSummary)
+    enable_checkpointing = any(isinstance(cb, ModelCheckpoint) for cb in callbacks)
+    enable_model_summary = any(isinstance(cb, ModelSummary) for cb in callbacks)
     trainer: Trainer = hydra.utils.instantiate(
         cfg.trainer.root,
         callbacks=callbacks,
@@ -219,7 +268,6 @@ def pipeline_launcher(cfg: DictConfig):
         # Log hyperparameters if loggers are present
         if len(pipeline_modules.loggers) > 0:
             logger.info("Logging hyperparameters!")
-            log_hyperparameters(cfg, pipeline_modules.model, pipeline_modules.trainer)
         yield pipeline_modules
     except Exception as ex:
         raise ex

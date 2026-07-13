@@ -5,10 +5,11 @@ import rootutils
 import torch
 from omegaconf import DictConfig
 
+import src.utils.hydra_resolvers  # noqa: F401  — registers now_tz OmegaConf resolver
 from src.utils.cli_utils import rewrite_dry_run_flag
 from src.utils.launcher_utils import pipeline_launcher
 from src.utils.pylogger import RankedLogger
-from src.utils.utils import extras
+from src.utils.startup import extras
 
 rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
 
@@ -17,7 +18,7 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 torch.set_float32_matmul_precision("medium")
 
 
-def run_training(cfg: DictConfig) -> None:
+def run_training(cfg: DictConfig):
     with pipeline_launcher(cfg) as pipeline_modules:
         logger.info("Starting training!")
         pipeline_modules.trainer.fit(
@@ -50,7 +51,7 @@ def run_training(cfg: DictConfig) -> None:
         logger.info(f"Metrics: {metric_dict}")
 
 
-def run_inference(cfg: DictConfig) -> None:
+def run_inference(cfg: DictConfig):
     with pipeline_launcher(cfg) as pipeline_modules:
         logger.info("Starting inference!")
         ckpt_path = pipeline_modules.cfg.get("ckpt_path", None)
@@ -68,7 +69,7 @@ def run_inference(cfg: DictConfig) -> None:
         )
 
 
-def run(cfg: DictConfig) -> None:
+def run(cfg: DictConfig):
     run_mode = cfg.get("run_mode")
     if run_mode == "train":
         run_training(cfg)
@@ -81,7 +82,7 @@ def run(cfg: DictConfig) -> None:
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="main.yaml")
-def main(cfg: DictConfig) -> None:
+def main(cfg: DictConfig):
     extras(cfg)
     run(cfg)
 

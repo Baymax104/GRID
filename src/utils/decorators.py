@@ -55,6 +55,9 @@ def timeout(
     if error_message is None:
         error_message = os.strerror(errno.ETIME)
 
+    if not hasattr(signal, "SIGALRM"):
+        raise NotImplementedError("timeout decorator requires Unix signal.SIGALRM, unavailable on Windows")
+
     def decorator(func):
         def _handler(signum, frame):
             logger.info(error_message)
@@ -124,9 +127,7 @@ def retry(
                     return timeout_individual_fn_call_decorator(f)(*args, **kwargs)
                 return f(*args, **kwargs)
 
-            acceptable_exceptions: tuple[type[Exception], ...] = (
-                exception_to_check if isinstance(exception_to_check, tuple) else (exception_to_check,)
-            )
+            acceptable_exceptions = exception_to_check if isinstance(exception_to_check, tuple) else (exception_to_check,)
             acceptable_exceptions = acceptable_exceptions + (__RetriableTimeoutException,)
 
             ret_val: T = None

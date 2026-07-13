@@ -142,5 +142,5 @@ class BaseDataModule(LightningDataModule, ABC):
     def state_dict(self) -> dict[Any, Any]:
         return {}
 
-    def load_state_dict(self, state_dict: dict[str, Any]) -> None:
+    def load_state_dict(self, state_dict: dict[str, Any]):
         pass

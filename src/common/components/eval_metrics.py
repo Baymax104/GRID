@@ -42,7 +42,7 @@ class CustomMeanReductionMetric(torchmetrics.Metric):
 
         return metric_values_tensor / total_values_tensor
 
-    def reset(self) -> None:
+    def reset(self):
         self.metric_values = 0
         self.total_values = 0
 
@@ -56,11 +56,11 @@ class CustomRetrievalMetric(CustomMeanReductionMetric):
         self,
         top_k: int,
         **kwargs: Any,
-    ) -> None:
+    ):
         super().__init__(**kwargs)
         self.top_k = top_k
 
-    def update(self, preds: torch.Tensor, target: torch.Tensor, indexes: torch.Tensor, **kwargs) -> None:
+    def update(self, preds: torch.Tensor, target: torch.Tensor, indexes: torch.Tensor, **kwargs):
         batch_size = int(len(indexes) / (indexes == 0).sum().item())
         preds = preds.reshape(batch_size, -1)
         target = target.reshape(batch_size, -1).int()

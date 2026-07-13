@@ -15,7 +15,7 @@ class MLP(nn.Module):
         activation: Callable[..., nn.Module] = nn.ReLU,
         bias: bool = True,
         dropout: float = 0.0,
-    ) -> None:
+    ):
         """Initialize the MLP.
 
         Args:

@@ -6,7 +6,6 @@ from typing import BinaryIO
 
 from fsspec.core import url_to_fs
 from lightning.fabric.utilities.types import _PATH
-from pyarrow import fs as pyarrow_fs
 
 from src.utils.decorators import retry
 from src.utils.pylogger import RankedLogger
@@ -21,7 +20,7 @@ def get_file_size(file_path: str) -> int:
 
 
 @retry()
-def copy_to_remote(local_path: str, remote_path: str, recursive: bool = True) -> None:
+def copy_to_remote(local_path: str, remote_path: str, recursive: bool = True):
     try:
         logger.info(f"Copying {local_path} to {remote_path}")
         fs, _ = url_to_fs(remote_path)
@@ -49,14 +48,6 @@ def load_json(file_path: str) -> dict:
     return feature_map
 
 
-@retry()
-def open_pyarrow_file(file_path: str):
-    # Optimized function for large pyarrow files (ie. parquet)
-    # enable us to read row groups instead of entire file.
-    fs, path = pyarrow_fs.FileSystem.from_uri(file_path)
-    return fs.open_input_file(path)
-
-
 def get_last_modified_file(folder_path: str, suffix="*", should_update_prefix=True) -> str:
     """
     Can get the last modified file in a folder from a local or remote filesystem.
@@ -66,7 +57,7 @@ def get_last_modified_file(folder_path: str, suffix="*", should_update_prefix=Tr
     if not file_list:
         return ""
 
-    latest_file = None
+    latest_file = ""
     latest_mtime = 0
     for file in file_list:
         info = fs.info(file)
@@ -77,7 +68,7 @@ def get_last_modified_file(folder_path: str, suffix="*", should_update_prefix=Tr
     return latest_file
 
 
-def remove_file_extension(path: _PATH) -> _PATH:
+def remove_file_extension(path: str) -> _PATH:
     """
     Removes the file extension from a given file path.
 
@@ -95,7 +86,7 @@ def remove_file_extension(path: _PATH) -> _PATH:
     return base
 
 
-def has_no_extension(filepath: _PATH) -> bool:
+def has_no_extension(filepath: str) -> bool:
     # Extract just the filename from the path, handles both local and cloud paths
     filename = os.path.basename(filepath)
     # Split the filename and check if extension is empty
@@ -153,52 +144,6 @@ def list_files(
         if should_update_prefix
         else fs.glob(f"{folder_path}/{suffix}")
     )
-
-
-def replace_char_after_segment(
-    path: str,
-    char_to_replace: str,
-    replacement_char: str,
-    segment_to_find: str | None = None,
-) -> str:
-    """
-    Replace a specific character with another character in a path string.
-    If segment_to_find is provided, replacements occur only after that segment,
-    or returns the original string if segment is not found.
-    If segment_to_find is None, replacements occur throughout the entire string.
-
-    Args:
-        path (str): The full path string to process
-        char_to_replace (str): The character to be replaced
-        replacement_char (str): The character to use as replacement
-        segment_to_find (str | None): The path segment after which replacements
-                                        should occur. If None, replace in the entire string.
-
-    Returns:
-        str: The modified path with character replacements.
-            If segment_to_find is provided but not found, returns the original path unchanged.
-    """
-    # If no segment is specified, replace throughout the entire string
-    if segment_to_find is None:
-        return path.replace(char_to_replace, replacement_char)
-
-    # Find the position of the segment in the path
-    segment_index = path.find(segment_to_find)
-
-    if segment_index != -1:
-        # Include the full segment in the "before" part
-        segment_end = segment_index + len(segment_to_find)
-        before_segment = path[:segment_end]
-        after_segment = path[segment_end:]
-
-        # Replace characters only in the part after the segment
-        modified_after_segment = after_segment.replace(char_to_replace, replacement_char)
-
-        # Combine the parts
-        return before_segment + modified_after_segment
-
-    # If segment is not found, return the original path unchanged
-    return path
 
 
 def sync_file(path: str):

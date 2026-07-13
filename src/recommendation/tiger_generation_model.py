@@ -13,7 +13,7 @@ from src.recommendation.base_recommender import SemanticIDGenerativeRecommender
 from src.recommendation.decoder_module import SemanticIDDecoderModule
 from src.recommendation.encoder_module import SemanticIDEncoderModule
 from src.recommendation.t5_multi_layer_ff import T5MultiLayerFF
-from src.utils.utils import get_parent_module_and_attr
+from src.utils.model_utils import get_parent_module_and_attr
 
 
 class SemanticIDEncoderDecoder(SemanticIDGenerativeRecommender):

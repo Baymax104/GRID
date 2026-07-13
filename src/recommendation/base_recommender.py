@@ -29,7 +29,7 @@ class SemanticIDGenerativeRecommender(TransformerBaseModule):
         should_check_prefix: bool,
         top_k_for_generation: int,
         **kwargs,
-    ) -> None:
+    ):
         """
         Initialize the SemanticIDGenerativeRecommender module.
 

@@ -12,7 +12,7 @@ class SemanticEmbeddingInferenceModule(LightningModule):
         self,
         semantic_embedding_model: nn.Module | transformers.PreTrainedModel,
         semantic_embedding_model_input_map: dict[str, str],
-    ) -> None:
+    ):
         """
         Initialize the SemanticEmbeddingInferenceModule.
 

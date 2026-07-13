@@ -3,9 +3,9 @@ from typing import Any
 import numpy as np
 import torch
 
+from src.data.components.tokenization import load_tokenize
 from src.utils.file_utils import load_json
 from src.utils.tensor_utils import lookup_values_in_keyed_prediction_bundle
-from src.utils.utils import load_tokenize
 
 
 def convert_bytes_to_string(

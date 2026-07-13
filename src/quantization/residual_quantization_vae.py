@@ -190,14 +190,14 @@ class ResidualQuantizationVAE(LightningModule):
     # Per-layer VQ logic + K-Means convergence initialization
     # ------------------------------------------------------------------ #
 
-    def _buffer_points(self, layer_idx: int, batch: torch.Tensor) -> None:
+    def _buffer_points(self, layer_idx: int, batch: torch.Tensor):
         batch = batch.detach()
         buf = self.init_buffers[layer_idx]
         n_to_add = min(self.init_buffer_size - buf.shape[0], batch.shape[0])
         self.init_buffers[layer_idx] = torch.cat([buf, batch[:n_to_add]], dim=0)
 
     @rank_zero_only
-    def _compute_initial_centroids(self, layer_idx: int, buffer: torch.Tensor) -> None:
+    def _compute_initial_centroids(self, layer_idx: int, buffer: torch.Tensor):
         """Initialize centroids via K-Means convergence.
 
         Runs K-Means++ initialization followed by iterative mini-batch K-Means
@@ -580,7 +580,7 @@ class ResidualQuantizationVAE(LightningModule):
         self.val_frac_unique_ids.reset()
         self.val_mse.reset()
 
-    def test_step(self, batch: ItemBatch, batch_idx: int) -> None:
+    def test_step(self, batch: ItemBatch, batch_idx: int):
         self.eval_step(
             batch,
             self.test_loss,

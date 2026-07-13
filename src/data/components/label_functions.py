@@ -12,7 +12,7 @@ class LabelFunction(ABC):
     An interface for the LabelFunction classes. The LabelFunction classes are used to transform the input sequence for training or inference and collecting the labels and label prediction locations.
     """
 
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
 
     @abstractmethod

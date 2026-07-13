@@ -30,7 +30,7 @@ class TransformerBaseModule(LightningModule):
         evaluator: Evaluator,
         feature_to_model_input_map: dict[str, str] = None,
         decoder: torch.nn.Module = None,
-    ) -> None:
+    ):
 
         super().__init__()
 
@@ -78,7 +78,7 @@ class TransformerBaseModule(LightningModule):
         return self._prediction_key_name
 
     @prediction_key_name.setter
-    def prediction_key_name(self, value: str) -> None:
+    def prediction_key_name(self, value: str):
         logger.debug(f"Setting prediction_key_name to {value}")
         self._prediction_key_name = value
 
@@ -87,7 +87,7 @@ class TransformerBaseModule(LightningModule):
         return self._prediction_name
 
     @prediction_name.setter
-    def prediction_name(self, value: str) -> None:
+    def prediction_name(self, value: str):
         logger.debug(f"Setting prediction_name to {value}")
         self._prediction_name = value
 
@@ -107,7 +107,7 @@ class TransformerBaseModule(LightningModule):
     def get_embedding_table(self):
         return self.encoder.get_input_embeddings().weight
 
-    def on_train_start(self) -> None:
+    def on_train_start(self):
         """Lightning hook that is called when training begins."""
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
@@ -117,7 +117,7 @@ class TransformerBaseModule(LightningModule):
             self.train_loss.reset()
             self.test_loss.reset()
 
-    def on_validation_epoch_start(self) -> None:
+    def on_validation_epoch_start(self):
         """Lightning hook that is called when a validation epoch starts."""
         if self.evaluator:
             self.val_loss.reset()
@@ -128,13 +128,13 @@ class TransformerBaseModule(LightningModule):
             self.test_loss.reset()
             self.evaluator.reset()
 
-    def on_validation_epoch_end(self) -> None:
+    def on_validation_epoch_end(self):
         # Lightning hook that is called when a validation epoch ends.
         if self.evaluator:
             self.log("val/loss", self.val_loss, sync_dist=False, prog_bar=False, logger=True)
             self.log_metrics("val")
 
-    def on_test_epoch_end(self) -> None:
+    def on_test_epoch_end(self):
         if self.evaluator:
             self.log("test/loss", self.test_loss, sync_dist=False, prog_bar=False, logger=True)
             self.log_metrics("test")
@@ -171,7 +171,7 @@ class TransformerBaseModule(LightningModule):
             prog_bar=prog_bar,
         )
 
-    def setup(self, stage: str) -> None:
+    def setup(self, stage: str):
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
         test, or predict.
 
@@ -267,7 +267,7 @@ class TransformerBaseModule(LightningModule):
         self,
         batch: Any,
         batch_idx: int,
-    ) -> None:
+    ):
         """Perform a single validation step on a batch of data from the validation set.
 
         :param batch: A batch of data (tuple) where first object is a SequentialModelInputData object
@@ -279,7 +279,7 @@ class TransformerBaseModule(LightningModule):
         self,
         batch: Any,
         batch_idx: int,
-    ) -> None:
+    ):
         """Perform a single test step on a batch of data from the test set.
 
         :param batch: A batch of data of data (tuple) where first object is a SequentialModelInputData object
