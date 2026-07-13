@@ -12,7 +12,7 @@ root:
   num_hierarchies: ${num_hierarchies}
   num_user_bins: null
   codebooks:
-    _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
+    _target_: src.utils.tensor_utils.load_model_output
     file_path: ${semantic_id_path}
   mlp_layers: 2
   top_k_for_generation: 10

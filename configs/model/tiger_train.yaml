@@ -14,7 +14,7 @@ root:
     user_id: user_id
   decoder: ${model.decoder}
   codebooks:
-    _target_: src.utils.tensor_utils.load_keyed_prediction_bundle
+    _target_: src.utils.tensor_utils.load_model_output
     file_path: ${semantic_id_path}
   num_hierarchies: ${num_hierarchies}
   should_check_prefix: true

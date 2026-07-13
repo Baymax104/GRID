@@ -22,7 +22,7 @@
 - 生成 semantic IDs：`experiment=rkmeans_inference`
 - 训练生成推荐模型：`experiment=tiger_train`
 - 生成推荐结果：`experiment=tiger_inference`
-- 前一阶段的产物通常传给下一阶段的 `embedding_path` / `semantic_id_path`，目标文件是 `.../pickle/merged_predictions_tensor.pt`（内容是 keyed prediction bundle：`{"keys": ..., "predictions": ...}`，不是裸 tensor）。
+- 前一阶段的产物通常传给下一阶段的 `embedding_path` / `semantic_id_path`，目标文件是 `.../pickle/merged_predictions_tensor.pt`（内容是 model output bundle：`{"keys": ..., "predictions": ...}`，不是裸 tensor）。
 
 ## 数据与输出路径的坑
 - `README.md` 里的数据目录描述过时；可执行配置实际读取的是：
@@ -32,8 +32,7 @@
   - 测试/预测：`${data_dir}/testing`
 - Hydra 输出目录固定在：`logs/{task_name}/runs/{YYYY-MM-DD}/{HH-MM-SS}`。
 - `LocalPickleWriter` 会在 `${paths.output_dir}/pickle` 下先写分片 `.pkl`，最后主进程合并成：
-  - `merged_predictions.pkl`
-  - `merged_predictions_tensor.pt`（单文件 keyed bundle）
+  - `merged_predictions_tensor.pt`（单文件 model output bundle：`{"keys": ..., "predictions": ...}`，不是裸 tensor）
 
 ## 配置行为
 - 默认 `print_config=True`。若不想在启动时打印完整配置树，可在 experiment 的 `extras.print_config` 中关闭。

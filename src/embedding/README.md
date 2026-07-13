@@ -173,7 +173,7 @@ attention_mask: torch.Tensor   # (B, 128)
 
 ## 输出形状
 
-`SemanticEmbeddingInferenceModule.predict_step()` 输出语义向量，并包装成 `OneKeyPerPredictionOutput`。
+`SemanticEmbeddingInferenceModule.predict_step()` 输出语义向量，并包装成 `ModelOutput`。
 
 常见输出可近似理解为：
 
