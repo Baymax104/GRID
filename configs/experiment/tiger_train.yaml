@@ -6,10 +6,12 @@ defaults:
 - /callbacks@callbacks: tiger_train
 - /logger@logger: tiger_train
 - /trainer@trainer: tiger_train
+
 data_dir: ???
 semantic_id_path: ???
 num_hierarchies: ???
 devices: ???
+
 sequence_length: 200
 run_mode: train
 task_name: tiger_train

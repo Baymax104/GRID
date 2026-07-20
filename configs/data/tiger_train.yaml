@@ -8,20 +8,18 @@ train_label:
   sequence_data:
     transform:
       _target_: src.data.components.label_functions.NextKTokenMasking
-      next_k: ${model.root.num_hierarchies}
+      next_k: ${num_hierarchies}
 
 eval_label:
   sequence_data:
     transform:
       _target_: src.data.components.label_functions.NextKTokenMasking
-      next_k: ${model.root.num_hierarchies}
+      next_k: ${num_hierarchies}
 
 preprocessing_functions:
 - _target_: src.data.components.preprocessing.filter_features_to_consider
   _partial_: true
-  features_to_consider:
-  - sequence_data
-  - user_id
+  features_to_consider: [sequence_data, user_id]
 - _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
   _partial_: true
 - _target_: src.data.components.preprocessing.convert_fields_to_tensors
@@ -40,15 +38,14 @@ preprocessing_functions:
   semantic_id_bundle:
     _target_: src.utils.tensor_utils.load_model_output
     file_path: ${semantic_id_path}
-  features_to_apply:
-  - sequence_data
-  num_hierarchies: ${model.root.num_hierarchies}
+  features_to_apply: [sequence_data]
+  num_hierarchies: ${num_hierarchies}
 
 train_collate:
   _target_: src.data.components.collate.collate_with_sid_causal_duplicate
   _partial_: true
   sequence_field_name: sequence_data
-  sid_hierarchy: ${model.root.num_hierarchies}
+  sid_hierarchy: ${num_hierarchies}
   max_batch_size: 32
 
 eval_collate:
