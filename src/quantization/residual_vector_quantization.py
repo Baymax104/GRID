@@ -110,7 +110,6 @@ class ResidualVectorQuantization(LightningModule):
         quantization_loss_weight: float = 1.0,
         optimizer: Callable[..., torch.optim.Optimizer] | None = None,
         scheduler: Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
-        track_residuals: bool = False,
     ):
         super().__init__()
 
@@ -124,7 +123,6 @@ class ResidualVectorQuantization(LightningModule):
         self.quantization_loss_weight = quantization_loss_weight
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.track_residuals = track_residuals
 
         if loss_function is None:
             loss_function = WeightedSquaredError()
@@ -289,11 +287,10 @@ class ResidualVectorQuantization(LightningModule):
             cluster_ids.append(layer_ids)
             quantized_embeddings = quantized_embeddings + layer_embeddings
             current_residuals = current_residuals - layer_embeddings
-            if self.track_residuals:
-                all_residuals.append(current_residuals)
+            all_residuals.append(current_residuals)
 
         cluster_ids = torch.stack(cluster_ids, dim=-1)
-        all_residuals = torch.stack(all_residuals, dim=-1) if self.track_residuals else None
+        all_residuals = torch.stack(all_residuals, dim=-1)
         return cluster_ids, all_residuals, quantized_embeddings, quantization_loss
 
     def model_step(self, model_input: ItemBatch):

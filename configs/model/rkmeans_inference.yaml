@@ -8,6 +8,5 @@ root:
   init_buffer_size: 3072
   initialize_on_cpu: false
   normalize_residuals: true
-  track_residuals: true
   optimizer: null
   scheduler: null

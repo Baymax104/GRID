@@ -5,7 +5,7 @@ import torch
 from lightning import LightningModule
 from lightning.pytorch.trainer.states import TrainerFn
 from lightning.pytorch.utilities import rank_zero_only
-from torch import nn
+from torch import Tensor, nn
 from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
@@ -97,7 +97,6 @@ class ResidualKMeans(LightningModule):
         loss_function: nn.Module | None = None,
         optimizer: Callable[..., torch.optim.Optimizer] | None = None,
         scheduler: Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
-        track_residuals: bool = False,
     ):
         super().__init__()
 
@@ -111,7 +110,6 @@ class ResidualKMeans(LightningModule):
         self.quantization_loss_weight = quantization_loss_weight
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.track_residuals = track_residuals
 
         if loss_function is None:
             loss_function = WeightedSquaredError()
@@ -255,18 +253,21 @@ class ResidualKMeans(LightningModule):
     # Model-level forward / model_step
     # ------------------------------------------------------------------ #
 
-    def forward(self, embeddings: torch.Tensor):
+    def forward(self, embeddings: torch.Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """Layer-wise residual quantization forward pass.
+
+        Args:
+            embeddings: (batch_size, n_features)
 
         Returns:
             cluster_ids: (batch_size, n_layers)
-            all_residuals: (batch_size, n_features, n_layers) or None
+            all_residuals: (batch_size, n_features, n_layers)
             quantized_embeddings: (batch_size, n_features)
             quantization_loss: scalar
         """
-        cluster_ids = []
+        cluster_ids: list[torch.Tensor] = []
         current_residuals = embeddings
-        all_residuals = []
+        all_residuals: list[torch.Tensor] = []
         quantized_embeddings = torch.zeros_like(embeddings)
         quantization_loss = torch.tensor(0.0).to(self.device)
 
@@ -287,12 +288,11 @@ class ResidualKMeans(LightningModule):
             cluster_ids.append(layer_ids)
             quantized_embeddings = quantized_embeddings + layer_embeddings
             current_residuals = current_residuals - layer_embeddings
-            if self.track_residuals:
-                all_residuals.append(current_residuals)
+            all_residuals.append(current_residuals)
 
-        cluster_ids = torch.stack(cluster_ids, dim=-1)
-        all_residuals = torch.stack(all_residuals, dim=-1) if self.track_residuals else None
-        return cluster_ids, all_residuals, quantized_embeddings, quantization_loss
+        cluster_ids_tensor = torch.stack(cluster_ids, dim=-1)
+        all_residuals_tensor = torch.stack(all_residuals, dim=-1)
+        return cluster_ids_tensor, all_residuals_tensor, quantized_embeddings, quantization_loss
 
     def model_step(self, model_input: ItemBatch):
         input_embeddings = model_input.features["input_embedding"].to(self.device)
@@ -587,10 +587,9 @@ class ResidualKMeans(LightningModule):
         self.test_mse.reset()
 
     def predict_step(self, batch: ItemBatch) -> ModelOutput:
-        cluster_ids, _, _ = self.model_step(batch)
         assert batch.item_ids is not None, "Item ids not provided."
-        item_ids = [item_id.item() if isinstance(item_id, torch.Tensor) else item_id for item_id in batch.item_ids]
-        return ModelOutput(keys=item_ids, predictions=cluster_ids)
+        cluster_ids, _, _ = self.model_step(batch)
+        return ModelOutput(keys=batch.item_ids, predictions=cluster_ids)
 
     # ------------------------------------------------------------------ #
     # Optimizer / Checkpoint

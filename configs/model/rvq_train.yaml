@@ -9,7 +9,6 @@ root:
   init_buffer_size: 3072
   initialize_on_cpu: false
   normalize_residuals: true
-  track_residuals: true
   optimizer: ${model.optimizer}
   scheduler: null
   training_loop_function: ${model.training_loop_function}

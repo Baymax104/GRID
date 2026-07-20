@@ -11,5 +11,5 @@ class ModelOutput:
     """
 
     def __init__(self, keys: torch.Tensor, predictions: torch.Tensor):
-        self.keys = keys
-        self.predictions = predictions
+        self.keys = keys  # (n,)
+        self.predictions = predictions  # (n, *)

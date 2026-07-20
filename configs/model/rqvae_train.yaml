@@ -9,7 +9,6 @@ root:
   init_buffer_size: 3072
   initialize_on_cpu: false
   normalize_residuals: false
-  track_residuals: true
   kmeans_max_iter: 1000
   normalization_layer: ${model.normalization_layer}
   encoder: ${model.encoder}
