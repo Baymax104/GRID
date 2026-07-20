@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 from lightning import LightningModule
 from lightning.pytorch.trainer.states import TrainerFn
 from lightning.pytorch.utilities import rank_zero_only
@@ -13,6 +14,7 @@ from src.common.components.loss_functions import WeightedSquaredError
 from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
 from src.utils.pylogger import RankedLogger
+
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -125,6 +127,7 @@ class ResidualKMeans(LightningModule):
         self.current_layer_schedule_index = 0
 
         # Per-layer parameters and state
+        # [(codebook_width, embedding_dim)] x num_hierarchies
         self.centroids_list = nn.ParameterList(
             [nn.Parameter(torch.zeros(n_clusters, n_features), requires_grad=True) for _ in range(n_layers)]
         )
@@ -207,38 +210,61 @@ class ResidualKMeans(LightningModule):
         assignments = torch.argmin(distances, dim=1).to(self.device)
         return assignments, init_centroids[assignments], loss
 
-    def _kmeans_forward(self, layer_idx: int, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """K-Means forward: compute assignments, cluster counts, and cluster sums."""
+    def _kmeans_forward(
+        self,
+        layer_idx: int,
+        current_residuals: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        K-Means forward: compute assignments, cluster counts, and cluster sums.
+
+        Args:
+            layer_idx: layer index
+            current_residuals: current residuals. Shape (batch_size, embedding_dim)
+
+        Returns:
+            assignments: nearest centroid index for each sample. Shape (batch_size,)
+            batch_cluster_counts: number of samples assigned to each centroid. Shape (codebook_width,)
+            batch_cluster_sums: sum of residual vectors assigned to each centroid. Shape (codebook_width, embedding_dim)
+        """
+        # (codebook_width, embedding_dim)
         centroids = self.centroids_list[layer_idx].data
-        distances = _compute_squared_euclidean_distance(batch, centroids)
+        # (batch_size, codebook_width)
+        distances = _compute_squared_euclidean_distance(current_residuals, centroids)
+        # (batch_size,)
         assignments = torch.argmin(distances, dim=1)
-        assignments_one_hot = nn.functional.one_hot(assignments, self.n_clusters).detach()
+        # (batch_size, codebook_width)
+        assignments_one_hot = F.one_hot(assignments, self.n_clusters).detach()
+        # (codebook_width,)
         batch_cluster_counts = torch.sum(assignments_one_hot, dim=0)
         self.cluster_counts_list[layer_idx] += batch_cluster_counts
-        batch_cluster_sums = torch.mm(assignments_one_hot.float().t(), batch)
+        # (codebook_width, batch_size) x (batch_size, embedding_dim) = (codebook_width, embedding_dim)
+        batch_cluster_sums = torch.mm(assignments_one_hot.float().t(), current_residuals)
         return assignments, batch_cluster_counts, batch_cluster_sums
 
     def _layer_model_step(
-        self, layer_idx: int, batch: torch.Tensor
+        self,
+        layer_idx: int,
+        current_residuals: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """Per-layer model step: init check → forward → update/loss."""
-        batch = batch.to(self.device)
+        current_residuals = current_residuals.to(self.device)
 
         if self.is_initial_step_list[layer_idx]:
             self.is_initial_step_list[layer_idx] = False
             self.is_initialized_list[layer_idx] = True
 
         if not self.is_initialized_list[layer_idx]:
-            return self._initialization_step(layer_idx, batch)
+            return self._initialization_step(layer_idx, current_residuals)
 
-        assignments, batch_cluster_counts, batch_cluster_sums = self._kmeans_forward(layer_idx, batch)
+        layer_ids, batch_cluster_counts, batch_cluster_sums = self._kmeans_forward(layer_idx, current_residuals)
         centroids = self.centroids_list[layer_idx]
         mask = batch_cluster_counts != 0
         mask_target = batch_cluster_sums[mask] / batch_cluster_counts[mask].unsqueeze(1)
         centroid_weights = batch_cluster_counts[mask] / self.cluster_counts_list[layer_idx][mask]
 
         loss = self.loss_function(centroids[mask], mask_target, centroid_weights)
-        return assignments, centroids[assignments], loss
+        return layer_ids, centroids[layer_ids], loss
 
     def _predict_layer(self, layer_idx: int, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Per-layer predict: argmin distance → assignments + embeddings (no update)."""
@@ -466,7 +492,7 @@ class ResidualKMeans(LightningModule):
         first_residuals_norm_ratio = torch.linalg.matrix_norm(all_residuals[:, :, 0]) / input_embedding_norm
         last_residuals_norm = torch.linalg.matrix_norm(all_residuals[:, :, -1])
         last_residuals_norm_ratio = last_residuals_norm / input_embedding_norm
-        mse = last_residuals_norm**2 / all_residuals[:, :, -1].numel()
+        mse = last_residuals_norm ** 2 / all_residuals[:, :, -1].numel()
 
         first_centroids_norm = torch.linalg.matrix_norm(self.centroids_list[0])
         last_centroids_norm = torch.linalg.matrix_norm(self.centroids_list[-1])
