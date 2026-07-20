@@ -1,5 +1,3 @@
-from typing import Any
-
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
@@ -10,11 +8,6 @@ from src.data.components.data_models import (
     SequentialModuleLabelData,
 )
 from src.data.utils import combine_list_of_tensor_dicts, pad_or_trim_sequence
-
-
-def identity_collate_fn(batch: Any) -> Any:
-    """The default collate function that does nothing."""
-    return batch
 
 
 def collate_with_sid_causal_duplicate(
@@ -145,8 +138,7 @@ def collate_fn_inference_for_sequence(
 
 
 def collate_fn_train(
-    # batch can be a list or a dict
-    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
+    rows: list[dict[str, torch.Tensor]],
     labels: dict[str, callable],
     sequence_length: int = 200,
     masking_token: int = 1,
@@ -158,7 +150,7 @@ def collate_fn_train(
     It can do training masking and padding for the input sequence.
 
     Args:
-        batch: The batch of data to be collated. Can be a list of dictionaries, in the case we were
+        rows: The batch of data to be collated. Can be a list of dictionaries, in the case we were
             loading the data per row, or a dictionary of tensors, in the case we were loading the data per batch.
         labels: The list of functions to apply to generate the labels.
         sequence_length: The length of the sequence to be padded or trimmed to.
@@ -170,8 +162,7 @@ def collate_fn_train(
         model input data and label data
     """
 
-    if isinstance(batch, list):
-        batch = combine_list_of_tensor_dicts(batch)  # type: ignore
+    batch = combine_list_of_tensor_dicts(rows)
 
     if data_augmentation_functions:
         for data_augmentation_function in data_augmentation_functions:
@@ -180,9 +171,9 @@ def collate_fn_train(
     model_input_data = SequentialModelInputData()
     model_label_data = SequentialModuleLabelData()
 
-    for field_name, field_sequence in batch.items():  # type: ignore
+    for field_name, field_sequence in batch.items():
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
-        current_sequence = field_sequence  # type: ignore
+        current_sequence = field_sequence
         # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
         current_sequence = pad_sequence(current_sequence, batch_first=True, padding_value=padding_token)
 
@@ -217,7 +208,9 @@ def collate_fn_train(
 
 
 def collate_fn_items(
-    rows: list[dict[str, torch.Tensor]], item_id_field: str, feature_to_input_name: dict[str, str]
+    rows: list[dict[str, torch.Tensor]],
+    item_id_field: str,
+    feature_to_input_name: dict[str, str]
 ) -> ItemBatch:
     """
     The collate function passed to the item dataloader.
