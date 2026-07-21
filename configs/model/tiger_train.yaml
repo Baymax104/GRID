@@ -3,23 +3,20 @@
 root:
   _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
   huggingface_model: ${model.huggingface_model}
-  postprocessor: null
-  aggregator: null
   optimizer: ${model.optimizer}
   scheduler: ${model.scheduler}
   loss_function: ${model.loss_function}
   evaluator: ${model.evaluator}
   feature_to_model_input_map:
     sequence_data: input_ids
-    user_id: user_id
   decoder: ${model.decoder}
-  codebooks:
-    _target_: src.utils.tensor_utils.load_model_output
+  semantic_ids:
+    _target_: src.utils.tensor_utils.load_semantic_id_tensor
     file_path: ${semantic_id_path}
   num_hierarchies: ${num_hierarchies}
   should_check_prefix: true
-  num_user_bins: null
   mlp_layers: 2
+
 huggingface_model:
   _target_: transformers.T5EncoderModel
   config:
@@ -31,6 +28,7 @@ huggingface_model:
     d_ff: 1024
     d_kv: 64
     num_layers: 4
+
 decoder:
   _target_: transformers.models.t5.modeling_t5.T5Stack
   config:
@@ -44,20 +42,24 @@ decoder:
     num_layers: 4
     is_decoder: true
     is_encoder_decoder: false
+
 loss_function:
   _target_: torch.nn.CrossEntropyLoss
   ignore_index: -1
+
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
   lr: 0.0003
   weight_decay: 0.001
+
 scheduler:
   _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
   _partial_: true
   warmup_steps: 1000
   min_ratio: 0.05
   scheduler_steps: ${trainer.root.max_steps}
+
 evaluator:
   _target_: src.common.components.eval_metrics.SIDRetrievalEvaluator
   top_k_list:

@@ -44,6 +44,22 @@ def load_model_output(file_path: str) -> ModelOutput:
     return model_output
 
 
+def load_semantic_id_tensor(file_path: str) -> torch.Tensor:
+    """Load semantic IDs from a keyed model output bundle for model-side prefix checks.
+
+    The returned tensor is sorted by key in the same way as :func:`load_model_output`,
+    but only the prediction tensor is exposed to model configs. Expected shape is
+    ``(num_items, num_hierarchies)``.
+    """
+    semantic_ids = load_model_output(file_path).predictions
+    if semantic_ids.ndim != 2:
+        raise ValueError(
+            "Semantic ID tensor must be 2-D with shape "
+            f"(num_items, num_hierarchies), got shape {tuple(semantic_ids.shape)}."
+        )
+    return semantic_ids.long()
+
+
 def gather_predictions_by_keys(
     bundle: ModelOutput,
     keys: torch.Tensor,
