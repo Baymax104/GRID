@@ -4,7 +4,7 @@
 TBD - created by archiving change remove-item-id-field-from-item-dataset-config. Update Purpose after archive.
 ## Requirements
 ### Requirement: ItemDatasetConfig SHALL only contain runtime-consumed fields
-`ItemDatasetConfig` 必须只保留 `SequenceDataset` 或 `BaseDataModule` 在运行时实际读取的字段。collate 域消费的配置（如 `item_id_field`）不得放在 dataset config 上，而应由 collate 配置直接声明。
+`ItemDatasetConfig` SHALL 只保留 `SequenceDataset` 或 `BaseDataModule` 在运行时实际读取的字段。collate 域消费的配置（如 `item_id_field`）SHALL NOT 放在 dataset config 上，而应由 collate 配置直接声明。
 
 #### Scenario: ItemDatasetConfig 不包含 collate 域字段
 - **WHEN** 维护者检查 `ItemDatasetConfig` 的字段集合

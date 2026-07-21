@@ -1,7 +1,11 @@
-## ADDED Requirements
+# dataset-owned-preprocessing-assembly Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: preprocessing 装配职责 SHALL 归属于 dataset 模块
-在新的 data 架构中，preprocessing 的装配必须由 dataset 模块基于 `dataset_config` 内的声明配置完成，而不是由 preprocessing 反向读取 `dataset_config` 或依赖大量 YAML resolver 拼装运行时依赖。
+在新的 data 架构中，preprocessing 的装配 SHALL 由 dataset 模块基于 `dataset_config` 内的声明配置完成，而不是由 preprocessing 反向读取 `dataset_config` 或依赖大量 YAML resolver 拼装运行时依赖。
 
 #### Scenario: dataset 内部装配 preprocessing chain
 - **WHEN** dataset 初始化并准备处理数据行

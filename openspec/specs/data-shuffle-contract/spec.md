@@ -1,7 +1,11 @@
-## ADDED Requirements
+# data-shuffle-contract Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: 新 data pipeline SHALL 使用 shuffle_files 与 shuffle_rows 表达 shuffle 语义
-在新的 data pipeline contract 中，shuffle 语义必须拆分为文件层与样本层两个维度，不再以 `should_shuffle_rows` 作为目标表达方式。
+在新的 data pipeline contract 中，shuffle 语义 SHALL 拆分为文件层与样本层两个维度，不再以 `should_shuffle_rows` 作为目标表达方式。
 
 #### Scenario: 文件层 shuffle 由 dataset config 控制
 - **WHEN** 维护者检查 dataset config 中与文件顺序相关的配置

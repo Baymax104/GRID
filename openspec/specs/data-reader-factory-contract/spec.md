@@ -1,7 +1,11 @@
-## ADDED Requirements
+# data-reader-factory-contract Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: dataset config 中的 data_reader SHALL 采用 factory contract
-在新 data pipeline 中，dataset config 暴露的 `data_reader` 必须是可调用的 reader factory（通常由 Hydra `_partial_` 生成），由 dataset 在运行时基于当前文件列表按需实例化。
+在新 data pipeline 中，dataset config 暴露的 `data_reader` SHALL 是可调用的 reader factory（通常由 Hydra `_partial_` 生成），由 dataset 在运行时基于当前文件列表按需实例化。
 
 #### Scenario: SequenceDatasetConfig / ItemDatasetConfig 暴露 reader factory
 - **WHEN** 维护者检查 `SequenceDatasetConfig` 或 `ItemDatasetConfig`

@@ -4,7 +4,7 @@
 TBD - created by archiving change adopt-step-based-training-progress-bar. Update Purpose after archive.
 ## Requirements
 ### Requirement: 训练主进度条 SHALL 以 step 为主轴显示
-对于采用 step-driven 训练预算的训练实验，控制台训练主进度条必须以当前 step 与总 step 预算为核心语义，而非继续突出 epoch 语义。
+对于采用 step-driven 训练预算的训练实验，控制台训练主进度条 SHALL 以当前 step 与总 step 预算为核心语义，而非继续突出 epoch 语义。
 
 #### Scenario: 训练进度条显示 step 预算
 - **WHEN** 用户运行任一训练实验并观察 train progress bar
@@ -21,7 +21,7 @@ TBD - created by archiving change adopt-step-based-training-progress-bar. Update
 - **THEN** progress bar MUST NOT 显示 `v_num`
 
 ### Requirement: step-based 训练进度条 SHALL 统一适用于所有训练实验
-项目中的训练实验不得各自采用互相冲突的 progress bar 主语义。
+项目中的训练实验 SHALL NOT 各自采用互相冲突的 progress bar 主语义。
 
 #### Scenario: 默认训练 callbacks 统一接入
 - **WHEN** 用户运行 `rkmeans_train`、`tiger_train`、`rqvae_train`、`rvq_train` 等训练实验

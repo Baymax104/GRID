@@ -1,7 +1,11 @@
-## ADDED Requirements
+# data-precomputed-lookup Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: 下游预计算特征消费 SHALL 通过显式 key lookup 完成
-凡是消费上游推理产物的 data preprocessing 逻辑，必须通过 keyed bundle 中的 `keys` 建立显式 lookup，再取回对应 `predictions`；不得继续把 `.pt` 当作可直接按业务主键索引的 tensor。
+凡是消费上游推理产物的 data preprocessing 逻辑，SHALL 通过 keyed bundle 中的 `keys` 建立显式 lookup，再取回对应 `predictions`；SHALL NOT 继续把 `.pt` 当作可直接按业务主键索引的 tensor。
 
 #### Scenario: embedding lookup 不再直接 tensor 索引
 - **WHEN** `rkmeans_train`、`rkmeans_inference`、`rqvae_train` 或 `rvq_train` 根据 item ID 读取预计算 embedding

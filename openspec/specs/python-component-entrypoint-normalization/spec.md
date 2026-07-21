@@ -1,5 +1,9 @@
-## ADDED Requirements
+# python-component-entrypoint-normalization Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: Python-side top-level instantiation SHALL read from components entrypoints
 The Python launcher layer SHALL obtain top-level instantiation roots for official experiments directly from `components` rather than through parameter-domain aliases.
 

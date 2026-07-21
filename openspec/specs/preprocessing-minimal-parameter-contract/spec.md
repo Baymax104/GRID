@@ -1,7 +1,11 @@
-## ADDED Requirements
+# preprocessing-minimal-parameter-contract Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: preprocessing 函数 SHALL 仅接收最小必要参数
-preprocessing 函数必须保持纯函数风格：接收输入行以及完成当前变换所需的最小必要参数，而不是接收模块配置对象或宽泛的 metadata 容器。
+preprocessing 函数 SHALL 保持纯函数风格：接收输入行以及完成当前变换所需的最小必要参数，而不是接收模块配置对象或宽泛的 metadata 容器。
 
 #### Scenario: field type conversion 使用局部参数
 - **WHEN** preprocessing 需要把字段转换为张量

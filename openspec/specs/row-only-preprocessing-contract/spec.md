@@ -1,7 +1,11 @@
-## ADDED Requirements
+# row-only-preprocessing-contract Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: preprocessing SHALL operate on single rows only
-在新的 data 架构中，preprocessing 必须只处理单条 row，不再兼容 `list[dict]` 形式的 batch rows。
+在新的 data 架构中，preprocessing SHALL 只处理单条 row，不再兼容 `list[dict]` 形式的 batch rows。
 
 #### Scenario: dataset 向 preprocessing 传入单条 row
 - **WHEN** dataset 执行 preprocessing chain

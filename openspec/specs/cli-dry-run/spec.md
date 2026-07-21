@@ -4,7 +4,7 @@
 TBD - created by archiving change add-cli-dry-run. Update Purpose after archive.
 ## Requirements
 ### Requirement: CLI SHALL support `--dry-run` for train and inference
-系统必须允许用户在训练与推理入口通过 `--dry-run` 启动 dry run 模式，并保持与其他 Hydra 参数兼容。
+系统 SHALL 允许用户在训练与推理入口通过 `--dry-run` 启动 dry run 模式，并保持与其他 Hydra 参数兼容。
 
 #### Scenario: Train entry receives dry-run flag
 - **WHEN** 用户执行 `-m src.train --dry-run ...`
@@ -17,7 +17,7 @@ TBD - created by archiving change add-cli-dry-run. Update Purpose after archive.
 - **AND** 不得因为未知 CLI 参数导致 Hydra 解析失败
 
 ### Requirement: Dry run SHALL execute only a minimal smoke-sized run
-dry run 必须真实进入主链路，但运行规模必须压缩到单 batch / 单 step 的 smoke 级别。
+dry run SHALL 真实进入主链路，但运行规模 SHALL 压缩到单 batch / 单 step 的 smoke 级别。
 
 #### Scenario: Train dry run executes minimal steps
 - **WHEN** 训练入口启用 `dry_run=true`
@@ -29,7 +29,7 @@ dry run 必须真实进入主链路，但运行规模必须压缩到单 batch / 
 - **THEN** trainer 必须只执行最小预测 batch 数
 
 ### Requirement: Dry run SHALL not write business results
-dry run 模式下系统不得写入业务结果产物。
+dry run 模式下系统 SHALL NOT 写入业务结果产物。
 
 #### Scenario: Train dry run disables result-producing components
 - **WHEN** 训练 dry run 运行
@@ -41,8 +41,8 @@ dry run 模式下系统不得写入业务结果产物。
 - **THEN** 系统不得写入 prediction pickle 文件
 - **AND** 不得写入 `merged_predictions_tensor.pt`
 
-### Requirement: Dry run MAY preserve runtime metadata outputs
-dry run 第一版可以保留 Hydra 输出目录和运行元信息写入，只要不写入业务结果。
+### Requirement: Dry run SHALL preserve runtime metadata outputs
+dry run 第一版 SHALL 保留 Hydra 输出目录和运行元信息写入，只要不写入业务结果。
 
 #### Scenario: Dry run preserves operational logs
 - **WHEN** dry run 运行

@@ -4,7 +4,7 @@
 TBD - created by archiving change migrate-sem-embeds-inference-data-pipeline. Update Purpose after archive.
 ## Requirements
 ### Requirement: item-level text inference data pipeline SHALL use the new data contract
-`sem_embeds_inference` 这类 item-level text inference 实验必须使用新的 data contract，包括 reader factory、row-only preprocessing 和配置直写 preprocessing chain。
+`sem_embeds_inference` 这类 item-level text inference 实验 SHALL 使用新的 data contract，包括 reader factory、row-only preprocessing 和配置直写 preprocessing chain。
 
 #### Scenario: predict dataset config uses explicit preprocessing chain
 - **WHEN** 维护者查看 `sem_embeds_inference` 的 data 配置

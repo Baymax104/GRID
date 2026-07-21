@@ -4,7 +4,7 @@
 TBD - created by archiving change rename-data-iterators-to-readers. Update Purpose after archive.
 ## Requirements
 ### Requirement: dataset 配置中的原始数据源组件 SHALL 统一命名为 data_reader
-项目中的 dataset 配置与相关调用侧，对外暴露原始文件数据源组件时必须统一使用 `data_reader` 术语，而不是继续使用 `data_iterator`。
+项目中的 dataset 配置与相关调用侧，对外暴露原始文件数据源组件时 SHALL 统一使用 `data_reader` 术语，而不是继续使用 `data_iterator`。
 
 #### Scenario: 配置 dataclass 使用 data_reader 字段
 - **WHEN** 维护者检查 `SequenceDatasetConfig` 与 `ItemDatasetConfig`

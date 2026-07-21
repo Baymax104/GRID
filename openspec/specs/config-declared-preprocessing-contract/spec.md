@@ -1,7 +1,11 @@
-## ADDED Requirements
+# config-declared-preprocessing-contract Specification
 
+## Purpose
+TBD - created by archiving. Update Purpose after archive.
+
+## Requirements
 ### Requirement: preprocessing chain SHALL be directly declared in config for readable experiment pipelines
-在以可读性优先的实验 data 配置中，preprocessing chain 必须可以直接在配置文件中声明，并显式展示每一步 preprocessing 及其最小必要参数。
+在以可读性优先的实验 data 配置中，preprocessing chain SHALL 可以直接在配置文件中声明，并显式展示每一步 preprocessing 及其最小必要参数。
 
 #### Scenario: rkmeans_train 配置显式声明 preprocessing chain
 - **WHEN** 维护者查看 `rkmeans_train` 的 data 配置

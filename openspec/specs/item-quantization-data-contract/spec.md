@@ -4,7 +4,7 @@
 TBD - created by archiving change migrate-item-chain-experiments-data-pipeline. Update Purpose after archive.
 ## Requirements
 ### Requirement: item 级量化实验 SHALL 使用新 data contract
-rvq_train、rqvae_train、rkmeans_inference 这类 item 级量化实验必须使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed embedding 基于 keyed bundle lookup，以及新 shuffle 语义。rkmeans_train 已先行迁移并作为参照样板。
+rvq_train、rqvae_train、rkmeans_inference 这类 item 级量化实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed embedding 基于 keyed bundle lookup，以及新 shuffle 语义。rkmeans_train 已先行迁移并作为参照样板。
 
 #### Scenario: 量化实验 data_reader 采用 factory 形式
 - **WHEN** 维护者查看 rvq_train / rqvae_train / rkmeans_inference 的数据读取配置

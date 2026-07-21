@@ -1,5 +1,11 @@
 # Keyed Prediction Bundle Artifact
+
+## Purpose
+
+定义 keyed prediction bundle 的持久化与加载协议，确保推理阶段导出的 item embedding、semantic IDs 等预测结果能够通过业务主键稳定查询，同时为模型侧提供明确的 semantic ID tensor 加载路径。
+
 ## Requirements
+
 ### Requirement: keyed 预测产物 SHALL 以单文件 bundle 形式保存
 凡是由推理阶段导出的 keyed predictions（例如 item embedding、semantic IDs），`merged_predictions_tensor.pt` MUST 保存为单文件 bundle，而非可直接按业务主键索引的裸 tensor。
 
@@ -51,4 +57,3 @@
 - **WHEN** TIGER 数据 preprocessing 执行 `item_id -> semantic_id` 映射
 - **THEN** 数据侧 MUST 继续使用包含 `keys` 与 `predictions` 的完整 keyed bundle
 - **THEN** 数据侧 lookup MUST 保持通过 key 查询而不是假设 item id 等于 tensor 行号
-

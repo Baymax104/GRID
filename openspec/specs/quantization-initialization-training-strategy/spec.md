@@ -4,7 +4,7 @@
 TBD - created by archiving change scope-custom-training-loop-to-quantization. Update Purpose after archive.
 ## Requirements
 ### Requirement: quantization 初始化特殊训练路径 SHALL 局部封装在 quantization 子域
-用于量化初始化阶段的特殊 manual optimization 路径必须局部封装在 quantization 子域内，而不是以项目通用 training hook 的形式暴露。
+用于量化初始化阶段的特殊 manual optimization 路径 SHALL 局部封装在 quantization 子域内，而不是以项目通用 training hook 的形式暴露。
 
 #### Scenario: 初始化策略位于 quantization 命名空间
 - **WHEN** 维护者查找 DDP 初始化阶段的 loss 缩放 / 临时 optimizer 逻辑

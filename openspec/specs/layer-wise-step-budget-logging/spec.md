@@ -4,7 +4,7 @@
 TBD - created by archiving change adopt-step-based-training-progress-bar. Update Purpose after archive.
 ## Requirements
 ### Requirement: layer-wise 训练日志 SHALL 准确表达 step budget
-对于按 layer 分配训练 step 的实验，日志必须准确表达每层分配到的 step budget 以及与全局 step 的关系，不得使用会掩盖余数分配的简化表达。
+对于按 layer 分配训练 step 的实验，日志 SHALL 准确表达每层分配到的 step budget 以及与全局 step 的关系，SHALL NOT 使用会掩盖余数分配的简化表达。
 
 #### Scenario: 启动日志明确 layer budgets
 - **WHEN** `ResidualQuantization` 以 layer-wise 模式开始训练
