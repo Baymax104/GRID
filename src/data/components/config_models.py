@@ -39,8 +39,6 @@ class SequenceDataloaderConfig:
         Path to the folder containingthe dataset files.
     dataset_config: SemanticIDDatasetConfig
         The dataset configuration.
-    labels: dict[str, callable]
-        A dictionary mapping from feature names to
     batch_size_per_device: list[callable]
         The batch size per dataloader, also per device (GPU).
     num_workers: int
@@ -48,15 +46,8 @@ class SequenceDataloaderConfig:
     assign_files_by_size: dict | None
         Whether to assign files to workers by file size to balance computation
         across workers.
-    masking_token: int
-        The token used to represent masked items.
     collate_fn: callable
         Collate function used to construct batches.
-    sequence_length: int = 200
-        The length of sequences the dataloader should return. If raw sequences
-        are shorter, the dataloader will pad them to reach sequence_length.
-    padding_token: int = 0
-        The token used for padding sequences.
     drop_last: bool = True
         Whether to drop the last batch if it is smaller than
         batch_size_per_device.
@@ -73,11 +64,7 @@ class SequenceDataloaderConfig:
     batch_size_per_device: int
     num_workers: int
     assign_files_by_size: bool
-    masking_token: int
     collate_fn: callable  # type: ignore
-    labels: dict[str, callable] = field(default_factory=dict)  # type: ignore
-    sequence_length: int = 200
-    padding_token: int = 0
     drop_last: bool = True
     pin_memory: bool = True
     persistent_workers: bool = False

@@ -1,7 +1,7 @@
 # @package _global_
 
 dataset_class:
-  _target_: src.data.components.datasets.SequenceDataset
+  _target_: src.data.datasets.SequenceDataset
   _partial_: true
 preprocessing_functions:
 - _target_: src.data.components.preprocessing.filter_features_to_consider
@@ -34,6 +34,8 @@ collate:
   _target_: src.data.components.collate.collate_fn_inference_for_sequence
   _partial_: true
   id_field_name: user_id
+  sequence_length: ${sequence_length}
+  padding_token: -1
 predict_dataset_config:
   _target_: src.data.components.config_models.SemanticIDDatasetConfig
   data_reader:
@@ -46,19 +48,15 @@ predict_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
-  labels: null
   batch_size_per_device: 32
   num_workers: 8
   timeout: 60
   assign_files_by_size: true
-  masking_token: 1
-  sequence_length: ${sequence_length}
-  padding_token: -1
   drop_last: false
   persistent_workers: false
   collate_fn: ${data.collate}
   dataset_config: ${data.predict_dataset_config}
   pin_memory: false
 datamodule:
-  _target_: src.data.datamodules.sequence.SequenceDataModule
+  _target_: src.data.data_module.BaseDataModule
   predict_dataloader_config: ${data.predict_dataloader}

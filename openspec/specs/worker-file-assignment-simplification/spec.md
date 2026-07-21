@@ -21,7 +21,6 @@ The loading pipeline SHALL assign files to workers using the standard partitione
 ### Requirement: Datamodule behavior SHALL not depend on assign-all-files validation
 The datamodule layer SHALL not require stage-specific validation or branching tied to the removed assign-all-files worker mode.
 
-#### Scenario: Item datamodule no longer guards the removed mode
-- **WHEN** `ItemDataModule` constructs a dataloader
+#### Scenario: Unified datamodule no longer guards the removed mode
+- **WHEN** `BaseDataModule` constructs a dataloader
 - **THEN** it MUST NOT perform stage validation that exists only to police the removed `assign_all_files_per_worker` capability
-

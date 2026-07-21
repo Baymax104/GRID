@@ -1,7 +1,7 @@
 # @package _global_
 
 dataset_class:
-  _target_: src.data.components.datasets.SequenceDataset
+  _target_: src.data.datasets.SequenceDataset
   _partial_: true
 
 collate:
@@ -60,5 +60,5 @@ predict_dataloader:
   limit_files: null
 
 datamodule:
-  _target_: src.data.datamodules.item.ItemDataModule
+  _target_: src.data.data_module.BaseDataModule
   predict_dataloader_config: ${data.predict_dataloader}

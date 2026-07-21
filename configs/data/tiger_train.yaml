@@ -1,7 +1,7 @@
 # @package _global_
 
 dataset_class:
-  _target_: src.data.components.datasets.SequenceDataset
+  _target_: src.data.datasets.SequenceDataset
   _partial_: true
 
 train_label:
@@ -19,17 +19,13 @@ eval_label:
 preprocessing_functions:
 - _target_: src.data.components.preprocessing.filter_features_to_consider
   _partial_: true
-  features_to_consider: [sequence_data, user_id]
+  features_to_consider: [sequence_data]
 - _target_: src.data.components.preprocessing.convert_to_dense_numpy_array
   _partial_: true
 - _target_: src.data.components.preprocessing.convert_fields_to_tensors
   _partial_: true
   field_type_map:
     sequence_data:
-      _target_: torch.__dict__.get
-      _args_:
-      - int32
-    user_id:
       _target_: torch.__dict__.get
       _args_:
       - int32
@@ -46,11 +42,19 @@ train_collate:
   _partial_: true
   sequence_field_name: sequence_data
   sid_hierarchy: ${num_hierarchies}
+  labels: ${data.train_label}
+  sequence_length: ${sequence_length}
+  masking_token: 0
+  padding_token: -1
   max_batch_size: 32
 
 eval_collate:
   _target_: src.data.components.collate.collate_fn_train
   _partial_: true
+  labels: ${data.eval_label}
+  sequence_length: ${sequence_length}
+  masking_token: 0
+  padding_token: -1
 
 train_dataset_config:
   _target_: src.data.components.config_models.SemanticIDDatasetConfig
@@ -74,14 +78,10 @@ train_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/training
-  labels: ${data.train_label}
   batch_size_per_device: 32
   num_workers: 16
   timeout: 60
   assign_files_by_size: false
-  masking_token: 0
-  sequence_length: ${sequence_length}
-  padding_token: -1
   drop_last: true
   persistent_workers: true
   collate_fn: ${data.train_collate}
@@ -92,14 +92,10 @@ val_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/evaluation
-  labels: ${data.eval_label}
   batch_size_per_device: 8
   num_workers: 8
   timeout: 60
   assign_files_by_size: true
-  masking_token: ${data.train_dataloader.masking_token}
-  sequence_length: ${data.train_dataloader.sequence_length}
-  padding_token: ${data.train_dataloader.padding_token}
   drop_last: false
   persistent_workers: false
   collate_fn: ${data.eval_collate}
@@ -110,14 +106,10 @@ test_dataloader:
   _target_: src.data.components.config_models.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
-  labels: ${data.eval_label}
   batch_size_per_device: 8
   num_workers: 8
   timeout: 60
   assign_files_by_size: true
-  masking_token: ${data.train_dataloader.masking_token}
-  sequence_length: ${data.train_dataloader.sequence_length}
-  padding_token: ${data.train_dataloader.padding_token}
   drop_last: false
   persistent_workers: false
   collate_fn: ${data.eval_collate}
@@ -125,7 +117,7 @@ test_dataloader:
   pin_memory: false
 
 datamodule:
-  _target_: src.data.datamodules.sequence.SequenceDataModule
+  _target_: src.data.data_module.BaseDataModule
   train_dataloader_config: ${data.train_dataloader}
   val_dataloader_config: ${data.val_dataloader}
   test_dataloader_config: ${data.test_dataloader}

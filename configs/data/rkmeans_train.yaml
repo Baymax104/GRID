@@ -1,7 +1,7 @@
 # @package _global_
 
 dataset_class:
-  _target_: src.data.components.datasets.SequenceDataset
+  _target_: src.data.datasets.SequenceDataset
   _partial_: true
 
 collate:
@@ -99,7 +99,7 @@ test_dataloader:
   limit_files: null
 
 datamodule:
-  _target_: src.data.datamodules.item.ItemDataModule
+  _target_: src.data.data_module.BaseDataModule
   train_dataloader_config: ${data.train_dataloader}
   val_dataloader_config: ${data.val_dataloader}
   test_dataloader_config: ${data.test_dataloader}

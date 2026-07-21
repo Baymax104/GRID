@@ -41,7 +41,7 @@
 
 ## 代码结构（只记最影响判断的）
 - `src/main.py`：统一 Hydra 入口、`extras(cfg)`，再根据 experiment 中的 `run_mode` 分发到 train / inference 链路。
-- `src/data/`：自定义数据管线核心。`SequenceDataModule.setup()` 先按 GPU rank 分文件，再由自定义 iterable dataloader 读 TFRecord。
+- `src/data/`：自定义数据管线核心。`BaseDataModule.setup()` 先按 GPU rank 分文件，再由自定义 iterable dataloader 读 TFRecord。
 - `src/models/embedding/`、`src/models/quantization/`、`src/models/recommendation/`：分别对应三段主 pipeline。
 
 ## 验证现实

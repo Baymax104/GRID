@@ -1,5 +1,4 @@
 import torch
-from torch.nn.utils.rnn import pad_sequence
 
 from src.data.components.data_models import (
     ItemBatch,
@@ -7,11 +6,10 @@ from src.data.components.data_models import (
     SequentialModelInputData,
     SequentialModuleLabelData,
 )
-from src.data.utils import combine_list_of_tensor_dicts, pad_or_trim_sequence
+from src.data.utils import combine_list_of_tensor_dicts, normalize_sequence_batch
 
 
 def collate_with_sid_causal_duplicate(
-    # batch can be a list or a dict
     batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
     sequence_field_name: str,
     sid_hierarchy: int,
@@ -75,7 +73,7 @@ def collate_with_sid_causal_duplicate(
                 current_idx += 1
 
     return collate_fn_train(
-        batch=new_batch,
+        rows=new_batch,
         labels=labels,
         sequence_length=sequence_length,
         masking_token=masking_token,
@@ -116,21 +114,17 @@ def collate_fn_inference_for_sequence(
         if field_name in id_field_name:
             # We use the id field as the user_id_list so predictions can be mapped back to the original id.
             model_input_data.user_id_list = field_sequence
+            continue
 
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
-        current_sequence = field_sequence  # type: ignore
-        # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
-        current_sequence = pad_sequence(current_sequence, batch_first=True, padding_value=padding_token)
-
-        # 2. padding or trimming the sequence to the desired length for training
-        current_sequence = pad_or_trim_sequence(
-            padded_sequence=current_sequence,
+        current_sequence = normalize_sequence_batch(
+            sequences=field_sequence,
             sequence_length=sequence_length,
             padding_token=padding_token,
         )
         model_input_data.transformed_sequences[field_name] = current_sequence
 
-        if field_name not in id_field_name and model_input_data.mask is None:
+        if model_input_data.mask is None:
             # if a field is not id, then it means its the real sequence we want calculate attention mask for it
             model_input_data.mask = (current_sequence != padding_token).long()
 
@@ -150,8 +144,7 @@ def collate_fn_train(
     It can do training masking and padding for the input sequence.
 
     Args:
-        rows: The batch of data to be collated. Can be a list of dictionaries, in the case we were
-            loading the data per row, or a dictionary of tensors, in the case we were loading the data per batch.
+        rows: The batch of data to be collated.
         labels: The list of functions to apply to generate the labels.
         sequence_length: The length of the sequence to be padded or trimmed to.
         masking_token: The token used for masking.
@@ -173,13 +166,8 @@ def collate_fn_train(
 
     for field_name, field_sequence in batch.items():
         # TODO (lneves): Allow for non-sequential data to be passed as a feature.
-        current_sequence = field_sequence
-        # 1. in-batch padding s.t. all sequences have the same length and in the format of pt tensor
-        current_sequence = pad_sequence(current_sequence, batch_first=True, padding_value=padding_token)
-
-        # 2. padding or trimming the sequence to the desired length for training
-        current_sequence = pad_or_trim_sequence(
-            padded_sequence=current_sequence,
+        current_sequence = normalize_sequence_batch(
+            sequences=field_sequence,
             sequence_length=sequence_length,
             padding_token=padding_token,
         )

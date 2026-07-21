@@ -1,13 +1,12 @@
-"""Shared LightningDataModule helpers for file-backed iterable datasets."""
+"""Shared LightningDataModule for file-backed iterable datasets."""
 
-from abc import ABC, abstractmethod
 from typing import Any
 
 from lightning import LightningDataModule
 from lightning.pytorch.trainer.states import TrainerFn
 from omegaconf import DictConfig
 
-from src.data.components.dataloaders import DataloaderWithIterationRetry
+from src.data.dataloaders import DataloaderWithIterationRetry
 from src.data.utils import assign_files_to_workers
 from src.utils.file_utils import list_files
 from src.utils.pylogger import RankedLogger
@@ -15,7 +14,7 @@ from src.utils.pylogger import RankedLogger
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-class BaseDataModule(LightningDataModule, ABC):
+class BaseDataModule(LightningDataModule):
     """Shared file-assignment and dataloader assembly for loading pipelines."""
 
     def __init__(
@@ -36,10 +35,6 @@ class BaseDataModule(LightningDataModule, ABC):
         self.stage_to_file_map: dict[TrainerFn, dict[int, list[str]]] = {}
 
     @staticmethod
-    def _get_data_reader_target(data_reader_factory):
-        return getattr(data_reader_factory, "func", data_reader_factory)
-
-    @staticmethod
     def _get_shuffle_files(config: DictConfig) -> bool:
         return getattr(config.dataset_config, "shuffle_files", False)
 
@@ -47,8 +42,9 @@ class BaseDataModule(LightningDataModule, ABC):
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
         if file_format:
             return file_format
-        data_reader_target = self._get_data_reader_target(config.dataset_config.data_reader)
-        return data_reader_target.get_file_suffix()
+        data_reader_factory = config.dataset_config.data_reader_factory
+        data_reader_target = getattr(data_reader_factory, "func", data_reader_factory)
+        return data_reader_target.get_file_suffix()  # noqa
 
     def setup(self, stage: str):
         if not hasattr(self, "trainer") or self.trainer is None:
@@ -104,9 +100,8 @@ class BaseDataModule(LightningDataModule, ABC):
             return False
         return curr_config.persistent_workers
 
-    @abstractmethod
     def _build_collate_fn(self, curr_config: DictConfig):
-        raise NotImplementedError
+        return curr_config.collate_fn
 
     def get_dataloader(self, stage: TrainerFn):
         curr_config = self.stage_to_config[stage]

@@ -105,6 +105,37 @@ def pad_or_trim_sequence(padded_sequence: torch.Tensor, sequence_length: int, pa
     return padded_sequence
 
 
+def normalize_sequence_batch(
+    sequences: list[torch.Tensor],
+    sequence_length: int,
+    padding_token: int = 0,
+) -> torch.Tensor:
+    """Normalize variable-length sequences to a fixed-length batch tensor.
+
+    This is the one-pass equivalent of ``pad_sequence`` followed by
+    ``pad_or_trim_sequence`` for 1-D sequence tensors: long rows keep the most
+    recent non-padding tokens, and short rows are right-padded.
+    """
+
+    normalized_sequences = []
+    for sequence in sequences:
+        if sequence.dim() != 1:
+            raise ValueError(f"Expected 1-D sequence tensors, got shape {tuple(sequence.shape)}.")
+
+        if sequence.size(0) > sequence_length:
+            valid_length = sequence.size(0) - (sequence == padding_token).sum().item()
+            start_index = max(valid_length - sequence_length, 0)
+            sequence = sequence[start_index: start_index + sequence_length]
+
+        if sequence.size(0) < sequence_length:
+            padding = sequence.new_full((sequence_length - sequence.size(0),), padding_token)
+            sequence = torch.cat([sequence, padding], dim=0)
+
+        normalized_sequences.append(sequence)
+
+    return torch.stack(normalized_sequences, dim=0)
+
+
 def combine_list_of_tensor_dicts(list_of_dicts: list[dict[str, torch.Tensor]]) -> dict[str, list[torch.Tensor]]:
     batch = defaultdict(list)
     for sequence in list_of_dicts:
