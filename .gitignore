@@ -195,5 +195,5 @@ cython_debug/
 
 /pretrained_models
 /data
-/logs/*
+/logs
 /.codegraph
