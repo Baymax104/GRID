@@ -1,8 +1,5 @@
-# tiger-sequence-data-contract Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change migrate-tiger-chain-data-pipeline. Update Purpose after archive.
-## Requirements
 ### Requirement: tiger sequence 实验 SHALL 使用新 data contract
 tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed semantic_id 基于 keyed bundle 局部参数注入、新 shuffle 语义、推理 id 字段与模型输入序列分离，以及 collate 参数在 collate 配置处显式声明。
 
@@ -67,4 +64,3 @@ tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使
 #### Scenario: 函数从局部参数获取 bundle
 - **WHEN** 函数执行 semantic_id lookup
 - **THEN** 它 MUST 直接使用 `semantic_id_bundle` 参数调用 `lookup_values_in_keyed_prediction_bundle`，不通过 `dataset_config.semantic_id_map` 间接获取
-

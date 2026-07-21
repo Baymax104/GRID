@@ -1,10 +1,7 @@
-# tiger-sequence-data-contract Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change migrate-tiger-chain-data-pipeline. Update Purpose after archive.
-## Requirements
 ### Requirement: tiger sequence 实验 SHALL 使用新 data contract
-tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed semantic_id 基于 keyed bundle 局部参数注入、新 shuffle 语义、推理 id 字段与模型输入序列分离，以及 collate 参数在 collate 配置处显式声明。
+tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed semantic_id 基于 keyed bundle 局部参数注入、新 shuffle 语义，以及推理 id 字段与模型输入序列分离。
 
 #### Scenario: sequence 实验 data_reader 采用 factory 形式
 - **WHEN** 维护者查看 tiger_train / tiger_inference 的数据读取配置
@@ -37,11 +34,6 @@ tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使
 - **AND** it MUST NOT store that field in `SequentialModelInputData.transformed_sequences`
 - **AND** attention masks MUST be computed from non-id sequence fields
 
-#### Scenario: TIGER collate arguments are local to collate blocks
-- **WHEN** 维护者检查 `tiger_train` 或 `tiger_inference` data 配置
-- **THEN** `labels`、`sequence_length`、`masking_token`、`padding_token` 等 collate 参数 MUST 在对应 collate callable 配置处声明
-- **AND** train/val/test/predict dataloader blocks MUST NOT 作为 collate 参数注入来源继续声明这些字段
-
 ### Requirement: sequence 链路 config 类 SHALL 精简为运行时字段
 `SemanticIDDatasetConfig` 和 `SequenceDataloaderConfig` SHALL 只暴露运行时消费的字段，删除旧架构遗留字段和无消费方的兼容字段。
 
@@ -53,10 +45,6 @@ tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使
 - **WHEN** 维护者检查 `SequenceDataloaderConfig` 定义
 - **THEN** 它 MUST 不再保留 `should_shuffle_rows`，shuffle 语义只通过 `dataset_config.shuffle_files` + reader `shuffle_rows` 表达
 
-#### Scenario: SequenceDataloaderConfig 不保留 collate-only 字段
-- **WHEN** 维护者检查 `SequenceDataloaderConfig` 定义
-- **THEN** 它 MUST 不再保留 `labels`、`sequence_length`、`masking_token`、`padding_token` 这类仅用于调用 collate function 的字段
-
 ### Requirement: map_sparse_id_to_semantic_id SHALL 接收局部 bundle 参数
 `map_sparse_id_to_semantic_id` SHALL 接收局部 `semantic_id_bundle` 参数，不接收 `dataset_config`。
 
@@ -67,4 +55,3 @@ tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使
 #### Scenario: 函数从局部参数获取 bundle
 - **WHEN** 函数执行 semantic_id lookup
 - **THEN** 它 MUST 直接使用 `semantic_id_bundle` 参数调用 `lookup_values_in_keyed_prediction_bundle`，不通过 `dataset_config.semantic_id_map` 间接获取
-

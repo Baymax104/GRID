@@ -1,8 +1,5 @@
-# transformer-base-training-contract Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change scope-custom-training-loop-to-quantization. Update Purpose after archive.
-## Requirements
 ### Requirement: 通用 transformer 训练基类 SHALL 使用标准 automatic optimization 契约
 项目中的通用 transformer 训练基类 MUST NOT 继续暴露 quantization 特有的手动训练 loop 注入接口；当前 recommendation/TIGER 主链 MUST NOT 继续依赖该通用基类作为运行时训练壳。
 
@@ -19,4 +16,3 @@ TBD - created by archiving change scope-custom-training-loop-to-quantization. Up
 - **WHEN** 维护者检查 TIGER 模型继承链和 Hydra 模型配置
 - **THEN** TIGER 模型 MUST NOT 通过 `TransformerBaseModule` 获取训练、验证、测试或评估行为
 - **THEN** TIGER 配置 MUST NOT 暴露仅服务该旧基类的 `postprocessor` 或 `aggregator` 参数
-
