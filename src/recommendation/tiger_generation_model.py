@@ -35,10 +35,10 @@ class SemanticIDEncoderDecoder(LightningModule):
         self,
         huggingface_model: transformers.PreTrainedModel,
         decoder: transformers.PreTrainedModel,
-        semantic_ids: torch.Tensor | None,
-        num_hierarchies: int | None,
-        num_embeddings_per_hierarchy: int | None = None,
-        embedding_dim: int | None = None,
+        semantic_ids: torch.Tensor,
+        num_hierarchies: int,
+        codebook_width: int,
+        embedding_dim: int,
         top_k_for_generation: int = 10,
         mlp_layers: int | None = None,
         should_check_prefix: bool = False,
@@ -48,29 +48,7 @@ class SemanticIDEncoderDecoder(LightningModule):
         loss_function: nn.Module | None = None,
         evaluator: Evaluator | None = None,
     ):
-        """
-        Initialize the SemanticIDEncoderDecoder module.
-
-        Args:
-            semantic_ids (torch.Tensor | None): model-side semantic ID tensor with shape
-                (num_items, num_hierarchies), used for prefix validation.
-            num_hierarchies (int): the number of hierarchies in the semantic IDs.
-            top_k_for_generation (int): the number of top-k candidates for generation.
-            mlp_layers (int | None): the number of mlp layers in the encoder and decoder.
-            embedding_dim (int | None): the dimension of the embeddings.
-            should_check_prefix (bool): whether to check if the prefix is valid.
-        """
         super().__init__()
-
-        if num_hierarchies is None or num_embeddings_per_hierarchy is None:
-            if semantic_ids is None:
-                raise ValueError(
-                    "semantic_ids is required when num_hierarchies or num_embeddings_per_hierarchy is not provided."
-                )
-            num_hierarchies = semantic_ids.shape[1]
-            num_embeddings_per_hierarchy = int(semantic_ids.max().item() + 1)
-        if embedding_dim is None:
-            embedding_dim = huggingface_model.encoder.block[0].layer[0].SelfAttention.q.in_features
 
         self.save_hyperparameters(
             logger=False,
@@ -89,29 +67,20 @@ class SemanticIDEncoderDecoder(LightningModule):
         self.loss_function = loss_function
         self.evaluator = evaluator
 
-        self.num_embeddings_per_hierarchy = num_embeddings_per_hierarchy
+        self.num_embeddings_per_hierarchy = codebook_width
         self.embedding_dim = embedding_dim
         self.num_hierarchies = num_hierarchies
         self.should_check_prefix = should_check_prefix
-        if semantic_ids is not None:
-            if semantic_ids.ndim != 2:
-                raise ValueError(
-                    "semantic_ids must have shape "
-                    f"(num_items, num_hierarchies), got {tuple(semantic_ids.shape)}."
-                )
-            if semantic_ids.size(1) < num_hierarchies:
-                raise ValueError(
-                    f"semantic_ids second dimension ({semantic_ids.size(1)}) must be >= num_hierarchies ({num_hierarchies})."
-                )
-            self.semantic_ids = semantic_ids[:, :num_hierarchies].long()
-        else:
-            self.semantic_ids = None
-            logger.warning(
-                "Not using pre-cached semantic IDs, please make sure that\n"
-                "1) dataset is properly pre-processed\n"
-                "2) num_hierarchies and num_embeddings_per_hierarchy are properly set\n"
-            )
         self.top_k_for_generation = top_k_for_generation
+        if semantic_ids.ndim != 2:
+            raise ValueError(
+                f"semantic_ids must have shape (num_items, num_hierarchies), got {tuple(semantic_ids.shape)}."
+            )
+        if semantic_ids.size(1) < num_hierarchies:
+            raise ValueError(
+                f"semantic_ids second dimension ({semantic_ids.size(1)}) must be >= num_hierarchies ({num_hierarchies})."
+            )
+        self.semantic_ids = semantic_ids[:, :num_hierarchies].long()
 
         if self.evaluator:  # For inference, evaluator is not set.
             for metric_name, metric_object in self.evaluator.metrics.items():
@@ -598,8 +567,7 @@ class SemanticIDEncoderDecoder(LightningModule):
         generated_sids, _ = self.model_step(batch)
         if batch.output_keys is None:
             raise ValueError("TigerModelInput.output_keys is required for prediction output.")
-        ids = [id_.item() if isinstance(id_, torch.Tensor) else id_ for id_ in batch.output_keys]
-        return ModelOutput(keys=ids, predictions=generated_sids)
+        return ModelOutput(keys=batch.output_keys, predictions=generated_sids)
 
     def model_step(
         self,

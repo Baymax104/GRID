@@ -22,7 +22,7 @@ class TigerModelInput:
 
     input_ids: torch.Tensor
     attention_mask: torch.Tensor
-    output_keys: torch.Tensor | list[str] | None = None
+    output_keys: torch.Tensor | None = None
 
 
 @dataclass

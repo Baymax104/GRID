@@ -45,5 +45,7 @@
 - `src/models/embedding/`、`src/models/quantization/`、`src/models/recommendation/`：分别对应三段主 pipeline。
 
 ## 验证现实
-- 仓库里没有已检查入库的 `tests/`，也没发现 repo-local lint / typecheck 配置；不要假设存在 `pytest`, `ruff`, `mypy` 的标准入口。
+- pytest 是当前仓库的标准单元测试入口：从仓库根目录运行 `uv run pytest`。
+- 单元测试统一放在 `tests/`，只测试无需 GPU 的函数级/模块级逻辑；优先使用内存中的最小输入，不依赖真实数据目录或外部服务。
+- 单元测试不得直接运行完整 experiment，不得调用 `src.main`、`torchrun`、完整 Hydra experiment，或真实 Trainer 训练/推理链路。
 - 改动后优先做与你触达范围一致的最小 smoke check；对配置改动，先检查对应 `configs/experiment/*.yaml` 与脚本命令是否仍然对齐。

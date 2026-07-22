@@ -12,6 +12,8 @@ root:
     _target_: src.utils.tensor_utils.load_semantic_id_tensor
     file_path: ${semantic_id_path}
   num_hierarchies: ${num_hierarchies}
+  codebook_width: ${codebook_width}
+  embedding_dim: ${embedding_dim}
   should_check_prefix: true
   mlp_layers: 2
 
