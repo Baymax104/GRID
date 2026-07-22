@@ -16,12 +16,17 @@ TIGER 生成推荐模型 SHALL 由一个自包含的 LightningModule 承载训�
 - **THEN** semantic ID prefix 校验、beam search 和 evaluator 调用 MUST 由 TIGER 模型主体直接协调
 
 ### Requirement: TIGER model configuration SHALL expose only active runtime dependencies
-TIGER train/inference 模型配置 SHALL 只声明当前生成式推荐路径实际消费的运行时依赖，不得继续暴露旧 embedding retrieval 路径的空配置参数。
+TIGER train/inference 模型配置 SHALL 只声明当前生成式推荐路径实际消费的运行时依赖，不得继续暴露旧 embedding retrieval 路径或通用 feature mapping 路径的空配置参数。
 
 #### Scenario: 配置不包含旧 postprocessor 和 aggregator
 - **WHEN** 维护者检查 `configs/model/tiger_train.yaml` 与 `configs/model/tiger_inference.yaml`
 - **THEN** 配置 MUST NOT 包含 `postprocessor` 字段
 - **THEN** 配置 MUST NOT 包含 `aggregator` 字段
+
+#### Scenario: 配置不包含通用 feature mapping 字段
+- **WHEN** 维护者检查 `configs/model/tiger_train.yaml` 与 `configs/model/tiger_inference.yaml`
+- **THEN** 配置 MUST NOT 包含旧的通用 feature-to-model-input mapping 字段
+- **AND** TIGER model MUST read `input_ids` and `attention_mask` directly from `TigerModelInput`
 
 #### Scenario: inference 构造不依赖训练专属对象
 - **WHEN** Hydra instantiate `tiger_inference` 模型配置
@@ -39,4 +44,3 @@ TIGER 模型侧 SHALL 接收 semantic ID tensor 作为 prefix 校验数据源，
 - **WHEN** 维护者检查 TIGER 模型构造参数和模型配置
 - **THEN** 模型侧 semantic ID tensor 参数 MUST 使用 `semantic_ids` 或等价明确名称
 - **THEN** 模型配置 MUST NOT 将完整 keyed bundle 命名为 `codebooks`
-

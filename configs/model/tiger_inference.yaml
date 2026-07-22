@@ -3,8 +3,6 @@
 root:
   _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
   huggingface_model: ${model.huggingface_model}
-  feature_to_model_input_map:
-    sequence_data: input_ids
   decoder: ${model.decoder}
   num_hierarchies: ${num_hierarchies}
   semantic_ids:

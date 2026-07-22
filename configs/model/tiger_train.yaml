@@ -7,8 +7,6 @@ root:
   scheduler: ${model.scheduler}
   loss_function: ${model.loss_function}
   evaluator: ${model.evaluator}
-  feature_to_model_input_map:
-    sequence_data: input_ids
   decoder: ${model.decoder}
   semantic_ids:
     _target_: src.utils.tensor_utils.load_semantic_id_tensor

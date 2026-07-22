@@ -2,197 +2,63 @@ import torch
 
 from src.data.components.data_models import (
     ItemBatch,
-    LabelFunctionOutput,
-    SequentialModelInputData,
-    SequentialModuleLabelData,
+    TigerLabelData,
+    TigerModelInput,
 )
-from src.data.utils import combine_list_of_tensor_dicts, normalize_sequence_batch
+from src.data.utils import combine_list_of_tensor_dicts
 
 
-def collate_with_sid_causal_duplicate(
-    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
-    sequence_field_name: str,
-    sid_hierarchy: int,
-    labels: dict[str, callable],  # type: ignore
-    sequence_length: int = 200,
-    masking_token: int = 1,
-    padding_token: int = 0,
-    max_batch_size: int = 128,
-) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
-    """
-    This collate_fn is used to create the generate contiguous sequences as data augmentation to improve the performance.
-    It does three things
-
-    1. augment the input sequences by creating all possible contiguous sequences
-    2. random sample max_batch_size sequences from the augmented sequences to prevent OOM
-    3. run regular collate_fn_train
-
-    Args:
-        batch: The batch of data to be collated. Can be a list of dictionaries, in the case we were
-            loading the data per row, or a dictionary of tensors, in the case we were loading the data per batch.
-        sequence_field_name: The name of the field in the batch that contains the sequence to be augmented.
-        sid_hierarchy: The length of Semantic IDs
-        labels: The list of functions to apply to generate the labels.
-        sequence_length: The length of the sequence to be padded or trimmed to. (not used in this function, passed to collate_fn_train)
-        masking_token: The token used for masking. (not used in this function, passed to collate_fn_train)
-        padding_token: The token used for padding. (not used in this function, passed to collate_fn_train)
-        max_batch_size: The maximum batch size to be used after the data augmentation.
-
-    Returns:
-        model input data and label data
-    """
-
-    if isinstance(batch, list):
-        batch = combine_list_of_tensor_dicts(batch)  # type: ignore
-
-    # calculating the total number of contiguous sub-sequences in the batch
-    total_num_seqs = (
-        ((k := torch.tensor([s.shape[0] for s in batch[sequence_field_name]]) // sid_hierarchy) - 1) * k // 2
-    )
-    total_num_seqs = torch.sum(total_num_seqs)
-
-    if total_num_seqs > max_batch_size:
-        select_seqs = torch.randint(low=0, high=total_num_seqs.item(), size=(max_batch_size,))
-    else:
-        select_seqs = torch.arange(total_num_seqs.item())
-
-    new_batch = {field_name: [] for field_name in batch}
-    current_idx = 0
-    for row_index, sequence in enumerate(batch[sequence_field_name]):
-        end_indices = torch.arange(2 * sid_hierarchy, sequence.shape[0] + 1, sid_hierarchy)
-        for end_index in end_indices:
-            start_indices = torch.arange(
-                0, end_index - 2 * sid_hierarchy + 1, sid_hierarchy
-            )  # we have a -2 here because we want to have at least two items in the sequence
-            for start_index in start_indices:
-                if current_idx in select_seqs:
-                    new_batch[sequence_field_name].append(sequence[start_index:end_index])
-                    for field_name in new_batch:
-                        if field_name != sequence_field_name:
-                            new_batch[field_name].append(batch[field_name][row_index])
-                current_idx += 1
-
-    return collate_fn_train(
-        rows=new_batch,
-        labels=labels,
-        sequence_length=sequence_length,
-        masking_token=masking_token,
-        padding_token=padding_token,
-    )
-
-
-def collate_fn_inference_for_sequence(
-    # batch can be a list or a dict
-    batch: list[dict[str, torch.Tensor]] | dict[str, torch.Tensor],
-    id_field_name: str,
-    sequence_length: int = 200,
-    padding_token: int = 0,
-    **kwargs,
-) -> SequentialModelInputData:
-    """
-    The collate function passed to inference dataloader for inference with sequential data.
-    It handles id_field_name for saving model outputs
-
-    Args:
-        batch: The batch of data to be collated. Can be a list of dictionaries, in the case we were
-            loading the data per row, or a dictionary of tensors, in the case we were loading the data per batch.
-        sequence_length: The length of the sequence to be padded or trimmed to.
-        padding_token: The token used for padding.
-        id_field_name: The name of the field that contains the id of the user/item. This is used to
-            map the predictions back to the original id.
-
-    Returns:
-        model input data
-    """
-
-    if isinstance(batch, list):
-        batch = combine_list_of_tensor_dicts(batch)  # type: ignore
-
-    model_input_data = SequentialModelInputData()
-
-    for field_name, field_sequence in batch.items():  # type: ignore
-        if field_name in id_field_name:
-            # We use the id field as the user_id_list so predictions can be mapped back to the original id.
-            model_input_data.user_id_list = field_sequence
-            continue
-
-        # TODO (lneves): Allow for non-sequential data to be passed as a feature.
-        current_sequence = normalize_sequence_batch(
-            sequences=field_sequence,
-            sequence_length=sequence_length,
-            padding_token=padding_token,
-        )
-        model_input_data.transformed_sequences[field_name] = current_sequence
-
-        if model_input_data.mask is None:
-            # if a field is not id, then it means its the real sequence we want calculate attention mask for it
-            model_input_data.mask = (current_sequence != padding_token).long()
-
-    return model_input_data  # type: ignore
-
-
-def collate_fn_train(
+def collate_fn_sequence(
     rows: list[dict[str, torch.Tensor]],
-    labels: dict[str, callable],
-    sequence_length: int = 200,
-    masking_token: int = 1,
-    padding_token: int = 0,
-    data_augmentation_functions: list[callable] | None = None,
-) -> tuple[SequentialModelInputData, SequentialModuleLabelData]:
+    input_field_name: str = "input_ids",
+    attention_mask_field_name: str = "attention_mask",
+    target_field_name: str | None = "target_ids",
+    output_key_field_name: str | None = None,
+) -> TigerModelInput | tuple[TigerModelInput, TigerLabelData]:
     """
-    The collate function passed to dataloader.
-    It can do training masking and padding for the input sequence.
+    Assemble preprocessed TIGER sequence rows for training/evaluation or inference.
 
     Args:
-        rows: The batch of data to be collated.
-        labels: The list of functions to apply to generate the labels.
-        sequence_length: The length of the sequence to be padded or trimmed to.
-        masking_token: The token used for masking.
-        padding_token: The token used for padding.
-        data_augmentation_functions: The list of functions to apply to augment the data.
+        rows: Row dictionaries emitted by ``SequenceDataset`` preprocessing.
+        input_field_name: Field containing preprocessed encoder input IDs.
+        attention_mask_field_name: Field containing preprocessed encoder attention masks.
+        target_field_name: Field containing preprocessed target semantic IDs. If ``None``, label data is not
+            returned.
+        output_key_field_name: Optional field containing output keys for mapping predictions back to source rows.
 
     Returns:
-        model input data and label data
+        model input data, and label data when ``target_field_name`` is configured.
     """
+
+    if not rows:
+        raise ValueError("TIGER sequence collate requires at least one row.")
 
     batch = combine_list_of_tensor_dicts(rows)
+    batch: dict[str, torch.Tensor] = {field_name: torch.stack(field_values, dim=0) for field_name, field_values in batch.items()}
 
-    if data_augmentation_functions:
-        for data_augmentation_function in data_augmentation_functions:
-            batch = data_augmentation_function(batch)
+    if input_field_name not in batch:
+        raise ValueError(f"TIGER sequence collate requires field '{input_field_name}'.")
+    if attention_mask_field_name not in batch:
+        raise ValueError(f"TIGER sequence collate requires field '{attention_mask_field_name}'.")
+    if target_field_name is not None and target_field_name not in batch:
+        raise ValueError(f"TIGER sequence collate requires field '{target_field_name}'.")
+    if output_key_field_name is not None and output_key_field_name not in batch:
+        raise ValueError(f"TIGER sequence collate requires field '{output_key_field_name}'.")
 
-    model_input_data = SequentialModelInputData()
-    model_label_data = SequentialModuleLabelData()
+    input_ids = batch[input_field_name]
+    attention_mask = batch[attention_mask_field_name]
+    output_keys = batch[output_key_field_name] if output_key_field_name is not None else None
 
-    for field_name, field_sequence in batch.items():
-        # TODO (lneves): Allow for non-sequential data to be passed as a feature.
-        current_sequence = normalize_sequence_batch(
-            sequences=field_sequence,
-            sequence_length=sequence_length,
-            padding_token=padding_token,
-        )
+    model_input = TigerModelInput(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        output_keys=output_keys
+    )
+    if target_field_name is None:
+        return model_input
 
-        # creating labels if the field is in the labels list
-        if field_name in labels:
-            label_function = labels[field_name].transform
-            label_function_output: LabelFunctionOutput = label_function.transform_label(
-                sequence=current_sequence,
-                padding_token=padding_token,
-                masking_token=masking_token,
-            )
-            model_label_data.labels[field_name] = label_function_output.labels
-            model_label_data.label_location[field_name] = label_function_output.label_location
-            model_label_data.attention_mask[field_name] = label_function_output.attention_mask
-            model_input_data.transformed_sequences[field_name] = label_function_output.sequence
-        else:
-            model_input_data.transformed_sequences[field_name] = current_sequence
-
-        # Currently supports a single masking per sequence
-        # TODO (lneves): Evaluate if this works or if we should have one mask per feature.
-        if model_input_data.mask is None:
-            model_input_data.mask = (current_sequence != padding_token).long()
-
-    return model_input_data, model_label_data  # type: ignore
+    target_ids = batch[target_field_name]
+    return model_input, TigerLabelData(target_ids=target_ids)
 
 
 def collate_fn_items(

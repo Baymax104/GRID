@@ -7,8 +7,8 @@ TBD - created by archiving change remove-user-id-training-path. Update Purpose a
 TIGER inference SHALL preserve the original user identity as prediction output keys and MUST NOT use that identity as a model generation feature.
 
 #### Scenario: Prediction output preserves user identity
-- **WHEN** TIGER `predict_step` receives a batch with `SequentialModelInputData.user_id_list`
-- **THEN** it MUST return `ModelOutput.keys` derived from `user_id_list`
+- **WHEN** TIGER `predict_step` receives a batch with `TigerModelInput.output_keys`
+- **THEN** it MUST return `ModelOutput.keys` derived from `output_keys`
 - **AND** it MUST pair those keys with generated semantic ID predictions
 
 #### Scenario: User identity is not passed to generation
@@ -27,4 +27,3 @@ The TIGER generation model SHALL NOT expose constructor parameters or runtime br
 - **WHEN** TIGER encodes a semantic ID sequence
 - **THEN** encoder inputs MUST be derived from item semantic IDs and optional separator tokens
 - **AND** encoder inputs MUST NOT prepend embeddings derived from user identity
-

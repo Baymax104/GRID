@@ -1,7 +1,5 @@
 """Shared LightningDataModule for file-backed iterable datasets."""
 
-from typing import Any
-
 from lightning import LightningDataModule
 from lightning.pytorch.trainer.states import TrainerFn
 from omegaconf import DictConfig
@@ -42,7 +40,7 @@ class BaseDataModule(LightningDataModule):
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
         if file_format:
             return file_format
-        data_reader_factory = config.dataset_config.data_reader_factory
+        data_reader_factory = config.dataset_config.data_reader
         data_reader_target = getattr(data_reader_factory, "func", data_reader_factory)
         return data_reader_target.get_file_suffix()  # noqa
 
@@ -133,9 +131,3 @@ class BaseDataModule(LightningDataModule):
 
     def predict_dataloader(self):
         return self.get_dataloader(stage=TrainerFn.PREDICTING)
-
-    def state_dict(self) -> dict[Any, Any]:
-        return {}
-
-    def load_state_dict(self, state_dict: dict[str, Any]):
-        pass

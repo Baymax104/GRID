@@ -1,0 +1,45 @@
+## MODIFIED Requirements
+
+### Requirement: tiger sequence 实验 SHALL 使用新 data contract
+tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed semantic_id 基于 keyed bundle 局部参数注入、新 shuffle 语义、推理 id 字段与模型输入序列分离、collate 参数在 collate 配置处显式声明，以及 label generator 以纯函数 callable 直接配置。
+
+#### Scenario: sequence 实验 data_reader 采用 factory 形式
+- **WHEN** 维护者查看 tiger_train / tiger_inference 的数据读取配置
+- **THEN** `data_reader` MUST 采用 factory / `_partial_` 形式，由 dataset 运行时按 worker 文件列表实例化
+
+#### Scenario: sequence 实验 preprocessing chain 配置直写
+- **WHEN** 维护者查看上述实验的 data 配置
+- **THEN** preprocessing 的顺序与参数 MUST 直接以 `preprocessing_functions` list 形式声明在配置中，不通过 Hydra resolver 派生
+
+#### Scenario: sequence 实验 semantic_id 注入基于 keyed bundle 局部参数
+- **WHEN** 维护者查看上述实验的 semantic_id 注入配置
+- **THEN** semantic_id MUST 通过 `map_sparse_id_to_semantic_id(semantic_id_bundle=...)` 的局部 `semantic_id_bundle` 参数注入，而不是通过 dataset config 的 `semantic_id_map` 字段
+
+#### Scenario: sequence 实验使用新 shuffle contract
+- **WHEN** 维护者查看上述实验的 shuffle 配置
+- **THEN** shuffle 语义 MUST 通过 `shuffle_files`（dataset config）与 `shuffle_rows`（reader factory）表达，而不是继续依赖 dataloader 的 `should_shuffle_rows`
+
+#### Scenario: sequence 实验 dataset config 不携带旧派生字段
+- **WHEN** 维护者检查上述实验的 dataset config
+- **THEN** 它 MUST 不再携带 `features_to_consider`、`semantic_id_map`、`num_placeholder_tokens_map`、`field_type_map`、`keep_user_id`、`user_id_field`、`min_sequence_length`、`feature_map` 等旧协议字段
+
+#### Scenario: TIGER training data excludes user identity model features
+- **WHEN** 维护者检查 `tiger_train` 的 data 和 model 配置
+- **THEN** training preprocessing MUST NOT retain `user_id` as a model input feature
+- **AND** model input mapping MUST NOT map `user_id` into TIGER forward or generation arguments
+
+#### Scenario: TIGER inference id field is output metadata only
+- **WHEN** `collate_fn_inference_for_sequence` receives a field matching `id_field_name`
+- **THEN** it MUST store that field in `SequentialModelInputData.user_id_list`
+- **AND** it MUST NOT store that field in `SequentialModelInputData.transformed_sequences`
+- **AND** attention masks MUST be computed from non-id sequence fields
+
+#### Scenario: TIGER collate arguments are local to collate blocks
+- **WHEN** 维护者检查 `tiger_train` 或 `tiger_inference` data 配置
+- **THEN** `labels`、`sequence_length`、`masking_token`、`padding_token` 等 collate 参数 MUST 在对应 collate callable 配置处声明
+- **AND** train/val/test/predict dataloader blocks MUST NOT 作为 collate 参数注入来源继续声明这些字段
+
+#### Scenario: TIGER label generators are direct pure function callables
+- **WHEN** 维护者检查 `tiger_train` 的 `label_functions` 配置
+- **THEN** label generator MUST 直接配置为 Hydra `_partial_` 纯函数 callable
+- **AND** label generator MUST NOT 使用 `transform:` wrapper 或 label function 类实例

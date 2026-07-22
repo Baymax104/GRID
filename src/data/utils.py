@@ -105,6 +105,28 @@ def pad_or_trim_sequence(padded_sequence: torch.Tensor, sequence_length: int, pa
     return padded_sequence
 
 
+def normalize_sequence_tensor(
+    sequence: torch.Tensor,
+    sequence_length: int,
+    padding_token: int = 0,
+) -> torch.Tensor:
+    """Normalize one 1-D sequence tensor to a fixed length."""
+
+    if sequence.dim() != 1:
+        raise ValueError(f"Expected 1-D sequence tensor, got shape {tuple(sequence.shape)}.")
+
+    if sequence.size(0) > sequence_length:
+        valid_length = sequence.size(0) - (sequence == padding_token).sum().item()
+        start_index = max(valid_length - sequence_length, 0)
+        sequence = sequence[start_index : start_index + sequence_length]
+
+    if sequence.size(0) < sequence_length:
+        padding = sequence.new_full((sequence_length - sequence.size(0),), padding_token)
+        sequence = torch.cat([sequence, padding], dim=0)
+
+    return sequence
+
+
 def normalize_sequence_batch(
     sequences: list[torch.Tensor],
     sequence_length: int,
@@ -117,22 +139,14 @@ def normalize_sequence_batch(
     recent non-padding tokens, and short rows are right-padded.
     """
 
-    normalized_sequences = []
-    for sequence in sequences:
-        if sequence.dim() != 1:
-            raise ValueError(f"Expected 1-D sequence tensors, got shape {tuple(sequence.shape)}.")
-
-        if sequence.size(0) > sequence_length:
-            valid_length = sequence.size(0) - (sequence == padding_token).sum().item()
-            start_index = max(valid_length - sequence_length, 0)
-            sequence = sequence[start_index: start_index + sequence_length]
-
-        if sequence.size(0) < sequence_length:
-            padding = sequence.new_full((sequence_length - sequence.size(0),), padding_token)
-            sequence = torch.cat([sequence, padding], dim=0)
-
-        normalized_sequences.append(sequence)
-
+    normalized_sequences = [
+        normalize_sequence_tensor(
+            sequence=sequence,
+            sequence_length=sequence_length,
+            padding_token=padding_token,
+        )
+        for sequence in sequences
+    ]
     return torch.stack(normalized_sequences, dim=0)
 
 

@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
@@ -5,6 +6,7 @@ import torch
 
 from src.common.components.model_output import ModelOutput
 from src.data.components.tokenization import load_tokenize
+from src.data.utils import normalize_sequence_tensor
 from src.utils.file_utils import load_json
 from src.utils.tensor_utils import gather_predictions_by_keys
 
@@ -198,6 +200,113 @@ def map_sparse_id_to_semantic_id(
                 # 3. flatten to (n_items x num_hierarchies,)
                 row[k] = semantic_ids[..., :num_hierarchies].reshape(-1)
     return row
+
+
+def expand_sid_causal_duplicate_sequences(
+    row: dict[str, torch.Tensor],
+    sequence_field_name: str,
+    sid_hierarchy: int,
+    max_num_sequences: int | None = None,
+) -> Iterator[dict[str, torch.Tensor]]:
+    """Yield semantic-ID-aligned contiguous subsequences for one TIGER row.
+
+    Each generated subsequence contains at least two items. One item is represented
+    by ``sid_hierarchy`` flattened semantic ID tokens.
+    """
+    if sequence_field_name not in row:
+        raise ValueError(f"Sequence field '{sequence_field_name}' not found in row.")
+    if sid_hierarchy <= 0:
+        raise ValueError("sid_hierarchy must be a positive integer.")
+    if max_num_sequences is not None and max_num_sequences < 0:
+        raise ValueError("max_num_sequences must be non-negative when provided.")
+
+    sequence = row[sequence_field_name]
+    if sequence.dim() != 1:
+        raise ValueError(f"Expected 1-D sequence tensor, got shape {tuple(sequence.shape)}.")
+
+    item_count = sequence.shape[0] // sid_hierarchy
+    total_num_sequences = (item_count - 1) * item_count // 2
+    if total_num_sequences <= 0:
+        return
+
+    if max_num_sequences is not None and total_num_sequences > max_num_sequences:
+        selected_indices = set(torch.randint(low=0, high=total_num_sequences, size=(max_num_sequences,)).tolist())
+    else:
+        selected_indices = None
+
+    current_index = 0
+    for end_item_index in range(2, item_count + 1):
+        end_index = end_item_index * sid_hierarchy
+        for start_item_index in range(0, end_item_index - 1):
+            if selected_indices is None or current_index in selected_indices:
+                start_index = start_item_index * sid_hierarchy
+                expanded_row = dict(row)
+                expanded_row[sequence_field_name] = sequence[start_index:end_index]
+                yield expanded_row
+            current_index += 1
+
+
+def generate_next_k_labels(
+    row: dict[str, torch.Tensor],
+    sequence_field_name: str,
+    input_field_name: str = "input_ids",
+    target_field_name: str = "target_ids",
+    next_k: int = 5,
+    masking_token: int = 0,
+    padding_token: int = -1,
+    keep_sequence_field: bool = False,
+) -> dict[str, torch.Tensor]:
+    """Generate TIGER row-level masked input IDs and target semantic IDs."""
+    if sequence_field_name not in row:
+        raise ValueError(f"Sequence field '{sequence_field_name}' not found in row.")
+    if next_k <= 0:
+        raise ValueError("next_k must be a positive integer.")
+
+    sequence = row[sequence_field_name]
+    if sequence.dim() != 1:
+        raise ValueError(f"Expected 1-D sequence tensor, got shape {tuple(sequence.shape)}.")
+
+    content_length = int((sequence != padding_token).sum().item())
+    if content_length < next_k + 1:
+        raise ValueError(f"Sequence length: {content_length} should be greater than next_k + 1: {next_k + 1}")
+
+    label_start_index = content_length - next_k
+    label_end_index = label_start_index + next_k
+
+    input_ids = sequence.clone()
+    target_ids = input_ids[label_start_index:label_end_index].clone()
+    input_ids[label_start_index:label_end_index] = padding_token
+    input_ids[label_start_index] = masking_token
+
+    labeled_row = dict(row)
+    labeled_row[input_field_name] = input_ids
+    labeled_row[target_field_name] = target_ids
+    if not keep_sequence_field and sequence_field_name not in {input_field_name, target_field_name}:
+        labeled_row.pop(sequence_field_name, None)
+    return labeled_row
+
+
+def normalize_sequence(
+    row: dict[str, torch.Tensor],
+    input_field_name: str = "input_ids",
+    attention_mask_field_name: str = "attention_mask",
+    sequence_length: int = 200,
+    padding_token: int = 0,
+) -> dict[str, torch.Tensor]:
+    """Normalize a TIGER input sequence row and generate its attention mask."""
+    if input_field_name not in row:
+        raise ValueError(f"Input field '{input_field_name}' not found in row.")
+
+    normalized_input = normalize_sequence_tensor(
+        sequence=row[input_field_name],
+        sequence_length=sequence_length,
+        padding_token=padding_token,
+    )
+
+    normalized_row = dict(row)
+    normalized_row[input_field_name] = normalized_input
+    normalized_row[attention_mask_field_name] = (normalized_input != padding_token).long()
+    return normalized_row
 
 
 def trim_sequence_row(

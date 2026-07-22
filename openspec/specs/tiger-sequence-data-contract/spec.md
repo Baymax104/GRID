@@ -1,10 +1,13 @@
 # tiger-sequence-data-contract Specification
 
 ## Purpose
-TBD - created by archiving change migrate-tiger-chain-data-pipeline. Update Purpose after archive.
+
+定义 TIGER sequence 级生成式推荐实验的数据读取、preprocessing、collate 与训练 batch contract。
+
 ## Requirements
+
 ### Requirement: tiger sequence 实验 SHALL 使用新 data contract
-tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed semantic_id 基于 keyed bundle 局部参数注入、新 shuffle 语义、推理 id 字段与模型输入序列分离，以及 collate 参数在 collate 配置处显式声明。
+tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使用新的 data contract，包括 reader factory、配置直写 preprocessing chain、precomputed semantic_id 基于 keyed bundle 局部参数注入、新 shuffle 语义、推理 id 字段与模型输入序列分离、collate 参数在 collate 配置处显式声明、label generator 以 preprocessing 纯函数声明、TIGER 专用 batch contract，以及统一且纯拼装的 TIGER sequence collate entry point。
 
 #### Scenario: sequence 实验 data_reader 采用 factory 形式
 - **WHEN** 维护者查看 tiger_train / tiger_inference 的数据读取配置
@@ -32,22 +35,39 @@ tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使
 - **AND** model input mapping MUST NOT map `user_id` into TIGER forward or generation arguments
 
 #### Scenario: TIGER inference id field is output metadata only
-- **WHEN** `collate_fn_inference_for_sequence` receives a field matching `id_field_name`
-- **THEN** it MUST store that field in `SequentialModelInputData.user_id_list`
-- **AND** it MUST NOT store that field in `SequentialModelInputData.transformed_sequences`
-- **AND** attention masks MUST be computed from non-id sequence fields
+- **WHEN** `collate_fn_sequence` receives a field matching `output_key_field_name`
+- **THEN** it MUST store that field in `TigerModelInput.output_keys`
+- **AND** it MUST NOT store that field in `TigerModelInput.input_ids`
+- **AND** attention masks MUST come from the configured preprocessed attention mask field
 
 #### Scenario: TIGER collate arguments are local to collate blocks
 - **WHEN** 维护者检查 `tiger_train` 或 `tiger_inference` data 配置
-- **THEN** `labels`、`sequence_length`、`masking_token`、`padding_token` 等 collate 参数 MUST 在对应 collate callable 配置处声明
+- **THEN** `sequence_length`、`padding_token` 等 sequence normalization 参数 MUST 在对应 preprocessing callable 配置处声明
 - **AND** train/val/test/predict dataloader blocks MUST NOT 作为 collate 参数注入来源继续声明这些字段
 
-### Requirement: sequence 链路 config 类 SHALL 精简为运行时字段
-`SemanticIDDatasetConfig` 和 `SequenceDataloaderConfig` SHALL 只暴露运行时消费的字段，删除旧架构遗留字段和无消费方的兼容字段。
+#### Scenario: TIGER label generators are preprocessing functions
+- **WHEN** 维护者检查 `tiger_train` 的 preprocessing 配置
+- **THEN** label generation MUST be declared in the preprocessing chain as a Hydra `_partial_` callable
+- **AND** collate blocks MUST NOT configure label generator callables
 
-#### Scenario: SemanticIDDatasetConfig 不保留旧协议字段
-- **WHEN** 维护者检查 `SemanticIDDatasetConfig` 定义
-- **THEN** 它 MUST 不再保留 `semantic_id_map`、`keep_user_id`、`user_id_field`、`features_to_consider`、`num_placeholder_tokens_map`、`field_type_map`、`min_sequence_length`、`feature_map`、`file_format`，且 `SequenceDatasetConfig` 基类 MUST 被删除
+#### Scenario: TIGER sequence collate returns TIGER-specific dataclasses
+- **WHEN** TIGER train or inference collate functions produce a batch
+- **THEN** they MUST return `TigerModelInput` for model inputs
+- **AND** train/eval/test collate MUST return `TigerLabelData` for labels
+- **AND** they MUST NOT return legacy generic sequential batch dataclasses
+
+#### Scenario: TIGER train, eval, and inference collate use unified sequence entry point
+- **WHEN** 维护者检查 `tiger_train` 或 `tiger_inference` 的 collate 配置
+- **THEN** train, eval, and inference collate blocks MUST target `src.data.components.collate.collate_fn_sequence`
+- **AND** training augmentation MUST be declared in train preprocessing rather than collate configuration
+
+### Requirement: sequence 链路 config 类 SHALL 精简为运行时字段
+`DatasetConfig` 和 `SequenceDataloaderConfig` SHALL 只暴露运行时消费的字段，删除旧架构遗留字段和无消费方的兼容字段。TIGER sequence 链路 SHALL 使用统一 `DatasetConfig`，而不是语义 ID 专用 dataset config 类。
+
+#### Scenario: DatasetConfig 不保留 sequence 旧协议字段
+- **WHEN** 维护者检查 `DatasetConfig` 定义和 TIGER dataset config blocks
+- **THEN** 它 MUST 不再保留 `semantic_id_map`、`keep_user_id`、`user_id_field`、`features_to_consider`、`num_placeholder_tokens_map`、`field_type_map`、`min_sequence_length`、`feature_map`、`file_format`
+- **AND** `SemanticIDDatasetConfig` 和 `SequenceDatasetConfig` MUST 被删除
 
 #### Scenario: SequenceDataloaderConfig 不保留旧 shuffle 字段
 - **WHEN** 维护者检查 `SequenceDataloaderConfig` 定义
@@ -67,4 +87,3 @@ tiger_train、tiger_inference 这类 sequence 级生成式推荐实验 SHALL 使
 #### Scenario: 函数从局部参数获取 bundle
 - **WHEN** 函数执行 semantic_id lookup
 - **THEN** 它 MUST 直接使用 `semantic_id_bundle` 参数调用 `lookup_values_in_keyed_prediction_bundle`，不通过 `dataset_config.semantic_id_map` 间接获取
-

@@ -1,11 +1,26 @@
 import random
+from collections.abc import Iterable, Iterator
+from typing import Any, TypeAlias
 
-from omegaconf import DictConfig
 from torch.utils.data import IterableDataset, get_worker_info
 
+from src.data.components.config_models import DatasetConfig
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
+
+Row: TypeAlias = dict[str, Any]
+PreprocessingResult: TypeAlias = Row | Iterable[Row] | None
+
+
+def _iter_preprocessing_result(result: PreprocessingResult) -> Iterator[Row]:
+    """Normalize a preprocessing result into a row iterator."""
+    if result is None:
+        return
+    if isinstance(result, dict):
+        yield result
+        return
+    yield from result
 
 
 class BaseDataset:
@@ -50,7 +65,7 @@ class SequenceDataset(BaseDataset, IterableDataset):
 
     def __init__(
         self,
-        dataset_config: DictConfig,
+        dataset_config: DatasetConfig,
         data_folder: str,
         list_of_file_paths: list[str],
         global_rank: int,
@@ -59,14 +74,24 @@ class SequenceDataset(BaseDataset, IterableDataset):
         super().__init__(list_of_file_paths=list_of_file_paths, global_rank=global_rank)
         self.data_folder = data_folder
         self.data_reader_factory = dataset_config.data_reader
-        self.preprocessing_functions = getattr(dataset_config, "preprocessing_functions", [])
-        self.shuffle_files = getattr(dataset_config, "shuffle_files", False)
+        self.preprocessing_functions = dataset_config.preprocessing_functions
+        self.shuffle_files = dataset_config.shuffle_files
         self.is_for_training = is_for_training
 
     def _load_data(self):
         current_worker_files = self.get_list_of_worker_files(shuffle=self.shuffle_files)
         data_reader = self.data_reader_factory(list_of_file_paths=current_worker_files)
         return data_reader.iterrows()
+
+    def _apply_preprocessing_functions(self, row: Row, start_index: int = 0) -> Iterator[Row]:
+        """Apply preprocessing functions as a streaming flat-map pipeline."""
+        if start_index >= len(self.preprocessing_functions):
+            yield row
+            return
+
+        preprocessing_function = self.preprocessing_functions[start_index]
+        for next_row in _iter_preprocessing_result(preprocessing_function(row)):
+            yield from self._apply_preprocessing_functions(next_row, start_index + 1)
 
     def __iter__(self):
         dataset_iterable = self._load_data()
@@ -75,13 +100,7 @@ class SequenceDataset(BaseDataset, IterableDataset):
         finished_iteration = False
         while not finished_iteration:
             for row_or_batch in dataset_iterable:
-                # call preprocessing functions
-                for preprocessing_function in self.preprocessing_functions:
-                    row_or_batch = preprocessing_function(row_or_batch)
-                    if row_or_batch is None:
-                        break
-                if row_or_batch:
-                    yield row_or_batch
+                yield from self._apply_preprocessing_functions(row_or_batch)
             # if the dataset is not for training, we stop the loop. Otherwise, we continue.
             finished_iteration = not self.is_for_training
             if not finished_iteration:

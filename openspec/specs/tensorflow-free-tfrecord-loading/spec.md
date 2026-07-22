@@ -37,5 +37,4 @@ TBD - created by archiving change remove-tensorflow-runtime. Update Purpose afte
 
 #### Scenario: Recommendation pipeline consumes sequential model input
 - **WHEN** `tiger_train_flat` 进入模型前阶段
-- **THEN** 推荐模型仍必须收到与当前链路兼容的 `SequentialModelInputData` 与 `SequentialModuleLabelData`
-
+- **THEN** 推荐模型 MUST 收到与当前链路兼容的 `TigerModelInput` 与 `TigerLabelData`

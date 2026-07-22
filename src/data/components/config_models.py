@@ -7,8 +7,8 @@ from src.data.components.readers import BaseDataReader
 
 
 @dataclass
-class SemanticIDDatasetConfig:
-    """The dataset configuration class for sequence pipelines that use semantic ids.
+class DatasetConfig:
+    """The generic dataset configuration class.
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ class SequenceDataloaderConfig:
         The dataset class.
     data_folder: str
         Path to the folder containingthe dataset files.
-    dataset_config: SemanticIDDatasetConfig
+    dataset_config: DatasetConfig
         The dataset configuration.
     batch_size_per_device: list[callable]
         The batch size per dataloader, also per device (GPU).
@@ -60,7 +60,7 @@ class SequenceDataloaderConfig:
 
     dataset_class: IterableDataset
     data_folder: str
-    dataset_config: SemanticIDDatasetConfig
+    dataset_config: DatasetConfig
     batch_size_per_device: int
     num_workers: int
     assign_files_by_size: bool
@@ -72,31 +72,12 @@ class SequenceDataloaderConfig:
 
 
 @dataclass
-class ItemDatasetConfig:
-    """The configuration class used to store the item dataset configuration.
-
-    Parameters
-    ----------
-    data_reader: Callable[..., BaseDataReader]
-        The data reader factory.
-    preprocessing_functions: list[callable]
-        The preprocessing functions to be applied to each row.
-    shuffle_files: bool
-        Whether to shuffle the order of files assigned to the current worker.
-    """
-
-    data_reader: Callable[..., BaseDataReader]
-    preprocessing_functions: list[callable] = field(default_factory=list)
-    shuffle_files: bool = False
-
-
-@dataclass
 class ItemDataloaderConfig:
     """The dataloader configuration class for item-level pipelines."""
 
     dataset_class: IterableDataset
     data_folder: str
-    dataset_config: ItemDatasetConfig
+    dataset_config: DatasetConfig
     batch_size_per_device: int
     num_workers: int
     assign_files_by_size: bool

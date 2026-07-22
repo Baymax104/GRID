@@ -52,7 +52,7 @@ preprocessing_functions:
       - text_mask
 
 predict_dataset_config:
-  _target_: src.data.components.config_models.ItemDatasetConfig
+  _target_: src.data.components.config_models.DatasetConfig
   shuffle_files: false
   preprocessing_functions: ${data.preprocessing_functions}
   data_reader:

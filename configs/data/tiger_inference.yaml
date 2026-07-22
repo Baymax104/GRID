@@ -30,14 +30,21 @@ preprocessing_functions:
   features_to_apply:
   - sequence_data
   num_hierarchies: ${model.root.num_hierarchies}
-collate:
-  _target_: src.data.components.collate.collate_fn_inference_for_sequence
+- _target_: src.data.components.preprocessing.normalize_sequence
   _partial_: true
-  id_field_name: user_id
+  input_field_name: sequence_data
+  attention_mask_field_name: attention_mask
   sequence_length: ${sequence_length}
   padding_token: -1
+collate:
+  _target_: src.data.components.collate.collate_fn_sequence
+  _partial_: true
+  input_field_name: sequence_data
+  attention_mask_field_name: attention_mask
+  target_field_name: null
+  output_key_field_name: user_id
 predict_dataset_config:
-  _target_: src.data.components.config_models.SemanticIDDatasetConfig
+  _target_: src.data.components.config_models.DatasetConfig
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
     _partial_: true

@@ -10,12 +10,14 @@ TBD - created by archiving. Update Purpose after archive.
 #### Scenario: 配置 dataclass 位于专属模块
 - **WHEN** 维护者查找 dataset、dataloader 或 tokenizer 的配置 dataclass
 - **THEN** 这些定义 MUST 位于 `src/data/components/config_models.py`
-- **THEN** `config_models.py` MUST 包含 `SequenceDatasetConfig`、`SequenceDataloaderConfig`、`SemanticIDDatasetConfig`、`TokenizerConfig`、`ItemDatasetConfig`、`ItemDataloaderConfig`
+- **THEN** `config_models.py` MUST 包含 `DatasetConfig`、`SequenceDataloaderConfig`、`TokenizerConfig`、`ItemDataloaderConfig`
+- **AND** `config_models.py` MUST NOT 包含重复的 `SemanticIDDatasetConfig` 或 `ItemDatasetConfig`
 
 #### Scenario: 运行时批数据 dataclass 位于专属模块
-- **WHEN** 维护者查找 label function 输出、模型输入或 item batch 容器 dataclass
+- **WHEN** 维护者查找 TIGER 模型输入、TIGER label data 或 item batch 容器 dataclass
 - **THEN** 这些定义 MUST 位于 `src/data/components/data_models.py`
-- **THEN** `data_models.py` MUST 包含 `LabelFunctionOutput`、`SequentialModuleLabelData`、`SequentialModelInputData`、`ItemData`、`ItemTextData`
+- **THEN** `data_models.py` MUST 包含 `TigerLabelData`、`TigerModelInput`、`ItemBatch`、`ItemTextBatch`
+- **AND** `data_models.py` MUST NOT 包含旧的通用 sequential batch 或 label output dataclass
 
 #### Scenario: 不再保留混合 data_models 入口
 - **WHEN** 维护者检查 `src/data/components/` 目录
@@ -30,9 +32,9 @@ TBD - created by archiving. Update Purpose after archive.
 - **THEN** `_target_` MUST NOT 指向 `src.data.components.data_models.*`
 
 #### Scenario: Python import 指向批数据模块
-- **WHEN** 代码导入 `LabelFunctionOutput`、`SequentialModelInputData`、`SequentialModuleLabelData`、`ItemData` 或 `ItemTextData`
+- **WHEN** 代码导入 `TigerModelInput`、`TigerLabelData`、`ItemBatch` 或 `ItemTextBatch`
 - **THEN** import MUST 来自 `src.data.components.data_models`
 
 #### Scenario: Python import 指向配置模型模块
-- **WHEN** 代码导入 `TokenizerConfig` 或其他 dataset / dataloader 配置 dataclass
+- **WHEN** 代码导入 `DatasetConfig`、`TokenizerConfig` 或其他 dataset / dataloader 配置 dataclass
 - **THEN** import MUST 来自 `src.data.components.config_models`

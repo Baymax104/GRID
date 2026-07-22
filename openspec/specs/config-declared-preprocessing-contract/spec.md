@@ -5,7 +5,7 @@ TBD - created by archiving. Update Purpose after archive.
 
 ## Requirements
 ### Requirement: preprocessing chain SHALL be directly declared in config for readable experiment pipelines
-在以可读性优先的实验 data 配置中，preprocessing chain SHALL 可以直接在配置文件中声明，并显式展示每一步 preprocessing 及其最小必要参数。
+在以可读性优先的实验 data 配置中，preprocessing chain SHALL 可以直接在配置文件中声明，并显式展示每一步 preprocessing 及其最小必要参数。配置声明的 preprocessing chain MUST support row-preserving, row-filtering, and row-expanding preprocessing steps.
 
 #### Scenario: rkmeans_train 配置显式声明 preprocessing chain
 - **WHEN** 维护者查看 `rkmeans_train` 的 data 配置
@@ -20,3 +20,8 @@ TBD - created by archiving. Update Purpose after archive.
 - **WHEN** dataset 初始化 preprocessing chain
 - **THEN** 它 MUST 直接读取 `dataset_config.preprocessing_functions`
 - **THEN** 它 MUST NOT 再负责推导这些 preprocessing 的参数
+
+#### Scenario: TIGER 配置显式声明扩展和 label preprocessing
+- **WHEN** 维护者查看 `tiger_train` 的 data 配置
+- **THEN** train preprocessing chain MUST 显式声明 SID causal duplicate row expansion step
+- **AND** train/eval preprocessing chains MUST 显式声明 TIGER label generation step

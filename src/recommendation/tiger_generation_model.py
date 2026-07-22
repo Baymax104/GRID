@@ -11,8 +11,8 @@ from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 from src.common.components.eval_metrics import Evaluator
 from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import (
-    SequentialModelInputData,
-    SequentialModuleLabelData,
+    TigerLabelData,
+    TigerModelInput,
 )
 from src.recommendation.decoder_module import SemanticIDDecoderModule
 from src.recommendation.encoder_module import SemanticIDEncoderModule
@@ -47,7 +47,6 @@ class SemanticIDEncoderDecoder(LightningModule):
         scheduler: torch.optim.lr_scheduler._LRScheduler | None = None,
         loss_function: nn.Module | None = None,
         evaluator: Evaluator | None = None,
-        feature_to_model_input_map: dict[str, str] | None = None,
     ):
         """
         Initialize the SemanticIDEncoderDecoder module.
@@ -89,7 +88,6 @@ class SemanticIDEncoderDecoder(LightningModule):
         self.scheduler = scheduler
         self.loss_function = loss_function
         self.evaluator = evaluator
-        self.feature_to_model_input_map = feature_to_model_input_map if feature_to_model_input_map else {}
 
         self.num_embeddings_per_hierarchy = num_embeddings_per_hierarchy
         self.embedding_dim = embedding_dim
@@ -596,15 +594,17 @@ class SemanticIDEncoderDecoder(LightningModule):
             )
         return embedding_table
 
-    def predict_step(self, batch: SequentialModelInputData):
+    def predict_step(self, batch: TigerModelInput):
         generated_sids, _ = self.model_step(batch)
-        ids = [id_.item() if isinstance(id_, torch.Tensor) else id_ for id_ in batch.user_id_list]
+        if batch.output_keys is None:
+            raise ValueError("TigerModelInput.output_keys is required for prediction output.")
+        ids = [id_.item() if isinstance(id_, torch.Tensor) else id_ for id_ in batch.output_keys]
         return ModelOutput(keys=ids, predictions=generated_sids)
 
     def model_step(
         self,
-        model_input: SequentialModelInputData,
-        label_data: SequentialModuleLabelData | None = None,
+        model_input: TigerModelInput,
+        label_data: TigerLabelData | None = None,
     ):
         """
         Perform a forward pass of the model and calculate the loss if label_data is provided.
@@ -618,21 +618,18 @@ class SemanticIDEncoderDecoder(LightningModule):
         if label_data is None:
             # this is inference stage
             generated_ids, marginal_probs = self.generate(
-                attention_mask=model_input.mask,
-                **{self.feature_to_model_input_map.get(k, k): v for k, v in model_input.transformed_sequences.items()},
+                attention_mask=model_input.attention_mask,
+                input_ids=model_input.input_ids,
             )
             return generated_ids, 0  # returning 0 here because we don't have a loss
 
-        fut_ids = None
-        for label in label_data.labels:
-            curr_label = label_data.labels[label]
-            fut_ids = curr_label.reshape(model_input.mask.size(0), -1)
+        fut_ids = label_data.target_ids
         # here we pass labels in to the forward function
         # because the decoder is causal and we are doing shifted prediction
         model_output = self.forward(
-            attention_mask_encoder=model_input.mask,
+            attention_mask_encoder=model_input.attention_mask,
+            input_ids=model_input.input_ids,
             future_ids=fut_ids,
-            **{self.feature_to_model_input_map.get(k, k): v for k, v in model_input.transformed_sequences.items()},
         )
 
         # we prepended a bos token to the decoder input
@@ -700,11 +697,11 @@ class SemanticIDEncoderDecoder(LightningModule):
 
     def training_step(
         self,
-        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
+        batch: tuple[TigerModelInput, TigerLabelData],
         batch_idx: int,
     ) -> torch.Tensor:
-        model_input: SequentialModelInputData = batch[0]
-        label_data: SequentialModuleLabelData = batch[1]
+        model_input: TigerModelInput = batch[0]
+        label_data: TigerLabelData = batch[1]
         _, loss = self.model_step(model_input=model_input, label_data=label_data)
 
         if self.evaluator:
@@ -723,26 +720,26 @@ class SemanticIDEncoderDecoder(LightningModule):
 
     def eval_step(
         self,
-        batch: tuple[SequentialModelInputData, SequentialModuleLabelData],
+        batch: tuple[TigerModelInput, TigerLabelData],
         loss_to_aggregate: MeanMetric,
     ):
         """Perform a TIGER generation evaluation step."""
         if self.evaluator is None:
             return
 
-        model_input: SequentialModelInputData = batch[0]
-        label_data: SequentialModuleLabelData = batch[1]
+        model_input: TigerModelInput = batch[0]
+        label_data: TigerLabelData = batch[1]
         _, loss = self.model_step(model_input=model_input, label_data=label_data)
 
         generated_ids, marginal_probs = self.generate(
-            attention_mask=model_input.mask,
-            **{self.feature_to_model_input_map.get(k, k): v for k, v in model_input.transformed_sequences.items()},
+            attention_mask=model_input.attention_mask,
+            input_ids=model_input.input_ids,
         )
 
         self.evaluator(
             marginal_probs=marginal_probs,
             generated_ids=generated_ids,
-            labels=list(label_data.labels.values())[0].to(marginal_probs.device),
+            labels=label_data.target_ids.to(marginal_probs.device),
         )
 
         loss_to_aggregate(loss)
