@@ -31,6 +31,7 @@ class BaseDataset:
     ):
         self.global_rank = global_rank
         self.list_of_file_paths = list_of_file_paths
+        self.cycle_count = 0
 
     def _get_worker_context(self) -> tuple[int, int, int]:
         # set global dataloader worker id in process level
@@ -47,12 +48,13 @@ class BaseDataset:
         global_dataloader_worker_id = self.global_rank * num_workers + worker_id
         return worker_id, num_workers, global_dataloader_worker_id
 
-    def get_list_of_worker_files(self, shuffle: bool = False):
+    def get_list_of_worker_files(self, shuffle: bool = False, seed: int = 0):
         worker_id, num_workers, global_dataloader_worker_id = self._get_worker_context()
-        worker_files = self.list_of_file_paths[worker_id::num_workers]
+        files = self.list_of_file_paths.copy()
         if shuffle:
-            random.seed(global_dataloader_worker_id)
-            random.shuffle(worker_files)
+            seed += global_dataloader_worker_id
+            random.Random(seed).shuffle(files)
+        worker_files = files[worker_id::num_workers]
         return worker_files
 
 
@@ -79,7 +81,7 @@ class SequenceDataset(BaseDataset, IterableDataset):
         self.is_for_training = is_for_training
 
     def _load_data(self):
-        current_worker_files = self.get_list_of_worker_files(shuffle=self.shuffle_files)
+        current_worker_files = self.get_list_of_worker_files(shuffle=self.shuffle_files, seed=self.cycle_count)
         data_reader = self.data_reader_factory(list_of_file_paths=current_worker_files)
         return data_reader.iterrows()
 
@@ -99,10 +101,11 @@ class SequenceDataset(BaseDataset, IterableDataset):
         # On a streaming dataset, we will always be on Epoch 0.
         finished_iteration = False
         while not finished_iteration:
-            for row_or_batch in dataset_iterable:
-                yield from self._apply_preprocessing_functions(row_or_batch)
+            for row in dataset_iterable:
+                yield from self._apply_preprocessing_functions(row)
             # if the dataset is not for training, we stop the loop. Otherwise, we continue.
             finished_iteration = not self.is_for_training
             if not finished_iteration:
+                self.cycle_count += 1
                 dataset_iterable = self._load_data()
         return None

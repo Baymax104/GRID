@@ -30,11 +30,8 @@ def is_feature_in_features_to_apply(features_to_apply: list[str] | None, k: str)
 def filter_features_to_consider(
     row: dict[str, Any],
     features_to_consider: list[str] | None = None,
-    feature_map: dict[str, str] | None = None,
 ):
-    row = map_feature_names(row, feature_map=feature_map)
     features_to_consider_set = set(features_to_consider or [])
-
     if len(features_to_consider_set) > 0:
         return {k: v for k, v in row.items() if k in features_to_consider_set}
     return row
@@ -70,30 +67,11 @@ def convert_to_dense_numpy_array(
     return row
 
 
-def map_feature_names(
-    row: dict[str, np.ndarray | torch.Tensor | Any],
-    feature_map: dict[str, str] | None = None,
-) -> dict[str, np.ndarray | torch.Tensor]:
-    """
-    Map the feature names to the desired feature names.
-
-    Args:
-        row: dataset row
-        feature_map: optional rename map
-
-    Returns:
-        row
-    """
-    if feature_map:
-        row = {v: row[k] for k, v in feature_map.items() if k in row}
-    return row
-
-
 def convert_fields_to_tensors(
-    row: dict[str, np.ndarray],
+    row: dict[str, Any],
     field_type_map: dict[str, torch.dtype] | None = None,
     features_to_apply: list[str] | None = None,
-) -> dict[str, torch.Tensor]:
+) -> dict[str, Any]:
     """
     Given a row, convert all fields to torch tensors.
     Uses the field type map to determine the dtype, defaulting to torch.long if no dtype is specified.
@@ -107,7 +85,7 @@ def convert_fields_to_tensors(
         row
     """
     field_type_map = field_type_map or {}
-    tensor_row = {}
+    tensor_row = dict(row)
     for k, v in row.items():
         if is_feature_in_features_to_apply(features_to_apply, k):
             if isinstance(v, int) or isinstance(v, float):

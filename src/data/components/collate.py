@@ -90,11 +90,11 @@ def collate_fn_items(
         raise AttributeError(f"Item ID field not found in batch: {item_id_field}")
 
     item_ids = batch[item_id_field]
-    model_input_data = ItemBatch(item_ids=item_ids)
+    features = {}
     for field_name, field_value in batch.items():
         if field_name == item_id_field:
             continue
         new_name = feature_to_input_name[field_name]
-        model_input_data.features[new_name] = field_value
+        features[new_name] = field_value
 
-    return model_input_data
+    return ItemBatch(item_ids=item_ids, features=features)

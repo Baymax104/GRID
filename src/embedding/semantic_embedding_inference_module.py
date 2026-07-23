@@ -71,6 +71,4 @@ class SemanticEmbeddingInferenceModule(LightningModule):
                 ids as keys and the semantic embeddings as predictions.
         """
         semantic_embeddings = self.model_step(batch)
-        item_ids = [item_id.item() if isinstance(item_id, torch.Tensor) else item_id for item_id in batch.item_ids]
-
-        return ModelOutput(keys=item_ids, predictions=semantic_embeddings)
+        return ModelOutput(keys=batch.item_ids, predictions=semantic_embeddings)
