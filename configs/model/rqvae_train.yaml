@@ -1,13 +1,12 @@
 # @package _global_
 
 root:
-  _target_: src.quantization.residual_quantization_vae.ResidualQuantizationVAE
+  _target_: src.quantization.rqvae.residual_quantization_vae.ResidualQuantizationVAE
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${model.encoder.output_dim}
   loss_function: ${model.loss_function}
   init_buffer_size: 3072
-  initialize_on_cpu: false
   normalize_residuals: false
   kmeans_max_iter: 1000
   normalization_layer: ${model.normalization_layer}
@@ -15,7 +14,6 @@ root:
   decoder: ${model.decoder}
   reconstruction_loss_function: ${model.reconstruction_loss_function}
   reconstruction_loss_weight: 1.0
-  training_loop_function: ${model.training_loop_function}
   optimizer: ${model.optimizer}
   scheduler: null
 loss_function:
@@ -53,9 +51,6 @@ decoder:
 reconstruction_loss_function:
   _target_: torch.nn.MSELoss
   reduction: mean
-training_loop_function:
-  _target_: src.quantization.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
-  _partial_: true
 optimizer:
   _target_: torch.optim.Adagrad
   _partial_: true

@@ -4,7 +4,7 @@ root:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
   min_steps: 1
-  max_steps: 1000
+  max_steps: 1500
   accelerator: gpu
   devices: ${devices}
   num_nodes: 1

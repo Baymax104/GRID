@@ -1,12 +1,10 @@
 # @package _global_
 
 root:
-  _target_: src.quantization.residual_kmeans.ResidualKMeans
+  _target_: src.quantization.rkmeans.residual_kmeans.ResidualKMeans
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${embedding_dim}
   init_buffer_size: 3072
-  initialize_on_cpu: false
-  normalize_residuals: true
   optimizer: null
   scheduler: null

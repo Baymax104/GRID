@@ -1,26 +1,31 @@
 # @package _global_
 
 root:
-  _target_: src.quantization.residual_kmeans.ResidualKMeans
+  _target_: src.quantization.rkmeans.residual_kmeans.ResidualKMeans
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${embedding_dim}
-  init_buffer_size: 3072
-  initialize_on_cpu: false
-  normalize_residuals: true
   optimizer: ${model.optimizer}
   scheduler: ${model.scheduler}
-  training_loop_function: ${model.training_loop_function}
+  loss_function: ${model.loss_function}
+  sub_layer:
+    _target_: src.quantization.rkmeans.kmeans_layer.KMeansLayer
+    _partial_: true
+    n_clusters: ${codebook_width}
+    n_features: ${embedding_dim}
+    init_buffer_size: 3072
+
 optimizer:
   _target_: torch.optim.SGD
   _partial_: true
   lr: 0.5
+
 scheduler:
   _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
   _partial_: true
   warmup_steps: 100
   min_ratio: 0.3
   scheduler_steps: ${trainer.root.max_steps}
-training_loop_function:
-  _target_: src.quantization.training_loop_functions.scale_loss_by_world_size_for_initialization_training_loop
-  _partial_: true
+
+loss_function:
+  _target_: src.common.components.loss_functions.WeightedSquaredError
