@@ -7,7 +7,7 @@
 - 配置：`configs/experiment/sem_embeds_inference.yaml`
 - datamodule：`src.data.data_module.BaseDataModule`
 - collate：`src.data.components.collate.collate_fn_items`
-- 模型：`src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule`
+- 模型：`src.embedding.semantic_embedder.SemanticEmbedder`
 
 ## 原始字段
 
@@ -149,7 +149,7 @@ ItemData(
 
 ## 模型实际消费的输入
 
-`SemanticEmbeddingInferenceModule` 会根据配置里的映射：
+`SemanticEmbedder` 会根据配置里的映射：
 
 ```yaml
 semantic_embedding_model_input_map:
@@ -173,7 +173,7 @@ attention_mask: torch.Tensor   # (B, 128)
 
 ## 输出形状
 
-`SemanticEmbeddingInferenceModule.predict_step()` 输出语义向量，并包装成 `ModelOutput`。
+`SemanticEmbedder.predict_step()` 输出语义向量，并包装成 `ModelOutput`。
 
 常见输出可近似理解为：
 

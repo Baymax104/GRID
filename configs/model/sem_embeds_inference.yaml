@@ -9,7 +9,7 @@ semantic_embedding_model:
     _target_: src.common.modules.embedding_aggregator.EmbeddingAggregator
 
 root:
-  _target_: src.embedding.semantic_embedding_inference_module.SemanticEmbeddingInferenceModule
+  _target_: src.embedding.semantic_embedder.SemanticEmbedder
   semantic_embedding_model_input_map:
     input_ids: text_tokens
     attention_mask: text_mask

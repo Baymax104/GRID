@@ -7,14 +7,14 @@ from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
 
 
-class SemanticEmbeddingInferenceModule(LightningModule):
+class SemanticEmbedder(LightningModule):
     def __init__(
         self,
         semantic_embedding_model: nn.Module | transformers.PreTrainedModel,
         semantic_embedding_model_input_map: dict[str, str],
     ):
         """
-        Initialize the SemanticEmbeddingInferenceModule.
+        Initialize the SemanticEmbedder.
 
         This module is used to compute semantic embeddings from input data using a
         pre-trained, frozen semantic embedding model. It is intended to be used only for
