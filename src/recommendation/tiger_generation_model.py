@@ -132,9 +132,9 @@ class SemanticIDEncoderDecoder(LightningModule):
         )
 
         # separation token for the encoder to differentiate between items
-        self.sep_token = (
-            nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True) if should_add_sep_token else None
-        )
+        self.sep_token = None
+        if should_add_sep_token:
+            self.sep_token = nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True)
 
     def _inject_sep_token_between_sids(
         self,
@@ -327,7 +327,7 @@ class SemanticIDEncoderDecoder(LightningModule):
         """
 
         # we shift the IDs here to match the hierarchy structure
-        # so that we can use a single embedding table to store the embeddigns for all hierarchies
+        # so that we can use a single embedding table to store the embeddings for all hierarchies
         shifted_sids = self._add_repeating_offset_to_rows(
             input_sids=input_ids,
             codebook_size=self.num_embeddings_per_hierarchy,
@@ -603,10 +603,6 @@ class SemanticIDEncoderDecoder(LightningModule):
         # we prepended a bos token to the decoder input
         # so we need to remove the last token in the output
         model_output = model_output[:, :-1]
-
-        # the label locations is shared for all semantic id hierarchies
-        if self.loss_function is None:
-            raise ValueError("loss_function is required for TIGER training/evaluation steps.")
 
         loss = 0
         for hierarchy in range(self.num_hierarchies):

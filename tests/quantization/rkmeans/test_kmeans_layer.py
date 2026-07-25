@@ -11,6 +11,7 @@ from src.quantization.rkmeans.kmeans_layer import KMeansLayer, _kmeans_plus_plus
 from src.quantization.rkmeans.residual_kmeans import ResidualKMeans
 from src.quantization.rqvae.residual_quantization_vae import ResidualQuantizationVAE
 from src.quantization.rvq.residual_vector_quantization import ResidualVectorQuantization
+from src.quantization.rvq.vector_quantization_layer import VectorQuantizationLayer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -31,6 +32,20 @@ def create_residual_kmeans(**kwargs) -> ResidualKMeans:
             init_buffer_size=init_buffer_size,
         ),
         loss_function=WeightedSquaredError(),
+        **kwargs,
+    )
+
+
+def create_residual_vector_quantization(**kwargs) -> ResidualVectorQuantization:
+    n_clusters = kwargs.setdefault("n_clusters", 2)
+    n_features = kwargs.setdefault("n_features", 2)
+    init_buffer_size = kwargs.pop("init_buffer_size", 4)
+    return ResidualVectorQuantization(
+        sub_layer=lambda: VectorQuantizationLayer(
+            n_clusters=n_clusters,
+            n_features=n_features,
+            init_buffer_size=init_buffer_size,
+        ),
         **kwargs,
     )
 
@@ -92,6 +107,8 @@ def test_quantization_models_do_not_expose_training_loop_function_or_manual_opti
         assert "training_loop_function" not in inspect.signature(model_class).parameters
         if model_class is ResidualKMeans:
             model = create_residual_kmeans(n_layers=1)
+        elif model_class is ResidualVectorQuantization:
+            model = create_residual_vector_quantization(n_layers=1)
         else:
             model = model_class(n_layers=1, n_clusters=2, n_features=2, init_buffer_size=4)
         assert not hasattr(model, "training_loop_function")
@@ -232,6 +249,19 @@ def test_residual_kmeans_uses_one_kmeans_layer_per_hierarchy():
     assert all(not hasattr(layer, "cluster_counts") for layer in model.layers)
 
 
+def test_rvq_uses_one_vector_quantization_layer_per_hierarchy():
+    model = create_residual_vector_quantization(n_layers=3, init_buffer_size=2)
+
+    assert len(model.layers) == 3
+    assert all(isinstance(layer, VectorQuantizationLayer) for layer in model.layers)
+    assert [tuple(layer.centroids.shape) for layer in model.layers] == [(2, 2), (2, 2), (2, 2)]
+    assert "centroids_list" not in dict(model.named_parameters())
+    assert "layers.0.centroids" in dict(model.named_parameters())
+    assert not hasattr(model, "init_buffers")
+    assert not hasattr(model, "is_initialized_list")
+    assert all(not hasattr(layer, "loss_function") for layer in model.layers)
+
+
 def test_residual_kmeans_forward_trains_only_current_layer_and_preserves_shapes():
     model = create_residual_kmeans(n_layers=2, init_buffer_size=2)
     model._trainer = SimpleNamespace(state=SimpleNamespace(fn=TrainerFn.FITTING))
@@ -292,20 +322,20 @@ def test_residual_kmeans_initialization_loss_keeps_grad_path_before_buffer_is_fu
 
 def test_rvq_initializes_in_the_same_step_without_transition_state():
     torch.manual_seed(0)
-    model = ResidualVectorQuantization(n_layers=1, n_clusters=2, n_features=2, init_buffer_size=4)
+    model = create_residual_vector_quantization(n_layers=1, init_buffer_size=4)
     residuals = torch.tensor([[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]])
 
-    ids, embeddings, loss = model._layer_model_step(0, residuals)
+    ids, embeddings, quantization_loss_embeddings = model.layers[0](residuals)
 
     assert ids.shape == (4,)
     assert embeddings.shape == residuals.shape
-    assert loss is not None
-    assert model.is_initialized_list == [True]
-    assert model.init_buffers[0].numel() == 0
+    assert quantization_loss_embeddings is None
+    assert model.layers[0].is_initialized
+    assert model.layers[0].init_buffer.numel() == 0
     assert not hasattr(model, "is_initial_step_list")
     assert not hasattr(model, "init_centroids_list")
     assert not hasattr(model, "init_loss_function")
-    assert not torch.equal(model.centroids_list[0].detach(), torch.zeros_like(model.centroids_list[0]))
+    assert not torch.equal(model.layers[0].centroids.detach(), torch.zeros_like(model.layers[0].centroids))
 
 
 def test_rqvae_initializes_in_the_same_step_after_convergence_without_transition_state():
@@ -334,7 +364,7 @@ def test_rqvae_initializes_in_the_same_step_after_convergence_without_transition
 
 def test_rvq_distributed_non_zero_rank_receives_broadcasted_initial_centroids(monkeypatch):
     broadcasted_centroids = torch.tensor([[2.0, 0.0], [0.0, 2.0]])
-    model = ResidualVectorQuantization(n_layers=1, n_clusters=2, n_features=2, init_buffer_size=4)
+    model = create_residual_vector_quantization(n_layers=1, init_buffer_size=4)
     residuals = torch.tensor([[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]])
 
     monkeypatch.setattr(distributed_utils.dist, "is_available", lambda: True)
@@ -346,11 +376,11 @@ def test_rvq_distributed_non_zero_rank_receives_broadcasted_initial_centroids(mo
         tensor.copy_(broadcasted_centroids)
 
     monkeypatch.setattr(distributed_utils.dist, "broadcast", fake_broadcast)
-    ids, embeddings, loss = model._layer_model_step(0, residuals)
+    ids, embeddings, quantization_loss_embeddings = model.layers[0](residuals)
 
-    assert loss is not None
-    assert model.is_initialized_list == [True]
-    assert torch.equal(model.centroids_list[0].detach(), broadcasted_centroids)
+    assert quantization_loss_embeddings is None
+    assert model.layers[0].is_initialized
+    assert torch.equal(model.layers[0].centroids.detach(), broadcasted_centroids)
     assert torch.equal(ids, torch.tensor([0, 0, 1, 1]))
     assert torch.equal(embeddings, broadcasted_centroids[ids])
 

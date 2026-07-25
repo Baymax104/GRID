@@ -11,72 +11,9 @@ from torchmetrics import MeanMetric
 from src.common.components.loss_functions import WeightedSquaredError
 from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
-from src.utils.distributed_utils import broadcast_from_rank_zero, get_distributed_rank
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
-
-
-def _compute_squared_euclidean_distance(x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256) -> torch.Tensor:
-    """Compute squared Euclidean distances between rows of x and rows of y."""
-    assert x.dim() == 2, f"Data must be 2D, got {x.dim()} dimensions"
-    assert y.dim() == 2, f"Data must be 2D, got {y.dim()} dimensions"
-    assert x.size(1) == y.size(1), "Data must have the same number of columns"
-
-    n1 = x.shape[0]
-    if batch_size is None or batch_size >= n1:
-        x_expanded = x.unsqueeze(1)
-        y_expanded = y.unsqueeze(0)
-        return torch.sum((x_expanded - y_expanded).pow(2), dim=2)
-
-    all_sq_distances = []
-    num_batches = (n1 + batch_size - 1) // batch_size
-    for i in range(num_batches):
-        start_idx = i * batch_size
-        end_idx = min((i + 1) * batch_size, n1)
-        x_batch = x[start_idx:end_idx]
-        x_batch_expanded = x_batch.unsqueeze(1)
-        y_expanded = y.unsqueeze(0)
-        sq_diffs_batch = (x_batch_expanded - y_expanded).pow(2)
-        all_sq_distances.append(torch.sum(sq_diffs_batch, dim=2))
-    return torch.cat(all_sq_distances, dim=0)
-
-
-def _kmeans_plus_plus_init(
-    buffer: torch.Tensor,
-    n_clusters: int,
-    distance_fn: Callable = _compute_squared_euclidean_distance,
-) -> torch.Tensor:
-    """Initialize centroids using the k-means++ algorithm."""
-    n_samples = buffer.shape[0]
-    n_features = buffer.shape[1]
-    centroids = torch.zeros((n_clusters, n_features), dtype=buffer.dtype, device=buffer.device)
-
-    first_centroid_idx = torch.randint(0, n_samples, (1,), device=buffer.device)
-    centroids[0] = buffer[first_centroid_idx]
-
-    for i in range(1, n_clusters):
-        min_distances = torch.min(distance_fn(buffer, centroids[:i]), dim=1)[0]
-        if min_distances.sum() == 0:
-            centroids[i:] = buffer[torch.randint(0, n_samples, (n_clusters - i,), device=buffer.device)]
-            break
-        next_centroid_idx = torch.multinomial(min_distances, num_samples=1)
-        centroids[i] = buffer[next_centroid_idx]
-
-    return centroids
-
-
-def _ste_quantize(
-    codebook: torch.Tensor,
-    batch: torch.Tensor,
-    distance_fn: Callable = _compute_squared_euclidean_distance,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Quantize using the Straight-Through Estimator (STE)."""
-    dists = distance_fn(batch, codebook)
-    ids = torch.argmin(dists, dim=-1)
-    embeddings = codebook[ids]
-    reconstruction_loss_embeddings = batch + (embeddings - batch).detach()
-    return ids, embeddings, reconstruction_loss_embeddings
 
 
 class ResidualVectorQuantization(LightningModule):
@@ -94,8 +31,8 @@ class ResidualVectorQuantization(LightningModule):
         n_layers: int,
         n_clusters: int,
         n_features: int,
+        sub_layer: Callable[..., nn.Module],
         loss_function: nn.Module | None = None,
-        init_buffer_size: int = 1000,
         normalize_residuals: bool = True,
         quantization_loss_weight: float = 1.0,
         optimizer: Callable[..., torch.optim.Optimizer] | None = None,
@@ -106,7 +43,6 @@ class ResidualVectorQuantization(LightningModule):
         self.n_layers = n_layers
         self.n_clusters = n_clusters
         self.n_features = n_features
-        self.init_buffer_size = init_buffer_size
         self.normalize_residuals = normalize_residuals
         self.quantization_loss_weight = quantization_loss_weight
         self.optimizer = optimizer
@@ -118,18 +54,10 @@ class ResidualVectorQuantization(LightningModule):
 
         # Layer-wise training schedule state
         self.current_layer = 0
-        self.steps_per_layer = 0
-        self.layer_step_budgets: list[int] = []
         self.layer_step_boundaries: list[int] = []
-        self.layer_training_schedule: list[int] = []
-        self.current_layer_schedule_index = 0
 
         # Per-layer parameters and state
-        self.centroids_list = nn.ParameterList(
-            [nn.Parameter(torch.zeros(n_clusters, n_features), requires_grad=True) for _ in range(n_layers)]
-        )
-        self.init_buffers: list[torch.Tensor] = [torch.tensor([]) for _ in range(n_layers)]
-        self.is_initialized_list: list[bool] = [False for _ in range(n_layers)]
+        self.layers = nn.ModuleList([sub_layer() for _ in range(n_layers)])
 
         # Metrics
         self.train_loss = MeanMetric()
@@ -157,85 +85,6 @@ class ResidualVectorQuantization(LightningModule):
         self.test_frac_unique_ids = MeanMetric()
 
     # ------------------------------------------------------------------ #
-    # Per-layer VQ logic (inlined from BaseClusteringModule + VectorQuantization)
-    # ------------------------------------------------------------------ #
-
-    def _buffer_points(self, layer_idx: int, batch: torch.Tensor):
-        batch = batch.detach()
-        buf = self.init_buffers[layer_idx]
-        n_to_add = min(self.init_buffer_size - buf.shape[0], batch.shape[0])
-        self.init_buffers[layer_idx] = torch.cat([buf, batch[:n_to_add]], dim=0)
-
-    def _compute_initial_centroids_for_current_rank(self, layer_idx: int, buffer: torch.Tensor) -> torch.Tensor:
-        if buffer.shape[0] < self.n_clusters:
-            raise ValueError(f"Buffer size {buffer.shape[0]} is less than the number of clusters {self.n_clusters}.")
-        if get_distributed_rank() != 0:
-            return torch.zeros_like(self.centroids_list[layer_idx].data)
-        return _kmeans_plus_plus_init(buffer, self.n_clusters)
-
-    def _initialization_step(
-        self, layer_idx: int, batch: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        self._buffer_points(layer_idx, batch)
-
-        if self.init_buffers[layer_idx].shape[0] < self.init_buffer_size:
-            loss = self.centroids_list[layer_idx].sum() * 0.0
-            batch_zero_embeddings = torch.zeros_like(batch, dtype=batch.dtype, device=self.device)
-            batch_zero_assignments = torch.zeros(batch.shape[0], dtype=torch.long, device=self.device)
-            return batch_zero_assignments, batch_zero_embeddings, loss
-
-        initial_centroids = self._compute_initial_centroids_for_current_rank(
-            layer_idx=layer_idx, buffer=self.init_buffers[layer_idx]
-        )
-        initial_centroids = broadcast_from_rank_zero(initial_centroids)
-        with torch.no_grad():
-            self.centroids_list[layer_idx].copy_(initial_centroids)
-        self.is_initialized_list[layer_idx] = True
-        self.init_buffers[layer_idx] = torch.tensor([], device=self.device)
-
-        loss = self.centroids_list[layer_idx].sum() * 0.0
-        distances = _compute_squared_euclidean_distance(batch, self.centroids_list[layer_idx].data)
-        assignments = torch.argmin(distances, dim=1).to(self.device)
-        return assignments, self.centroids_list[layer_idx][assignments], loss
-
-    def _vq_forward(
-        self, layer_idx: int, batch: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        """VQ forward: use quantization_strategy to quantize."""
-        codebook = self.centroids_list[layer_idx]
-        ids, embeddings, reconstruction_loss_embeddings = _ste_quantize(
-            codebook=codebook,
-            batch=batch,
-        )
-        return ids, embeddings, reconstruction_loss_embeddings
-
-    def _layer_model_step(
-        self, layer_idx: int, batch: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        """Per-layer model step: init check → forward → loss."""
-        if batch.device != self.device:
-            batch = batch.to(self.device)
-
-        if not self.is_initialized_list[layer_idx]:
-            return self._initialization_step(layer_idx, batch)
-
-        assignments, embeddings, reconstruction_loss_embeddings = self._vq_forward(layer_idx, batch)
-        loss = self.loss_function(batch, embeddings)
-        return (
-            assignments,
-            reconstruction_loss_embeddings if reconstruction_loss_embeddings is not None else embeddings,
-            loss,
-        )
-
-    def _predict_layer(self, layer_idx: int, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        batch = batch.to(self.device)
-        with torch.no_grad():
-            centroids = self.centroids_list[layer_idx].data
-            distances = _compute_squared_euclidean_distance(batch, centroids)
-            assignments = torch.argmin(distances, dim=1)
-            return assignments, centroids[assignments]
-
-    # ------------------------------------------------------------------ #
     # Model-level forward / model_step
     # ------------------------------------------------------------------ #
 
@@ -250,15 +99,20 @@ class ResidualVectorQuantization(LightningModule):
             if self.normalize_residuals:
                 current_residuals = nn.functional.normalize(current_residuals, dim=-1)
 
+            layer = self.layers[idx]
             train_layer = False
             if self.trainer.state.fn == TrainerFn.FITTING:
                 train_layer = idx == self.current_layer
 
             if train_layer:
-                layer_ids, layer_embeddings, layer_loss = self._layer_model_step(idx, current_residuals)
+                layer_ids, layer_embeddings, quantization_loss_embeddings = layer(current_residuals)
+                if quantization_loss_embeddings is None:
+                    layer_loss = layer.centroids.sum() * 0.0
+                else:
+                    layer_loss = self.loss_function(current_residuals, quantization_loss_embeddings)
                 quantization_loss += layer_loss
             else:
-                layer_ids, layer_embeddings = self._predict_layer(idx, current_residuals)
+                layer_ids, layer_embeddings = layer.predict(current_residuals)
 
             cluster_ids.append(layer_ids)
             quantized_embeddings = quantized_embeddings + layer_embeddings
@@ -347,15 +201,14 @@ class ResidualVectorQuantization(LightningModule):
         )
 
         if (
-            self.current_layer_schedule_index < len(self.layer_training_schedule) - 1
-            and (self.current_layer < 0 or self.is_initialized_list[self.current_layer])
-            and self.global_step + 1 >= self.layer_step_boundaries[self.current_layer_schedule_index]
+            self.current_layer < self.n_layers - 1
+            and self.layers[self.current_layer].is_initialized
+            and self.global_step + 1 >= self.layer_step_boundaries[self.current_layer]
         ):
             logger.info(
                 f"Device {self.device}: Finished training {self._format_layer_name(self.current_layer)} at global_step={self.global_step + 1}.",
             )
-            self.current_layer_schedule_index += 1
-            self.current_layer = self.layer_training_schedule[self.current_layer_schedule_index]
+            self.current_layer += 1
 
         return loss
 
@@ -368,40 +221,16 @@ class ResidualVectorQuantization(LightningModule):
         if hasattr(self, "train_loss"):
             self.train_loss.reset()
 
-        self.current_layer = 0
-        self.current_layer_schedule_index = 0
-        self.layer_step_budgets = []
-        self.layer_step_boundaries = []
-        self.layer_training_schedule = []
-
-        for idx in range(self.n_layers):
-            self.init_buffers[idx] = torch.tensor([], device=self.device)
-            self.centroids_list[idx] = self.centroids_list[idx].to(self.device)
+        for layer in self.layers:
+            layer.reset_training_state(self.device)
 
         total_steps = self.trainer.max_steps
-        self.layer_training_schedule = list(range(self.n_layers))
-
-        eff_n_layers = len(self.layer_training_schedule)
-        base_steps_per_layer = total_steps // eff_n_layers
-        remainder = total_steps % eff_n_layers
-        self.layer_step_budgets = [
-            base_steps_per_layer + (1 if layer_idx < remainder else 0) for layer_idx in range(eff_n_layers)
-        ]
+        layer_step_budgets = [total_steps // self.n_layers for _ in range(self.n_layers)]
+        layer_step_budgets[-1] += total_steps % self.n_layers
         cumulative_steps = 0
-        for budget in self.layer_step_budgets:
+        for budget in layer_step_budgets:
             cumulative_steps += budget
             self.layer_step_boundaries.append(cumulative_steps)
-
-        self.current_layer = self.layer_training_schedule[0]
-        self.steps_per_layer = base_steps_per_layer
-        schedule_as_text = ", ".join(
-            f"{self._format_layer_name(layer)}={budget}"
-            for layer, budget in zip(self.layer_training_schedule, self.layer_step_budgets, strict=False)
-        )
-        logger.info(
-            f"Device {self.device}: Training layers one-at-a-time with step budget [{schedule_as_text}] (total={total_steps})."
-            " Ensure that early stopping callbacks are disabled."
-        )
 
         self.train_first_residuals_norm_ratio.reset()
         self.train_last_residuals_norm_ratio.reset()
@@ -429,8 +258,8 @@ class ResidualVectorQuantization(LightningModule):
         last_residuals_norm_ratio = last_residuals_norm / input_embedding_norm
         mse = last_residuals_norm**2 / all_residuals[:, :, -1].numel()
 
-        first_centroids_norm = torch.linalg.matrix_norm(self.centroids_list[0])
-        last_centroids_norm = torch.linalg.matrix_norm(self.centroids_list[-1])
+        first_centroids_norm = torch.linalg.matrix_norm(self.layers[0].centroids)
+        last_centroids_norm = torch.linalg.matrix_norm(self.layers[-1].centroids)
 
         frac_unique_ids = torch.unique(cluster_ids, dim=0).shape[0] / cluster_ids.shape[0]
 
@@ -579,10 +408,10 @@ class ResidualVectorQuantization(LightningModule):
     def on_load_checkpoint(self, checkpoint):
         self.current_layer = checkpoint["current_layer"]
         for idx in range(self.n_layers):
-            self.is_initialized_list[idx] = checkpoint["layers_initialized"][idx]
+            self.layers[idx].is_initialized = checkpoint["layers_initialized"][idx]
         return super().on_load_checkpoint(checkpoint)
 
     def on_save_checkpoint(self, checkpoint):
         checkpoint["current_layer"] = self.current_layer
-        checkpoint["layers_initialized"] = list(self.is_initialized_list)
+        checkpoint["layers_initialized"] = [layer.is_initialized for layer in self.layers]
         return super().on_save_checkpoint(checkpoint)

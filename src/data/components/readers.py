@@ -87,7 +87,7 @@ class TFRecordReader(BaseDataReader):
 
         dataset_iterator = merged_examples()
         if self.shuffle_rows:
-            dataset_iterator = shuffle_iterator(iter(dataset_iterator), queue_size=1024)
+            dataset_iterator = shuffle_iterator(iter(dataset_iterator), queue_size=128)
 
         dataset_iterator = iter(dataset_iterator)
         curr_example = self._get_next_example(dataset_iterator)
