@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 
-from src.common.components.model_output import ModelOutput
+from src.inference.model_output import ModelOutput
 from src.utils.file_utils import open_local_or_remote
 
 

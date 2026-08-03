@@ -1,11 +1,9 @@
 import json
 import os
 from pathlib import Path
-from shutil import SameFileError
 from typing import BinaryIO
 
 from fsspec.core import url_to_fs
-from lightning.fabric.utilities.types import _PATH
 
 from src.utils.decorators import retry
 from src.utils.pylogger import RankedLogger
@@ -17,23 +15,6 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 def get_file_size(file_path: str) -> int:
     fs, _ = url_to_fs(file_path)
     return fs.size(file_path)
-
-
-@retry()
-def copy_to_remote(local_path: str, remote_path: str, recursive: bool = True):
-    try:
-        logger.info(f"Copying {local_path} to {remote_path}")
-        fs, _ = url_to_fs(remote_path)
-        fs.put(local_path, remote_path, recursive=recursive)
-        logger.info(f"Finished copying {local_path} to {remote_path}")
-    except SameFileError:
-        logger.warning(f"{local_path} and {remote_path} are the same. Skipping copy.")
-
-
-@retry()
-def file_exists_local_or_remote(file_path: str) -> bool:
-    fs, _ = url_to_fs(file_path)
-    return fs.exists(file_path)
 
 
 @retry()
@@ -66,24 +47,6 @@ def get_last_modified_file(folder_path: str, suffix="*", should_update_prefix=Tr
             latest_mtime = mtime
             latest_file = file
     return latest_file
-
-
-def remove_file_extension(path: str) -> _PATH:
-    """
-    Removes the file extension from a given file path.
-
-    Args:
-        path (_PATH): The file path from which to remove the extension.
-
-    Returns:
-        _PATH: The file path without the extension.
-
-    Example:
-        >>> remove_file_extension("example/file.txt")
-        'example/file'
-    """
-    base, _ = os.path.splitext(path)
-    return base
 
 
 def has_no_extension(filepath: str) -> bool:

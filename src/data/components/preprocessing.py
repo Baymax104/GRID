@@ -4,11 +4,10 @@ from typing import Any
 import numpy as np
 import torch
 
-from src.common.components.model_output import ModelOutput
 from src.data.components.tokenization import load_tokenize
-from src.data.utils import normalize_sequence_tensor
+from src.inference.model_output import ModelOutput
+from src.inference.utils import gather_predictions_by_keys
 from src.utils.file_utils import load_json
-from src.utils.tensor_utils import gather_predictions_by_keys
 
 
 def convert_bytes_to_string(
@@ -270,16 +269,35 @@ def normalize_sequence(
     attention_mask_field_name: str = "attention_mask",
     sequence_length: int = 200,
     padding_token: int = 0,
+    sid_hierarchy: int | None = None,
 ) -> dict[str, torch.Tensor]:
     """Normalize a TIGER input sequence row and generate its attention mask."""
     if input_field_name not in row:
         raise ValueError(f"Input field '{input_field_name}' not found in row.")
 
-    normalized_input = normalize_sequence_tensor(
-        sequence=row[input_field_name],
-        sequence_length=sequence_length,
-        padding_token=padding_token,
-    )
+    normalized_input = row[input_field_name]
+    if normalized_input.dim() != 1:
+        raise ValueError(f"Expected 1-D sequence tensor, got shape {tuple(normalized_input.shape)}.")
+    if sid_hierarchy is not None and sid_hierarchy <= 0:
+        raise ValueError("sid_hierarchy must be a positive integer when provided.")
+
+    if normalized_input.size(0) > sequence_length:
+        if sid_hierarchy is None:
+            valid_length = normalized_input.size(0) - (normalized_input == padding_token).sum().item()
+            start_index = max(valid_length - sequence_length, 0)
+            normalized_input = normalized_input[start_index : start_index + sequence_length]
+        else:
+            max_complete_token_length = (sequence_length // sid_hierarchy) * sid_hierarchy
+            complete_input_length = (normalized_input.size(0) // sid_hierarchy) * sid_hierarchy
+            normalized_input = normalized_input[:complete_input_length]
+            if max_complete_token_length == 0:
+                normalized_input = normalized_input[:0]
+            else:
+                normalized_input = normalized_input[-max_complete_token_length:]
+
+    if normalized_input.size(0) < sequence_length:
+        padding = normalized_input.new_full((sequence_length - normalized_input.size(0),), padding_token)
+        normalized_input = torch.cat([normalized_input, padding], dim=0)
 
     normalized_row = dict(row)
     normalized_row[input_field_name] = normalized_input

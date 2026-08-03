@@ -9,11 +9,11 @@ from torchmetrics import MeanMetric
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 
 from src.common.components.eval_metrics import Evaluator
-from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import (
     TigerLabelData,
     TigerModelInput,
 )
+from src.inference.model_output import ModelOutput
 from src.recommendation.decoder_module import SemanticIDDecoderModule
 from src.recommendation.encoder_module import SemanticIDEncoderModule
 from src.recommendation.t5_multi_layer_ff import T5MultiLayerFF

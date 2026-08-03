@@ -3,8 +3,8 @@ import transformers
 from lightning import LightningModule
 from torch import nn
 
-from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
+from src.inference.model_output import ModelOutput
 
 
 class SemanticEmbedder(LightningModule):

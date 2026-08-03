@@ -9,8 +9,8 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.common.components.loss_functions import WeightedSquaredError
-from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
+from src.inference.model_output import ModelOutput
 from src.utils.distributed_utils import broadcast_from_rank_zero, get_distributed_rank
 from src.utils.pylogger import RankedLogger
 

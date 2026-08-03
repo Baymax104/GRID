@@ -12,7 +12,7 @@ TBD - created by archiving change add-cli-dry-run. Update Purpose after archive.
 - **AND** 主链路必须以内部 `dry_run=true` 的语义继续运行
 
 #### Scenario: Inference entry receives dry-run flag
-- **WHEN** 用户执行 `-m src.inference --dry-run ...`
+- **WHEN** 用户通过统一入口执行推理 experiment 并附带 `--dry-run ...`
 - **THEN** 推理入口必须成功识别该 flag
 - **AND** 不得因为未知 CLI 参数导致 Hydra 解析失败
 
@@ -49,4 +49,3 @@ dry run 第一版 SHALL 保留 Hydra 输出目录和运行元信息写入，只�
 - **THEN** 允许生成 Hydra 输出目录与普通运行日志
 - **AND** 允许保留 `config_tree.log`
 - **AND** 不得要求保留已删除的 `tags.log`
-

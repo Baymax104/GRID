@@ -4,19 +4,22 @@
 TBD - created by archiving change flatten-data-loading-and-rename-components. Update Purpose after archive.
 ## Requirements
 ### Requirement: 数据加载包 SHALL 采用扁平化目录布局
-`src/data/` 包 SHALL 直接承载 `components/`、`data_module.py`、`dataloaders.py`、`datasets.py`、`utils.py`，且 SHALL NOT 保留 `loading/` 中间层目录或独立 `datamodules/` 实现目录。
+`src/data/` 包 SHALL 直接承载 `components/`、`data_module.py`、`dataloaders.py`、`datasets.py` 和 `utils.py`，且 SHALL NOT 保留 `loading/` 中间层目录或独立 `datamodules/` 实现目录。数据加载共享 helper SHALL 位于 `src/data/utils.py`。
 
 #### Scenario: 不存在 loading 中间层
 - **WHEN** 维护者检查 `src/data/` 目录结构
 - **THEN** 目录下 MUST 直接包含 `components/`、`data_module.py`、`dataloaders.py`、`datasets.py`、`utils.py`
 - **THEN** datamodule 实现 MUST 位于 `src/data/data_module.py`
+- **THEN** 数据加载共享 helper MUST 位于 `src/data/utils.py`
 - **THEN** 目录下 MUST NOT 包含当前生效的 `datamodules/` 实现目录
 - **THEN** 目录下 MUST NOT 包含 `loading/` 子目录
 
 #### Scenario: Python 模块路径不经过 loading
 - **WHEN** 仓库代码或配置以 `_target_` 或 import 引用数据加载模块
-- **THEN** 模块路径 MUST 形如 `src.data.components.*`、`src.data.data_module`、`src.data.dataloaders`、`src.data.datasets`、`src.data.utils`
+- **THEN** 数据加载模块路径 MUST 形如 `src.data.components.*`、`src.data.data_module`、`src.data.dataloaders`、`src.data.datasets`
+- **THEN** 数据加载共享 helper 路径 MUST 形如 `src.data.utils`
 - **THEN** datamodule `_target_` MUST reference `src.data.data_module.BaseDataModule`
+- **THEN** 模块路径 MUST NOT 形如 `src.utils.data_utils`
 - **THEN** 模块路径 MUST NOT 形如 `src.data.datamodules.*`
 - **THEN** 模块路径 MUST NOT 形如 `src.data.loading.*`
 

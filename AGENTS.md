@@ -14,11 +14,13 @@
   - `sem_embeds_inference.sh`
   - `rkmeans_train.sh`
   - `rkmeans_inference.sh`
+  - `rqvae_train.sh`
+  - `rvq_train.sh`
   - `tiger_train.sh`
 
 ## 实际 pipeline 顺序
 - 语义向量：`experiment=sem_embeds_inference`
-- 训练量化器：`experiment=rkmeans_train`
+- 训练量化器：`experiment=rkmeans_train` / `rqvae_train` / `rvq_train`
 - 生成 semantic IDs：`experiment=rkmeans_inference`
 - 训练生成推荐模型：`experiment=tiger_train`
 - 生成推荐结果：`experiment=tiger_inference`
@@ -38,11 +40,15 @@
 - 默认 `print_config=True`。若不想在启动时打印完整配置树，可在 experiment 的 `extras.print_config` 中关闭。
 - 推理类 experiment 通常会在 experiment 顶层显式提供 `ckpt_path`；只有像 `sem_embeds_inference` 这种实验才会显式覆盖成 `null`。
 - `src/utils/launcher_utils.py` 是统一入口 `src/main.py` 共用的装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
+- `src/inference/` 只是推理输出组件包，不是运行入口；不要恢复旧的 `src/inference.py` 双入口语义。
 
 ## 代码结构（只记最影响判断的）
 - `src/main.py`：统一 Hydra 入口、`extras(cfg)`，再根据 experiment 中的 `run_mode` 分发到 train / inference 链路。
-- `src/data/`：自定义数据管线核心。`BaseDataModule.setup()` 先按 GPU rank 分文件，再由自定义 iterable dataloader 读 TFRecord。
-- `src/models/embedding/`、`src/models/quantization/`、`src/models/recommendation/`：分别对应三段主 pipeline。
+- `src/data/`：自定义数据管线核心。`BaseDataModule.setup()` 先按 GPU rank 分文件，再由自定义 iterable dataloader 读 TFRecord；数据加载共享 helper 位于 `src/data/utils.py`。
+- `src/inference/`：推理输出协议与落盘链路，包括 `ModelOutput`、`LocalPickleWriter`、推理结果后处理，以及 keyed prediction bundle 加载/查询工具。
+- `src/embedding/`、`src/quantization/`、`src/recommendation/`：分别对应语义向量、量化器、生成推荐模型三段主 pipeline。
+- `src/common/components/`：仅保留跨阶段通用组件，如 metrics、loss、scheduler；不要把推理 writer 或推理输出协议放回这里。
+- `src/utils/`：保留跨域基础工具，如 launcher、logging、file I/O、Rich 输出；不要放 data 专用 helper 或 inference bundle 协议。
 
 ## 验证现实
 - pytest 是当前仓库的标准单元测试入口：从仓库根目录运行 `uv run pytest`。

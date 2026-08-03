@@ -9,8 +9,8 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.common.components.loss_functions import WeightedSquaredError
-from src.common.components.model_output import ModelOutput
 from src.data.components.data_models import ItemBatch
+from src.inference.model_output import ModelOutput
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)

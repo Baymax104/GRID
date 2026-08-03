@@ -7,7 +7,7 @@ import torch
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
 
-from src.common.components.model_output import ModelOutput
+from src.inference.model_output import ModelOutput
 from src.utils.decorators import retry
 from src.utils.file_utils import sync_file
 from src.utils.pylogger import RankedLogger

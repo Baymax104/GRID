@@ -1,28 +1,4 @@
-# utils-dead-code-removal Specification
-
-## Purpose
-TBD - created by archiving change delete-utils-dead-code. Update Purpose after archive.
-## Requirements
-### Requirement: 废弃模块 SHALL 在无引用时删除
-`src/utils/` 中标注为 Deprecated 且在仓库内（Python 代码 + YAML 配置）无任何引用的模块 SHALL 被整体删除，不得以 stub 形式保留。
-
-#### Scenario: restart_job 模块无引用时被删除
-- **WHEN** 维护者在仓库中搜索 `restart_job` 或 `RestartAndLoadCheckpointCallback` 或 `BaseJobLauncher` 或 `LocalJobLauncher`
-- **THEN** 在 `src/utils/` 下 MUST NOT 存在 `restart_job.py` 文件
-- **THEN** 在 `src/utils/` 下 MUST NOT 存在 `restart_job_utils.py` 文件
-
-### Requirement: 自定义 resolver SHALL 仅保留有配置引用的项
-`custom_hydra_resolvers.py` 中注册的 OmegaConf resolver SHALL 仅保留在 `configs/**/*.yaml` 中有实际 `${resolver_name:...}` 引用的项。无配置引用的 resolver 函数及其注册语句 SHALL 被删除。
-
-#### Scenario: now_tz resolver 被保留
-- **WHEN** 维护者检查 `custom_hydra_resolvers.py`
-- **THEN** 文件 MUST 包含 `now_of_timezone` 函数定义
-- **THEN** 文件 MUST 包含 `OmegaConf.register_new_resolver("now_tz", now_of_timezone)` 注册语句
-
-#### Scenario: 无引用 resolver 被删除
-- **WHEN** 维护者在 `configs/**/*.yaml` 中搜索 `${remove_chars_from_string`、`${conditional_expression`、`${extract_fields_from_list_of_dicts`、`${create_map_from_list_of_dicts`、`${math_eval`、`${remove_item_from_list`
-- **THEN** 搜索结果 MUST 为空
-- **THEN** `custom_hydra_resolvers.py` MUST NOT 包含这些 resolver 的函数定义或注册语句
+## MODIFIED Requirements
 
 ### Requirement: 工具函数 SHALL 在无调用者时删除
 `src/utils/` 各模块中在仓库内（Python 导入 + YAML `_target_` + OmegaConf resolver）无任何调用者的函数 SHALL 被删除。
@@ -36,7 +12,7 @@ TBD - created by archiving change delete-utils-dead-code. Update Purpose after a
 - **THEN** `src/utils/utils.py` MUST NOT 包含这些函数定义
 
 #### Scenario: file_utils 死函数被删除
-- **WHEN** 维护者在仓库中搜索 `open_pyarrow_file`、`replace_char_after_segment`
+- **WHEN** 维护者在仓库中搜索 `open_pyarrow_file`、`replace_char_after_segment`、`copy_to_remote`、`file_exists_local_or_remote`、`remove_file_extension`
 - **THEN** `src/utils/file_utils.py` MUST NOT 包含这些函数定义
 
 #### Scenario: logging_utils 死函数被删除
@@ -58,7 +34,8 @@ TBD - created by archiving change delete-utils-dead-code. Update Purpose after a
 #### Scenario: file_utils.py 清理孤立 import
 - **WHEN** 维护者检查 `file_utils.py` 的 import 语句
 - **THEN** 文件 MUST NOT 包含 `from pyarrow import fs as pyarrow_fs`
-- **THEN** 文件 MUST 保留 `from shutil import SameFileError`（仍被 `copy_to_remote` 使用）
+- **THEN** 文件 MUST NOT 包含 `from shutil import SameFileError`
+- **THEN** 文件 MUST NOT 包含 `from lightning.fabric.utilities.types import _PATH`
 
 #### Scenario: logging_utils.py 清理孤立 import
 - **WHEN** 维护者检查 `logging_utils.py` 的 import 语句

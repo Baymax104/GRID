@@ -76,94 +76,9 @@ def assign_files_to_workers(
     return worker_to_files, False
 
 
-def pad_or_trim_sequence(padded_sequence: torch.Tensor, sequence_length: int, padding_token: int = 0) -> torch.Tensor:
-    """Pad or trim the input sequence to the desired length."""
-
-    # truncation
-    if padded_sequence.size(1) > sequence_length:
-        # TODO (clark): if padded_sequence contains a lot of sequences sharing the same post-fix,
-        # this current solution will create duplicate sequences.
-        bs, seq = padded_sequence.shape
-        arange0 = torch.arange(seq, device=padded_sequence.device).repeat((bs, 1))
-        mask = padded_sequence == padding_token
-        # gets the len before padding
-        lengths = seq - mask.sum(1)
-        # shifts only for sequences longer than max_len
-        shift = torch.clamp(lengths - sequence_length, min=0).unsqueeze(1)
-        # rotate the indexes so we can trim just the last ones
-        final_idx = (arange0 + shift) % seq
-        rotated = torch.gather(padded_sequence, 1, final_idx)
-        # get just the max len
-        padded_sequence = rotated[:, :sequence_length]
-
-    # additional padding
-    if padded_sequence.size(1) < sequence_length:
-        padding_tensor = (
-            padding_token * torch.ones((padded_sequence.shape[0], sequence_length - padded_sequence.size(1))).long()
-        )
-        padded_sequence = torch.cat([padded_sequence, padding_tensor], dim=-1)
-    return padded_sequence
-
-
-def normalize_sequence_tensor(
-    sequence: torch.Tensor,
-    sequence_length: int,
-    padding_token: int = 0,
-) -> torch.Tensor:
-    """Normalize one 1-D sequence tensor to a fixed length."""
-
-    if sequence.dim() != 1:
-        raise ValueError(f"Expected 1-D sequence tensor, got shape {tuple(sequence.shape)}.")
-
-    if sequence.size(0) > sequence_length:
-        valid_length = sequence.size(0) - (sequence == padding_token).sum().item()
-        start_index = max(valid_length - sequence_length, 0)
-        sequence = sequence[start_index : start_index + sequence_length]
-
-    if sequence.size(0) < sequence_length:
-        padding = sequence.new_full((sequence_length - sequence.size(0),), padding_token)
-        sequence = torch.cat([sequence, padding], dim=0)
-
-    return sequence
-
-
-def normalize_sequence_batch(
-    sequences: list[torch.Tensor],
-    sequence_length: int,
-    padding_token: int = 0,
-) -> torch.Tensor:
-    """Normalize variable-length sequences to a fixed-length batch tensor.
-
-    This is the one-pass equivalent of ``pad_sequence`` followed by
-    ``pad_or_trim_sequence`` for 1-D sequence tensors: long rows keep the most
-    recent non-padding tokens, and short rows are right-padded.
-    """
-
-    normalized_sequences = [
-        normalize_sequence_tensor(
-            sequence=sequence,
-            sequence_length=sequence_length,
-            padding_token=padding_token,
-        )
-        for sequence in sequences
-    ]
-    return torch.stack(normalized_sequences, dim=0)
-
-
 def combine_list_of_tensor_dicts(list_of_dicts: list[dict[str, torch.Tensor]]) -> dict[str, list[torch.Tensor]]:
     batch = defaultdict(list)
     for sequence in list_of_dicts:
         for field_name, field_sequence in sequence.items():
             batch[field_name].append(field_sequence)
     return batch
-
-
-def convert_all_tensors_to_device(object, device):
-    if isinstance(object, torch.Tensor):
-        return object.to(device)
-    elif isinstance(object, dict):
-        return {k: convert_all_tensors_to_device(v, device) for k, v in object.items() if v is not None and v != object}
-    elif isinstance(object, list):
-        return [convert_all_tensors_to_device(v, device) for v in object if v is not None and v != object]
-    else:
-        return object

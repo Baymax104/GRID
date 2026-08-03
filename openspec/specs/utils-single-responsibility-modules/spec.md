@@ -29,5 +29,4 @@ TBD - created by archiving change reorganize-utils-package. Update Purpose after
 #### Scenario: 序列掩码工具归属模型工具域
 - **WHEN** 维护者检查 `create_last_k_mask` 的位置
 - **THEN** 它 MUST 位于 `src/utils/model_utils.py`
-- **THEN** 它 MUST NOT 位于 `tensor_utils.py`（该模块专用于 keyed prediction bundle 协议）
-
+- **THEN** 它 MUST NOT 位于 `src/inference/utils.py`（该模块专用于 keyed prediction bundle 协议）

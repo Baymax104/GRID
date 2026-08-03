@@ -13,7 +13,6 @@ from src.quantization.rqvae.residual_quantization_vae import ResidualQuantizatio
 from src.quantization.rvq.residual_vector_quantization import ResidualVectorQuantization
 from src.quantization.rvq.vector_quantization_layer import VectorQuantizationLayer
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 

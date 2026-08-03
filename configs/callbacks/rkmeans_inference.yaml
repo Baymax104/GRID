@@ -1,10 +1,10 @@
 # @package _global_
 
 pickle_writer:
-  _target_: src.common.components.prediction_writers.LocalPickleWriter
+  _target_: src.inference.prediction_writers.LocalPickleWriter
   output_dir: ${paths.output_dir}/pickle
   flush_frequency: 100000
   write_interval: batch
   post_processing_functions:
-  - _target_: src.common.components.postprocessing.deduplicate_rows_in_tensor
+  - _target_: src.inference.postprocessing.deduplicate_rows_in_tensor
     _partial_: true
