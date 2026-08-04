@@ -52,7 +52,7 @@ preprocessing_functions:
       - text_mask
 
 predict_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   shuffle_files: false
   preprocessing_functions: ${data.preprocessing_functions}
   data_reader:
@@ -61,7 +61,7 @@ predict_dataset_config:
     shuffle_rows: false
 
 predict_dataloader:
-  _target_: src.data.components.config_models.ItemDataloaderConfig
+  _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   batch_size_per_device: 8

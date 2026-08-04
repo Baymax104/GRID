@@ -4,7 +4,7 @@ from time import sleep
 from omegaconf import DictConfig
 
 from src.utils.pylogger import RankedLogger
-from src.utils.rich_utils import print_config_tree
+from src.utils.rich import print_config_tree
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 

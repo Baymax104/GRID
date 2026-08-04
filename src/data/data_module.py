@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 
 from src.data.dataloaders import DataloaderWithIterationRetry
 from src.data.utils import assign_files_to_workers
-from src.utils.file_utils import list_files
+from src.utils.file import list_files
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)

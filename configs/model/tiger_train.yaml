@@ -3,9 +3,7 @@
 root:
   _target_: src.recommendation.tiger_generation_model.SemanticIDEncoderDecoder
   huggingface_model: ${model.huggingface_model}
-  optimizer: ${model.optimizer}
-  scheduler: ${model.scheduler}
-  loss_function: ${model.loss_function}
+  training_model_config: ${model.training_model_config}
   evaluator: ${model.evaluator}
   decoder: ${model.decoder}
   semantic_ids:
@@ -15,7 +13,6 @@ root:
   codebook_width: ${codebook_width}
   embedding_dim: ${embedding_dim}
   should_check_prefix: true
-  mlp_layers: 2
 
 huggingface_model:
   _target_: transformers.T5EncoderModel
@@ -43,22 +40,22 @@ decoder:
     is_decoder: true
     is_encoder_decoder: false
 
-loss_function:
-  _target_: torch.nn.CrossEntropyLoss
-  ignore_index: -1
-
-optimizer:
-  _target_: torch.optim.AdamW
-  _partial_: true
-  lr: 0.0003
-  weight_decay: 0.001
-
-scheduler:
-  _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
-  _partial_: true
-  warmup_steps: 1000
-  min_ratio: 0.05
-  scheduler_steps: ${trainer.root.max_steps}
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  loss_function:
+    _target_: torch.nn.CrossEntropyLoss
+    ignore_index: -1
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: 0.0003
+    weight_decay: 0.001
+  scheduler:
+    _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _partial_: true
+    warmup_steps: 1000
+    min_ratio: 0.05
+    scheduler_steps: ${trainer.root.max_steps}
 
 evaluator:
   _target_: src.common.components.eval_metrics.SIDRetrievalEvaluator

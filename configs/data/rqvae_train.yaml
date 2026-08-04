@@ -36,7 +36,7 @@ preprocessing_functions:
     embedding_field_to_add: embedding
 
 train_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   shuffle_files: true
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
@@ -45,7 +45,7 @@ train_dataset_config:
   preprocessing_functions: ${data.preprocessing_functions}
 
 eval_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   shuffle_files: false
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
@@ -54,7 +54,7 @@ eval_dataset_config:
   preprocessing_functions: ${data.preprocessing_functions}
 
 train_dataloader:
-  _target_: src.data.components.config_models.ItemDataloaderConfig
+  _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   batch_size_per_device: 2048
@@ -68,7 +68,7 @@ train_dataloader:
   dataset_config: ${data.train_dataset_config}
   limit_files: null
 val_dataloader:
-  _target_: src.data.components.config_models.ItemDataloaderConfig
+  _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   batch_size_per_device: 256
@@ -82,7 +82,7 @@ val_dataloader:
   dataset_config: ${data.eval_dataset_config}
   limit_files: null
 test_dataloader:
-  _target_: src.data.components.config_models.ItemDataloaderConfig
+  _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   batch_size_per_device: 256

@@ -9,7 +9,7 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 
 from src.inference.model_output import ModelOutput
 from src.utils.decorators import retry
-from src.utils.file_utils import sync_file
+from src.utils.file import sync_file
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)

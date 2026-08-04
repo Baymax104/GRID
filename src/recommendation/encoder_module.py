@@ -1,7 +1,7 @@
 import torch
 import transformers
 
-from src.utils.model_utils import delete_module, find_module_shape, reset_parameters
+from src.utils.model import delete_module, find_module_shape, reset_parameters
 
 
 class SemanticIDEncoderModule(torch.nn.Module):

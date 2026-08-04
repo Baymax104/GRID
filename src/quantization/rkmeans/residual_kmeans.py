@@ -9,6 +9,7 @@ from torch import Tensor, nn
 from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
+from src.common.configs.model import TrainingModelConfig
 from src.data.components.data_models import ItemBatch
 from src.inference.model_output import ModelOutput
 from src.utils.pylogger import RankedLogger
@@ -32,20 +33,21 @@ class ResidualKMeans(LightningModule):
         n_clusters: int,
         n_features: int,
         sub_layer: Callable[..., nn.Module],
-        loss_function: nn.Module,
+        training_model_config: TrainingModelConfig | None = None,
         quantization_loss_weight: float = 1.0,
-        optimizer: Callable[..., torch.optim.Optimizer] | None = None,
-        scheduler: Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
     ):
         super().__init__()
+
+        if training_model_config is None:
+            training_model_config = TrainingModelConfig()
 
         self.n_layers = n_layers
         self.n_clusters = n_clusters
         self.n_features = n_features
         self.quantization_loss_weight = quantization_loss_weight
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.loss_function = loss_function
+        self.optimizer = training_model_config.optimizer
+        self.scheduler = training_model_config.scheduler
+        self.loss_function = training_model_config.loss_function
 
         # Layer-wise training schedule state
         self.current_layer = 0

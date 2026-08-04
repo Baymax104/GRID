@@ -4,7 +4,7 @@ from typing import Any, TypeAlias
 
 from torch.utils.data import IterableDataset, get_worker_info
 
-from src.data.components.config_models import DatasetConfig
+from src.common.configs.data import DatasetConfig
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)

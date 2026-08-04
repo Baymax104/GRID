@@ -5,21 +5,31 @@ root:
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${model.encoder.output_dim}
-  loss_function: ${model.loss_function}
+  training_model_config: ${model.training_model_config}
   init_buffer_size: 3072
   normalize_residuals: false
   kmeans_max_iter: 1000
   normalization_layer: ${model.normalization_layer}
   encoder: ${model.encoder}
   decoder: ${model.decoder}
-  reconstruction_loss_function: ${model.reconstruction_loss_function}
   reconstruction_loss_weight: 1.0
-  optimizer: ${model.optimizer}
+
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  loss_function:
+    _target_: src.common.components.loss_functions.BetaQuantizationLoss
+    beta: 0.25
+    reduction: mean
+  reconstruction_loss_function:
+    _target_: torch.nn.MSELoss
+    reduction: mean
+  optimizer:
+    _target_: torch.optim.Adagrad
+    _partial_: true
+    lr: 0.001
+    weight_decay: 0.0
   scheduler: null
-loss_function:
-  _target_: src.common.components.loss_functions.BetaQuantizationLoss
-  beta: 0.25
-  reduction: mean
+
 normalization_layer:
   _target_: torch.nn.Sequential
   _args_:
@@ -48,11 +58,3 @@ decoder:
   activation:
     _target_: torch.nn.ReLU
     _partial_: true
-reconstruction_loss_function:
-  _target_: torch.nn.MSELoss
-  reduction: mean
-optimizer:
-  _target_: torch.optim.Adagrad
-  _partial_: true
-  lr: 0.001
-  weight_decay: 0.0

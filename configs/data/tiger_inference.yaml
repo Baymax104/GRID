@@ -44,7 +44,7 @@ collate:
   target_field_name: null
   output_key_field_name: user_id
 predict_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
     _partial_: true
@@ -52,7 +52,7 @@ predict_dataset_config:
   shuffle_files: false
   preprocessing_functions: ${data.preprocessing_functions}
 predict_dataloader:
-  _target_: src.data.components.config_models.SequenceDataloaderConfig
+  _target_: src.common.configs.data.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
   batch_size_per_device: 32

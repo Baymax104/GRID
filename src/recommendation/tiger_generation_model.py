@@ -9,6 +9,7 @@ from torchmetrics import MeanMetric
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 
 from src.common.components.eval_metrics import Evaluator
+from src.common.configs.model import TrainingModelConfig
 from src.data.components.data_models import (
     TigerLabelData,
     TigerModelInput,
@@ -16,8 +17,6 @@ from src.data.components.data_models import (
 from src.inference.model_output import ModelOutput
 from src.recommendation.decoder_module import SemanticIDDecoderModule
 from src.recommendation.encoder_module import SemanticIDEncoderModule
-from src.recommendation.t5_multi_layer_ff import T5MultiLayerFF
-from src.utils.model_utils import get_parent_module_and_attr
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
@@ -40,15 +39,15 @@ class SemanticIDEncoderDecoder(LightningModule):
         codebook_width: int,
         embedding_dim: int,
         top_k_for_generation: int = 10,
-        mlp_layers: int | None = None,
         should_check_prefix: bool = False,
         should_add_sep_token: bool = True,
-        optimizer: torch.optim.Optimizer | None = None,
-        scheduler: torch.optim.lr_scheduler._LRScheduler | None = None,
-        loss_function: nn.Module | None = None,
+        training_model_config: TrainingModelConfig | None = None,
         evaluator: Evaluator | None = None,
     ):
         super().__init__()
+
+        if training_model_config is None:
+            training_model_config = TrainingModelConfig()
 
         self.save_hyperparameters(
             logger=False,
@@ -56,15 +55,15 @@ class SemanticIDEncoderDecoder(LightningModule):
                 "huggingface_model",
                 "decoder",
                 "semantic_ids",
-                "loss_function",
+                "training_model_config",
                 "evaluator",
             ],
         )
 
         self.model = huggingface_model
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.loss_function = loss_function
+        self.optimizer = training_model_config.optimizer
+        self.scheduler = training_model_config.scheduler
+        self.loss_function = training_model_config.loss_function
         self.evaluator = evaluator
 
         self.num_embeddings_per_hierarchy = codebook_width
@@ -112,21 +111,9 @@ class SemanticIDEncoderDecoder(LightningModule):
             ),
         )
 
-        if mlp_layers is not None:
-            # bloating the mlp layers in both encoder and decoder
-            # TODO (clark): this currently only works for T5
-            for name, module in self.named_modules():
-                if isinstance(module, transformers.models.t5.modeling_t5.T5LayerFF):
-                    parent_module, attr_name = get_parent_module_and_attr(self, name)
-                    setattr(
-                        parent_module,
-                        attr_name,
-                        T5MultiLayerFF(config=self.encoder.encoder.config, num_layers=mlp_layers),
-                    )
-
         # generate embedding tables for each hierarchy
         # here we assume each hierarchy has the same amount of embeddings
-        self.item_sid_embedding_table_encoder = self._spawn_embedding_tables(
+        self.item_sid_embedding_table_encoder = nn.Embedding(
             num_embeddings=self.num_embeddings_per_hierarchy * self.num_hierarchies,
             embedding_dim=self.embedding_dim,
         )
@@ -153,24 +140,11 @@ class SemanticIDEncoderDecoder(LightningModule):
             sep_token.unsqueeze(0).expand(batch_size, item_count_per_sequence, -1).unsqueeze(-2)
         )
         id_embeddings = torch.cat([reshaped_id_embeddings, reshaped_sep_token_for_concat], dim=-2)
-        attention_mask = torch.cat(
-            [reshaped_attention_mask, reshaped_attention_mask[:, :, [-1]]],
-            dim=-1,
-        )
+        attention_mask = torch.cat([reshaped_attention_mask, reshaped_attention_mask[:, :, [-1]]], dim=-1)
         id_embeddings = id_embeddings.reshape(batch_size, -1, emb_dim)
         attention_mask = attention_mask.reshape(batch_size, -1)
         return id_embeddings, attention_mask
 
-    def _spawn_embedding_tables(
-        self,
-        num_embeddings: int,
-        embedding_dim: int,
-    ) -> nn.Embedding:
-        """Spawn an embedding table with the given number of embeddings and embedding dimension."""
-        return nn.Embedding(
-            num_embeddings=num_embeddings,  # type: ignore
-            embedding_dim=embedding_dim,  # type: ignore
-        )
 
     def _is_kv_cache_valid(self, kv_cache: tuple | DynamicCache | EncoderDecoderCache) -> bool:
         if isinstance(kv_cache, (EncoderDecoderCache, DynamicCache)):
@@ -205,12 +179,10 @@ class SemanticIDEncoderDecoder(LightningModule):
         if self.semantic_ids is None:
             raise ValueError("semantic_ids is required when should_check_prefix=True.")
 
+        self.semantic_ids = self.semantic_ids.to(prefix.device)
         current_hierarchy = prefix.shape[1]
         num_prefixes = prefix.shape[0]
         results = []
-
-        if prefix.device != self.semantic_ids.device:
-            self.semantic_ids = self.semantic_ids.to(prefix.device)
 
         trimmed_semantic_ids = self.semantic_ids[:, :current_hierarchy]
 
@@ -661,11 +633,10 @@ class SemanticIDEncoderDecoder(LightningModule):
 
     def training_step(
         self,
-        batch: tuple[TigerModelInput, TigerLabelData],
+        batch: tuple[TigerModelInput, TigerLabelData | None],
         batch_idx: int,
     ) -> torch.Tensor:
-        model_input: TigerModelInput = batch[0]
-        label_data: TigerLabelData = batch[1]
+        model_input, label_data = batch
         _, loss = self.model_step(model_input=model_input, label_data=label_data)
 
         if self.evaluator:

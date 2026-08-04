@@ -36,7 +36,7 @@ preprocessing_functions:
     embedding_field_to_add: embedding
 
 predict_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   shuffle_files: false
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
@@ -45,7 +45,7 @@ predict_dataset_config:
   preprocessing_functions: ${data.preprocessing_functions}
 
 predict_dataloader:
-  _target_: src.data.components.config_models.ItemDataloaderConfig
+  _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
   batch_size_per_device: 128

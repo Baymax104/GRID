@@ -14,7 +14,7 @@ def collate_fn_sequence(
     attention_mask_field_name: str = "attention_mask",
     target_field_name: str | None = "target_ids",
     output_key_field_name: str | None = None,
-) -> TigerModelInput | tuple[TigerModelInput, TigerLabelData]:
+) -> tuple[TigerModelInput, TigerLabelData | None]:
     """
     Assemble preprocessed TIGER sequence rows for training/evaluation or inference.
 
@@ -55,7 +55,7 @@ def collate_fn_sequence(
         output_keys=output_keys
     )
     if target_field_name is None:
-        return model_input
+        return model_input, None
 
     target_ids = batch[target_field_name]
     return model_input, TigerLabelData(target_ids=target_ids)

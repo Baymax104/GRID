@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from src.utils.model_utils import create_last_k_mask
+from src.utils.model import create_last_k_mask
 
 
 class EmbeddingAggregator(nn.Module):

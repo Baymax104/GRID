@@ -1,6 +1,6 @@
 ## Context
 
-The existing `utils-dead-code-removal` specification already establishes that unused functions in `src/utils/` should be deleted when they have no Python callers, YAML `_target_` references, or OmegaConf resolver references. A fresh scan found three additional `src/utils/file_utils.py` helpers with no real callers: `copy_to_remote`, `file_exists_local_or_remote`, and `remove_file_extension`.
+The existing `utils-dead-code-removal` specification already establishes that unused functions in `src/utils/` should be deleted when they have no Python callers, YAML `_target_` references, or OmegaConf resolver references. A fresh scan found three additional `src/utils/file.py` helpers with no real callers: `copy_to_remote`, `file_exists_local_or_remote`, and `remove_file_extension`.
 
 The living spec still says `SameFileError` must remain because it is used by `copy_to_remote`. That statement is now stale because `copy_to_remote` itself is confirmed unused.
 
@@ -8,7 +8,7 @@ The living spec still says `SameFileError` must remain because it is used by `co
 
 **Goals:**
 
-- Remove only the confirmed-dead `file_utils` helpers.
+- Remove only the confirmed-dead `file.py` helpers.
 - Clean imports made orphaned by that removal.
 - Update the spec contract so future dead-code checks do not preserve `SameFileError` for a deleted function.
 - Validate with focused search and Ruff.

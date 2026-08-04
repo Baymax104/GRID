@@ -9,15 +9,15 @@ from lightning.pytorch.callbacks.progress import ProgressBar
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, open_dict
 
-from src.utils import logging_utils
-from src.utils.file_utils import (
+import src.utils.logging as logging_utils
+from src.utils.file import (
     get_last_modified_file,
     has_no_extension,
     list_subfolders,
 )
-from src.utils.logging_utils import DryRunLogger, finalize_loggers
+from src.utils.logging import DryRunLogger, finalize_loggers
 from src.utils.pylogger import RankedLogger
-from src.utils.rich_utils import StepBasedRichProgressBar
+from src.utils.rich import StepBasedRichProgressBar
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 

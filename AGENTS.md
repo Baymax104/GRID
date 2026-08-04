@@ -39,7 +39,7 @@
 ## 配置行为
 - 默认 `print_config=True`。若不想在启动时打印完整配置树，可在 experiment 的 `extras.print_config` 中关闭。
 - 推理类 experiment 通常会在 experiment 顶层显式提供 `ckpt_path`；只有像 `sem_embeds_inference` 这种实验才会显式覆盖成 `null`。
-- `src/utils/launcher_utils.py` 是统一入口 `src/main.py` 共用的装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
+- `src/utils/launcher.py` 是统一入口 `src/main.py` 共用的装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
 - `src/inference/` 只是推理输出组件包，不是运行入口；不要恢复旧的 `src/inference.py` 双入口语义。
 
 ## 代码结构（只记最影响判断的）

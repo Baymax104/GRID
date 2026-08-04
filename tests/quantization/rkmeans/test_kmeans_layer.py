@@ -5,8 +5,9 @@ from types import SimpleNamespace
 import torch
 from lightning.pytorch.trainer.states import TrainerFn
 
-import src.utils.distributed_utils as distributed_utils
+import src.utils.distributed as distributed_utils
 from src.common.components.loss_functions import WeightedSquaredError
+from src.common.configs.model import TrainingModelConfig
 from src.quantization.rkmeans.kmeans_layer import KMeansLayer, _kmeans_plus_plus_init
 from src.quantization.rkmeans.residual_kmeans import ResidualKMeans
 from src.quantization.rqvae.residual_quantization_vae import ResidualQuantizationVAE
@@ -20,6 +21,11 @@ def create_kmeans_layer(**kwargs) -> KMeansLayer:
     return KMeansLayer(**kwargs)
 
 
+def create_training_model_config(**kwargs) -> TrainingModelConfig:
+    kwargs.setdefault("loss_function", WeightedSquaredError())
+    return TrainingModelConfig(**kwargs)
+
+
 def create_residual_kmeans(**kwargs) -> ResidualKMeans:
     n_clusters = kwargs.setdefault("n_clusters", 2)
     n_features = kwargs.setdefault("n_features", 2)
@@ -30,7 +36,7 @@ def create_residual_kmeans(**kwargs) -> ResidualKMeans:
             n_features=n_features,
             init_buffer_size=init_buffer_size,
         ),
-        loss_function=WeightedSquaredError(),
+        training_model_config=create_training_model_config(),
         **kwargs,
     )
 
@@ -45,6 +51,7 @@ def create_residual_vector_quantization(**kwargs) -> ResidualVectorQuantization:
             n_features=n_features,
             init_buffer_size=init_buffer_size,
         ),
+        training_model_config=create_training_model_config(),
         **kwargs,
     )
 
@@ -109,9 +116,32 @@ def test_quantization_models_do_not_expose_training_loop_function_or_manual_opti
         elif model_class is ResidualVectorQuantization:
             model = create_residual_vector_quantization(n_layers=1)
         else:
-            model = model_class(n_layers=1, n_clusters=2, n_features=2, init_buffer_size=4)
+            model = model_class(
+                n_layers=1,
+                n_clusters=2,
+                n_features=2,
+                training_model_config=create_training_model_config(),
+                init_buffer_size=4,
+            )
         assert not hasattr(model, "training_loop_function")
         assert model.automatic_optimization
+
+
+def test_quantization_models_receive_grouped_training_model_config():
+    model_classes = [
+        ResidualKMeans,
+        ResidualVectorQuantization,
+        ResidualQuantizationVAE,
+    ]
+
+    for model_class in model_classes:
+        parameters = inspect.signature(model_class).parameters
+        assert "training_model_config" in parameters
+        assert "training_components" not in parameters
+        assert "loss_function" not in parameters
+        assert "optimizer" not in parameters
+        assert "scheduler" not in parameters
+        assert "reconstruction_loss_function" not in parameters
 
 
 def test_quantization_training_configs_do_not_expose_training_loop_function():
@@ -343,6 +373,7 @@ def test_rqvae_initializes_in_the_same_step_after_convergence_without_transition
         n_layers=1,
         n_clusters=2,
         n_features=2,
+        training_model_config=create_training_model_config(),
         init_buffer_size=4,
         kmeans_max_iter=5,
     )
@@ -391,6 +422,7 @@ def test_rqvae_rank_zero_broadcasts_refined_initial_centroids(monkeypatch):
         n_layers=1,
         n_clusters=2,
         n_features=2,
+        training_model_config=create_training_model_config(),
         init_buffer_size=4,
         kmeans_max_iter=5,
     )

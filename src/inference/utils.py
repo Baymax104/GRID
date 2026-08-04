@@ -3,7 +3,7 @@ from typing import Any
 import torch
 
 from src.inference.model_output import ModelOutput
-from src.utils.file_utils import open_local_or_remote
+from src.utils.file import open_local_or_remote
 
 
 def _validate_model_output(bundle: dict[str, Any]):

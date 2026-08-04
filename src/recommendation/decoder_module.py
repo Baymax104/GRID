@@ -3,7 +3,7 @@ import transformers
 from transformers.cache_utils import DynamicCache
 from transformers.modeling_outputs import Seq2SeqModelOutput
 
-from src.utils.model_utils import delete_module, reset_parameters
+from src.utils.model import delete_module, reset_parameters
 
 
 class SemanticIDDecoderModule(torch.nn.Module):

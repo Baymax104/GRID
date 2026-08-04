@@ -89,7 +89,7 @@ collate:
   target_field_name: target_ids
 
 train_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
     _partial_: true
@@ -98,7 +98,7 @@ train_dataset_config:
   preprocessing_functions: ${data.train_preprocessing_functions}
 
 eval_dataset_config:
-  _target_: src.data.components.config_models.DatasetConfig
+  _target_: src.common.configs.data.DatasetConfig
   data_reader:
     _target_: src.data.components.readers.TFRecordReader
     _partial_: true
@@ -107,7 +107,7 @@ eval_dataset_config:
   preprocessing_functions: ${data.eval_preprocessing_functions}
 
 train_dataloader:
-  _target_: src.data.components.config_models.SequenceDataloaderConfig
+  _target_: src.common.configs.data.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/training
   batch_size_per_device: 32
@@ -121,7 +121,7 @@ train_dataloader:
   pin_memory: true
 
 val_dataloader:
-  _target_: src.data.components.config_models.SequenceDataloaderConfig
+  _target_: src.common.configs.data.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/evaluation
   batch_size_per_device: 8
@@ -135,7 +135,7 @@ val_dataloader:
   pin_memory: false
 
 test_dataloader:
-  _target_: src.data.components.config_models.SequenceDataloaderConfig
+  _target_: src.common.configs.data.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/testing
   batch_size_per_device: 8

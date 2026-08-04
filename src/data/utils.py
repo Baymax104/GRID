@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import torch
 
-from src.utils.file_utils import get_file_size
+from src.utils.file import get_file_size
 
 
 def assign_files_to_workers(

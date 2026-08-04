@@ -9,9 +9,10 @@ from torch.distributions import Categorical
 from torchmetrics import MeanMetric
 
 from src.common.components.loss_functions import WeightedSquaredError
+from src.common.configs.model import TrainingModelConfig
 from src.data.components.data_models import ItemBatch
 from src.inference.model_output import ModelOutput
-from src.utils.distributed_utils import broadcast_from_rank_zero, get_distributed_rank
+from src.utils.distributed import broadcast_from_rank_zero, get_distributed_rank
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
@@ -95,21 +96,21 @@ class ResidualQuantizationVAE(LightningModule):
         n_layers: int,
         n_clusters: int,
         n_features: int,
-        loss_function: nn.Module | None = None,
+        training_model_config: TrainingModelConfig | None = None,
         init_buffer_size: int = 1000,
         normalize_residuals: bool = False,
         quantization_loss_weight: float = 1.0,
-        reconstruction_loss_function: nn.Module | None = None,
         reconstruction_loss_weight: float = 0.0,
         normalization_layer: nn.Module | None = None,
         encoder: nn.Module | None = None,
         decoder: nn.Module | None = None,
         kmeans_max_iter: int = 1000,
         kmeans_atol: float = 1e-8,
-        optimizer: Callable[..., torch.optim.Optimizer] | None = None,
-        scheduler: Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
     ):
         super().__init__()
+
+        if training_model_config is None:
+            training_model_config = TrainingModelConfig()
 
         self.n_layers = n_layers
         self.n_clusters = n_clusters
@@ -117,13 +118,14 @@ class ResidualQuantizationVAE(LightningModule):
         self.init_buffer_size = init_buffer_size
         self.normalize_residuals = normalize_residuals
         self.quantization_loss_weight = quantization_loss_weight
-        self.reconstruction_loss_function = reconstruction_loss_function
+        self.reconstruction_loss_function = training_model_config.reconstruction_loss_function
         self.reconstruction_loss_weight = reconstruction_loss_weight
         self.kmeans_max_iter = kmeans_max_iter
         self.kmeans_atol = kmeans_atol
-        self.optimizer = optimizer
-        self.scheduler = scheduler
+        self.optimizer = training_model_config.optimizer
+        self.scheduler = training_model_config.scheduler
 
+        loss_function = training_model_config.loss_function
         if loss_function is None:
             loss_function = WeightedSquaredError()
         self.loss_function = loss_function

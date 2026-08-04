@@ -35,13 +35,13 @@ TBD - created by archiving change delete-utils-dead-code. Update Purpose after a
 - **WHEN** 维护者在仓库中搜索 `get_var_if_not_none`、`get_class_name_str`、`lightning_precision_to_dtype`、`sample_gumbel`、`gumbel_softmax_sample`
 - **THEN** `src/utils/utils.py` MUST NOT 包含这些函数定义
 
-#### Scenario: file_utils 死函数被删除
+#### Scenario: file.py 死函数被删除
 - **WHEN** 维护者在仓库中搜索 `open_pyarrow_file`、`replace_char_after_segment`
-- **THEN** `src/utils/file_utils.py` MUST NOT 包含这些函数定义
+- **THEN** `src/utils/file.py` MUST NOT 包含这些函数定义
 
-#### Scenario: logging_utils 死函数被删除
+#### Scenario: logging.py 死函数被删除
 - **WHEN** 维护者在仓库中搜索 `convert_dict_to_json_string`
-- **THEN** `src/utils/logging_utils.py` MUST NOT 包含该函数定义
+- **THEN** `src/utils/logging.py` MUST NOT 包含该函数定义
 
 ### Requirement: 删除操作 SHALL 清理孤立 import
 因函数删除而变为无引用的 import 语句 SHALL 被一并清理，确保通过 Ruff F401/I001 检查。
@@ -55,11 +55,11 @@ TBD - created by archiving change delete-utils-dead-code. Update Purpose after a
 - **WHEN** 维护者检查 `utils.py` 的 import 语句
 - **THEN** 文件 MUST NOT 包含 `import torch.nn.functional as F`
 
-#### Scenario: file_utils.py 清理孤立 import
-- **WHEN** 维护者检查 `file_utils.py` 的 import 语句
+#### Scenario: file.py 清理孤立 import
+- **WHEN** 维护者检查 `file.py` 的 import 语句
 - **THEN** 文件 MUST NOT 包含 `from pyarrow import fs as pyarrow_fs`
-- **THEN** 文件 MUST 保留 `from shutil import SameFileError`（仍被 `copy_to_remote` 使用）
 
-#### Scenario: logging_utils.py 清理孤立 import
-- **WHEN** 维护者检查 `logging_utils.py` 的 import 语句
+#### Scenario: logging.py 清理孤立 import
+- **WHEN** 维护者检查 `logging.py` 的 import 语句
 - **THEN** 文件 MUST NOT 包含 `import json`
+

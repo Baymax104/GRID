@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from src.utils.distributed_utils import broadcast_from_rank_zero, get_distributed_rank
+from src.utils.distributed import broadcast_from_rank_zero, get_distributed_rank
 
 
 def _compute_squared_euclidean_distance(x: torch.Tensor, y: torch.Tensor, batch_size: int | None = 256) -> torch.Tensor:

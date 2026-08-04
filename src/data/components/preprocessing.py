@@ -7,7 +7,7 @@ import torch
 from src.data.components.tokenization import load_tokenize
 from src.inference.model_output import ModelOutput
 from src.inference.utils import gather_predictions_by_keys
-from src.utils.file_utils import load_json
+from src.utils.file import load_json
 
 
 def convert_bytes_to_string(

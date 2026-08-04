@@ -5,21 +5,23 @@ root:
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${embedding_dim}
-  loss_function: ${model.loss_function}
+  training_model_config: ${model.training_model_config}
   normalize_residuals: true
-  optimizer: ${model.optimizer}
-  scheduler: null
   sub_layer:
     _target_: src.quantization.rvq.vector_quantization_layer.VectorQuantizationLayer
     _partial_: true
     n_clusters: ${codebook_width}
     n_features: ${embedding_dim}
     init_buffer_size: 3072
-loss_function:
-  _target_: src.common.components.loss_functions.BetaQuantizationLoss
-  beta: 0.25
-optimizer:
-  _target_: torch.optim.Adagrad
-  _partial_: true
-  lr: 0.001
-  weight_decay: 0.0
+
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  loss_function:
+    _target_: src.common.components.loss_functions.BetaQuantizationLoss
+    beta: 0.25
+  optimizer:
+    _target_: torch.optim.Adagrad
+    _partial_: true
+    lr: 0.001
+    weight_decay: 0.0
+  scheduler: null

@@ -5,9 +5,7 @@ root:
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_width}
   n_features: ${embedding_dim}
-  optimizer: ${model.optimizer}
-  scheduler: ${model.scheduler}
-  loss_function: ${model.loss_function}
+  training_model_config: ${model.training_model_config}
   sub_layer:
     _target_: src.quantization.rkmeans.kmeans_layer.KMeansLayer
     _partial_: true
@@ -15,17 +13,17 @@ root:
     n_features: ${embedding_dim}
     init_buffer_size: 3072
 
-optimizer:
-  _target_: torch.optim.SGD
-  _partial_: true
-  lr: 0.5
-
-scheduler:
-  _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
-  _partial_: true
-  warmup_steps: 100
-  min_ratio: 0.3
-  scheduler_steps: ${trainer.root.max_steps}
-
-loss_function:
-  _target_: src.common.components.loss_functions.WeightedSquaredError
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  loss_function:
+    _target_: src.common.components.loss_functions.WeightedSquaredError
+  optimizer:
+    _target_: torch.optim.SGD
+    _partial_: true
+    lr: 0.5
+  scheduler:
+    _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _partial_: true
+    warmup_steps: 100
+    min_ratio: 0.3
+    scheduler_steps: ${trainer.root.max_steps}

@@ -6,10 +6,10 @@ import torch
 from omegaconf import DictConfig
 
 import src.utils.hydra_resolvers  # noqa: F401  — registers now_tz OmegaConf resolver
-from src.utils.cli_utils import rewrite_dry_run_flag
-from src.utils.launcher_utils import pipeline_launcher
+from src.utils.cli import rewrite_dry_run_flag
+from src.utils.extra import extras
+from src.utils.launcher import pipeline_launcher
 from src.utils.pylogger import RankedLogger
-from src.utils.startup import extras
 
 rootutils.setup_root(__file__, indicator="pyproject.toml", pythonpath=True)
 
