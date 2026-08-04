@@ -15,14 +15,14 @@ from src.data.components.data_models import (
     TigerModelInput,
 )
 from src.inference.model_output import ModelOutput
-from src.recommendation.decoder_module import SemanticIDDecoderModule
-from src.recommendation.encoder_module import SemanticIDEncoderModule
+from src.recommendation.decoder import TigerDecoder
+from src.recommendation.encoder import TigerEncoder
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-class SemanticIDEncoderDecoder(LightningModule):
+class Tiger(LightningModule):
     """
     This is an in-house implementation of the encoder-decoder module proposed in TIGER paper,
     See Figure 2.b in https://arxiv.org/pdf/2305.05065.
@@ -89,14 +89,14 @@ class SemanticIDEncoderDecoder(LightningModule):
             self.val_loss = MeanMetric()
             self.test_loss = MeanMetric()
 
-        self.encoder = SemanticIDEncoderModule(
+        self.encoder = TigerEncoder(
             encoder=huggingface_model,
         )
 
         # bos_token used to prompt the decoder to generate the first token
         bos_token = nn.Parameter(torch.randn(1, self.embedding_dim), requires_grad=True)
 
-        self.decoder = SemanticIDDecoderModule(
+        self.decoder = TigerDecoder(
             decoder=decoder,
             bos_token=bos_token,
             decoder_mlp=nn.ModuleList(
@@ -306,7 +306,7 @@ class SemanticIDEncoderDecoder(LightningModule):
             num_hierarchies=self.num_hierarchies,
             attention_mask=attention_mask,
         )
-        inputs_embeds_for_encoder = self.get_embedding_table(table_name="encoder")(shifted_sids)
+        inputs_embeds_for_encoder = self.item_sid_embedding_table_encoder(shifted_sids)
 
         if self.sep_token is not None:
             (
@@ -357,7 +357,7 @@ class SemanticIDEncoderDecoder(LightningModule):
                 if attention_mask is None
                 else attention_mask,
             )
-            inputs_embeds_for_decoder = self.get_embedding_table(table_name="decoder")(shifted_future_sids)
+            inputs_embeds_for_decoder = self.item_sid_embedding_table_encoder(shifted_future_sids)
 
             # we do not have valid kv cache
             # we need to prepend bos token to the decoder input
@@ -510,30 +510,6 @@ class SemanticIDEncoderDecoder(LightningModule):
         )
         return decoder_output
 
-    def get_embedding_table(self, table_name: str, hierarchy: int | None = None):
-        """
-        Get the embedding table for the given table name and hierarchy.
-        Args:
-            table_name: The name of the table to get the embedding for.
-            hierarchy: The hierarchy level to get the embedding for.
-        """
-        # here we assume the encoder and decoder share the same embedding table
-        # we can have flexible embedding table in the future
-        if table_name == "encoder":
-            embedding_table = self.item_sid_embedding_table_encoder
-        elif table_name == "decoder":
-            embedding_table = self.item_sid_embedding_table_encoder
-        else:
-            raise ValueError(f"Unknown embedding table: {table_name}")
-
-        if hierarchy is not None:
-            return embedding_table(
-                torch.arange(
-                    hierarchy * self.num_embeddings_per_hierarchy,
-                    (hierarchy + 1) * self.num_embeddings_per_hierarchy,
-                ).to(self.device)
-            )
-        return embedding_table
 
     def predict_step(self, batch: TigerModelInput):
         generated_sids, _ = self.model_step(batch)

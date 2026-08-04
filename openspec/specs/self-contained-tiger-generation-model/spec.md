@@ -35,7 +35,7 @@ TIGER train/inference 模型配置 SHALL 只声明当前生成式推荐路径实
 #### Scenario: 配置不包含自定义 T5 FFN 覆盖
 - **WHEN** 维护者检查 `configs/model/tiger_train.yaml` 与 `configs/model/tiger_inference.yaml`
 - **THEN** 配置 MUST NOT 包含 `mlp_layers` 字段
-- **AND** `SemanticIDEncoderDecoder` MUST NOT expose `mlp_layers` as a constructor parameter
+- **AND** `Tiger` MUST NOT expose `mlp_layers` as a constructor parameter
 - **AND** TIGER model construction MUST NOT replace HuggingFace `T5LayerFF` modules with a project custom FFN module
 
 ### Requirement: TIGER model SHALL use semantic ID tensors for prefix validation
@@ -50,4 +50,3 @@ TIGER 模型侧 SHALL 接收 semantic ID tensor 作为 prefix 校验数据源，
 - **WHEN** 维护者检查 TIGER 模型构造参数和模型配置
 - **THEN** 模型侧 semantic ID tensor 参数 MUST 使用 `semantic_ids` 或等价明确名称
 - **THEN** 模型配置 MUST NOT 将完整 keyed bundle 命名为 `codebooks`
-

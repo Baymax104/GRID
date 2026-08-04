@@ -6,7 +6,7 @@ from transformers.modeling_outputs import Seq2SeqModelOutput
 from src.utils.model import delete_module, reset_parameters
 
 
-class SemanticIDDecoderModule(torch.nn.Module):
+class TigerDecoder(torch.nn.Module):
     """
     This is an in-house replication of the decoder module proposed in TIGER paper,
     See Figure 2.b in https://arxiv.org/pdf/2305.05065.
@@ -19,7 +19,7 @@ class SemanticIDDecoderModule(torch.nn.Module):
         bos_token: torch.nn.Parameter | None = None,
     ):
         """
-        Initialize the SemanticIDDecoderModule.
+        Initialize the TigerDecoder module.
 
         Parameters:
         decoder (transformers.PreTrainedModel): the encoder model (e.g., transformers.T5EncoderModel).

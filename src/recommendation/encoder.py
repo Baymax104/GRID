@@ -4,7 +4,7 @@ import transformers
 from src.utils.model import delete_module, find_module_shape, reset_parameters
 
 
-class SemanticIDEncoderModule(torch.nn.Module):
+class TigerEncoder(torch.nn.Module):
     """
     This is an in-house replication of the encoder module proposed in TIGER paper,
     See Figure 2.b in https://arxiv.org/pdf/2305.05065.
@@ -12,7 +12,7 @@ class SemanticIDEncoderModule(torch.nn.Module):
 
     def __init__(self, encoder: transformers.PreTrainedModel):
         """
-        Initialize the SemanticIDEncoderModule module.
+        Initialize the TigerEncoder module.
 
         Parameters:
             encoder (transformers.PreTrainedModel): the encoder model (e.g., transformers.T5EncoderModel).
