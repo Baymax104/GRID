@@ -12,4 +12,4 @@ OMP_NUM_THREADS=$(( $(nproc) / NPROC_PER_NODE )) \
   data_dir=data/beauty \
   embedding_dim=768 \
   num_hierarchies=3 \
-  codebook_width=256
+  codebook_size=256

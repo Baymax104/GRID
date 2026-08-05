@@ -2,7 +2,7 @@
 
 root:
   _target_: src.recommendation.tiger.Tiger
-  huggingface_model: ${model.huggingface_model}
+  encoder: ${model.encoder}
   training_model_config: ${model.training_model_config}
   evaluator: ${model.evaluator}
   decoder: ${model.decoder}
@@ -10,11 +10,11 @@ root:
     _target_: src.inference.utils.load_semantic_id_tensor
     file_path: ${semantic_id_path}
   num_hierarchies: ${num_hierarchies}
-  codebook_width: ${codebook_width}
+  codebook_size: ${codebook_size}
   embedding_dim: ${embedding_dim}
   should_check_prefix: true
 
-huggingface_model:
+encoder:
   _target_: transformers.T5EncoderModel
   config:
     _target_: transformers.T5Config
@@ -30,12 +30,12 @@ decoder:
   _target_: transformers.models.t5.modeling_t5.T5Stack
   config:
     _target_: transformers.models.t5.configuration_t5.T5Config
-    vocab_size: ${model.huggingface_model.config.vocab_size}
-    d_model: ${model.huggingface_model.config.d_model}
-    num_heads: ${model.huggingface_model.config.num_heads}
+    vocab_size: ${model.encoder.config.vocab_size}
+    d_model: ${model.encoder.config.d_model}
+    num_heads: ${model.encoder.config.num_heads}
     dropout_rate: 0.1
-    d_ff: ${model.huggingface_model.config.d_ff}
-    d_kv: ${model.huggingface_model.config.d_kv}
+    d_ff: ${model.encoder.config.d_ff}
+    d_kv: ${model.encoder.config.d_kv}
     num_layers: 4
     is_decoder: true
     is_encoder_decoder: false

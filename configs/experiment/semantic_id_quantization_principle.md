@@ -1,26 +1,26 @@
 # Semantic ID 量化核心原理
 
-本文简要说明 residual quantization 中 `embedding`、`codebook`、`codebook_width`、`n_layers` 与 semantic ID 的关系。
+本文简要说明 residual quantization 中 `embedding`、`codebook`、`codebook_size`、`n_layers` 与 semantic ID 的关系。
 
 ## Codebook 的形状
 
 在量化模型中，每一层都有一个 codebook。单层 codebook 可以理解为一张向量表：
 
 ```text
-codebook.shape = (codebook_width, embedding_dim)
+codebook.shape = (codebook_size, embedding_dim)
                = (n_clusters, n_features)
 ```
 
 其中：
 
-- `codebook_width` / `n_clusters`：该层有多少个可选 code，也就是多少个 centroid。
+- `codebook_size` / `n_clusters`：该层有多少个可选 code，也就是多少个 centroid。
 - `embedding_dim` / `n_features`：每个 centroid 的向量维度。
 - `n_layers` / `num_hierarchies`：有多少层 residual quantization。
 
 因此，多层时可以概念化理解为：
 
 ```text
-(n_layers, codebook_width, embedding_dim)
+(n_layers, codebook_size, embedding_dim)
 ```
 
 实际代码中使用的是每层一个 centroid 参数表，而不是必须合并成三维 tensor。
@@ -42,7 +42,7 @@ code_id = argmin(distance(embedding, codebook[i]))
 因此，一个连续 embedding 会被映射成一个离散整数 `code_id`：
 
 ```text
-code_id ∈ [0, codebook_width)
+code_id ∈ [0, codebook_size)
 ```
 
 ## Residual Quantization 如何生成 Semantic ID
@@ -70,14 +70,14 @@ semantic_id.shape = (n_layers,)
 其中每个位置都是对应层 codebook 的编号：
 
 ```text
-semantic_id[i] ∈ [0, codebook_width)
+semantic_id[i] ∈ [0, codebook_size)
 ```
 
 例如：
 
 ```text
 n_layers = 4
-codebook_width = 256
+codebook_size = 256
 
 semantic_id = [12, 87, 203, 5]
 ```

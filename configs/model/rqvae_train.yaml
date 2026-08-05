@@ -3,7 +3,7 @@
 root:
   _target_: src.quantization.rqvae.residual_quantization_vae.ResidualQuantizationVAE
   n_layers: ${num_hierarchies}
-  n_clusters: ${codebook_width}
+  n_clusters: ${codebook_size}
   n_features: ${model.encoder.output_dim}
   training_model_config: ${model.training_model_config}
   init_buffer_size: 3072

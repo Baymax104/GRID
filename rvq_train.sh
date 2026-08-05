@@ -11,4 +11,4 @@ OMP_NUM_THREADS=$(( $(nproc) / NPROC_PER_NODE )) \
   devices=[0,1] \
   embedding_dim=768 \
   num_hierarchies=3 \
-  codebook_width=256 --dry-run
+  codebook_size=256 --dry-run

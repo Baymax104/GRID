@@ -3,13 +3,13 @@
 root:
   _target_: src.quantization.rkmeans.residual_kmeans.ResidualKMeans
   n_layers: ${num_hierarchies}
-  n_clusters: ${codebook_width}
+  n_clusters: ${codebook_size}
   n_features: ${embedding_dim}
   training_model_config: ${model.training_model_config}
   sub_layer:
     _target_: src.quantization.rkmeans.kmeans_layer.KMeansLayer
     _partial_: true
-    n_clusters: ${codebook_width}
+    n_clusters: ${codebook_size}
     n_features: ${embedding_dim}
     init_buffer_size: 3072
 

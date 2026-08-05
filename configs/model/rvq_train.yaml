@@ -3,14 +3,14 @@
 root:
   _target_: src.quantization.rvq.residual_vector_quantization.ResidualVectorQuantization
   n_layers: ${num_hierarchies}
-  n_clusters: ${codebook_width}
+  n_clusters: ${codebook_size}
   n_features: ${embedding_dim}
   training_model_config: ${model.training_model_config}
   normalize_residuals: true
   sub_layer:
     _target_: src.quantization.rvq.vector_quantization_layer.VectorQuantizationLayer
     _partial_: true
-    n_clusters: ${codebook_width}
+    n_clusters: ${codebook_size}
     n_features: ${embedding_dim}
     init_buffer_size: 3072
 
