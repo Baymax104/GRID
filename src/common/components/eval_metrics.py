@@ -2,7 +2,6 @@ from typing import Any
 
 import torch
 import torchmetrics
-from torchmetrics.metric import Metric
 from torchmetrics.utilities.distributed import gather_all_tensors
 
 
@@ -115,68 +114,3 @@ class Recall(CustomRetrievalMetric):
 
         recall = true_positives / total_relevant.minimum(torch.tensor(self.top_k, device=self.device)).clamp(min=1)
         return recall
-
-
-class Evaluator:
-    def __init__(self, metrics: dict[str, Metric], *args, **kwargs):
-        self.metrics = metrics
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def reset(self):
-        for metric in self.metrics.values():
-            metric.reset()
-
-    def to(self, device: torch.device):
-        for metric in self.metrics.values():
-            metric.to(device=device)
-
-
-class SIDRetrievalEvaluator(Evaluator):
-    """
-    Wrapper for retrieval evaluation metrics for semantic IDs.
-    It takes model outputs in semantic IDs and automatically calculates the retrieval metrics.
-    """
-
-    def __init__(
-        self,
-        metrics: dict[str, CustomRetrievalMetric],
-        top_k_list: list[int],
-    ):
-        super().__init__(metrics)
-        self.metrics = {
-            f"{metric_name}@{top_k}": metric_object(top_k=top_k, sync_on_compute=False, compute_with_cache=False)
-            for metric_name, metric_object in metrics.items()
-            for top_k in top_k_list
-        }
-
-    def __call__(
-        self,
-        marginal_probs: torch.Tensor,
-        generated_ids: torch.Tensor,
-        labels: torch.Tensor,
-        **kwargs,
-    ):
-        batch_size, num_candidates, num_hierarchies = generated_ids.shape
-        labels = labels.reshape(batch_size, 1, num_hierarchies)
-        preds = marginal_probs.reshape(-1)
-
-        # check if the generated IDs contain the labels
-        # if so, we get the coordinates of the matched IDs
-        matched_id_coord = torch.all((generated_ids == labels), dim=2).nonzero()
-
-        # we initialize the ground truth as all false
-        target = torch.zeros(batch_size, num_candidates).bool()
-
-        # we set the matched IDs to true if they are in the generated IDs
-        target[matched_id_coord[:, 0], matched_id_coord[:, 1]] = True
-        target = target.reshape(-1)
-        expanded_indexes = torch.arange(batch_size).unsqueeze(-1).expand(batch_size, num_candidates).reshape(-1)
-
-        for _, metric_object in self.metrics.items():
-            metric_object.update(
-                preds,
-                target.to(preds.device),
-                indexes=expanded_indexes.to(preds.device),
-            )

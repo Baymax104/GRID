@@ -4,7 +4,6 @@ root:
   _target_: src.recommendation.tiger.Tiger
   encoder: ${model.encoder}
   training_model_config: ${model.training_model_config}
-  evaluator: ${model.evaluator}
   decoder: ${model.decoder}
   semantic_ids:
     _target_: src.inference.utils.load_semantic_id_tensor
@@ -57,15 +56,49 @@ training_model_config:
     min_ratio: 0.05
     scheduler_steps: ${trainer.root.max_steps}
 
-evaluator:
-  _target_: src.common.components.eval_metrics.SIDRetrievalEvaluator
-  top_k_list:
-  - 5
-  - 10
-  metrics:
-    ndcg:
-      _target_: src.common.components.eval_metrics.NDCG
-      _partial_: true
-    recall:
-      _target_: src.common.components.eval_metrics.Recall
-      _partial_: true
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: loss
+    val:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: loss
+      retrieval:
+        name: ""
+        metric:
+          _target_: src.common.metrics.SIDRetrievalMetricGroup
+          top_k_list:
+          - 5
+          - 10
+          metrics:
+            ndcg:
+              _target_: src.common.components.eval_metrics.NDCG
+              _partial_: true
+            recall:
+              _target_: src.common.components.eval_metrics.Recall
+              _partial_: true
+    test:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: loss
+      retrieval:
+        name: ""
+        metric:
+          _target_: src.common.metrics.SIDRetrievalMetricGroup
+          top_k_list:
+          - 5
+          - 10
+          metrics:
+            ndcg:
+              _target_: src.common.components.eval_metrics.NDCG
+              _partial_: true
+            recall:
+              _target_: src.common.components.eval_metrics.Recall
+              _partial_: true

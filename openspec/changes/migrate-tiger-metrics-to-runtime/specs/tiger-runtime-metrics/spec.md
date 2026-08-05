@@ -1,0 +1,38 @@
+## ADDED Requirements
+
+### Requirement: TIGER SHALL expose metric payloads instead of managing metrics
+TIGER SHALL return metric payloads from train, validation, and test steps and SHALL NOT own framework-managed metric attributes or metric logging hooks.
+
+#### Scenario: TIGER training step returns loss payload
+- **WHEN** `training_step` runs with a valid TIGER training batch
+- **THEN** it MUST return a mapping containing `loss`
+- **THEN** it MUST NOT update or log framework-managed metrics directly
+
+#### Scenario: TIGER validation and test steps return retrieval payload
+- **WHEN** validation or test step runs with labels
+- **THEN** it MUST return a mapping containing `loss`, `generated_ids`, `marginal_probs`, and `labels`
+- **THEN** it MUST NOT reset or log framework-managed metrics directly
+
+### Requirement: TIGER retrieval metrics SHALL use metric runtime
+TIGER SID retrieval metrics SHALL be computed through a metric group managed by `MetricEngine`.
+
+#### Scenario: Retrieval metric group computes configured top-k metrics
+- **WHEN** the metric group receives payload fields `marginal_probs`, `generated_ids`, and `labels`
+- **THEN** it MUST update each configured retrieval metric for each configured top-k
+- **THEN** compute MUST return metric names such as `ndcg@5` and `recall@10`
+
+### Requirement: TIGER train config SHALL declare runtime metrics
+The official TIGER train model config SHALL declare metrics through `model.metrics` and SHALL no longer pass `evaluator` to `model.root`.
+
+#### Scenario: TIGER config declares loss and retrieval metrics
+- **WHEN** a maintainer inspects `configs/model/tiger_train.yaml`
+- **THEN** `model.metrics` MUST declare train loss, validation loss, test loss, validation retrieval, and test retrieval metrics
+- **THEN** `model.root` MUST NOT pass an `evaluator` field
+
+### Requirement: Pipeline SHALL attach metric callback from model metrics
+The pipeline launcher SHALL attach the metric callback when model metrics are configured.
+
+#### Scenario: Metric callback is attached for configured metrics
+- **WHEN** pipeline modules are initialized with `cfg.model.metrics`
+- **THEN** callbacks MUST include one metric callback using those metrics
+- **THEN** models without `cfg.model.metrics` MUST keep their callback list unchanged

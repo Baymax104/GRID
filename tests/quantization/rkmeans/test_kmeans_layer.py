@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import torch
 from lightning.pytorch.trainer.states import TrainerFn
+from omegaconf import OmegaConf
 
 import src.utils.distributed as distributed_utils
 from src.common.components.loss_functions import WeightedSquaredError
@@ -142,6 +143,65 @@ def test_quantization_models_receive_grouped_training_model_config():
         assert "optimizer" not in parameters
         assert "scheduler" not in parameters
         assert "reconstruction_loss_function" not in parameters
+
+
+def test_quantization_models_do_not_create_metric_attributes():
+    models = [
+        create_residual_kmeans(n_layers=2),
+        create_residual_vector_quantization(n_layers=2),
+        ResidualQuantizationVAE(
+            n_layers=2,
+            n_clusters=2,
+            n_features=2,
+            training_model_config=create_training_model_config(),
+            init_buffer_size=4,
+        ),
+    ]
+    metric_attribute_names = [
+        "train_loss",
+        "train_quantization_loss",
+        "train_reconstruction_loss",
+        "train_first_residuals_norm_ratio",
+        "train_last_residuals_norm_ratio",
+        "first_centroids_norm",
+        "last_centroids_norm",
+        "train_frac_unique_ids",
+        "train_mse",
+        "val_loss",
+        "test_loss",
+        "train_layer_coverages_0",
+        "train_layer_id_entropy_0",
+    ]
+
+    for model in models:
+        for attribute_name in metric_attribute_names:
+            assert not hasattr(model, attribute_name)
+
+
+def test_quantization_train_configs_declare_runtime_metrics_with_repeat():
+    config_paths = [
+        PROJECT_ROOT / "configs/model/rkmeans_train.yaml",
+        PROJECT_ROOT / "configs/model/rvq_train.yaml",
+        PROJECT_ROOT / "configs/model/rqvae_train.yaml",
+    ]
+
+    for config_path in config_paths:
+        config = OmegaConf.load(config_path)
+        config_container = OmegaConf.to_container(config, resolve=False)
+        train_metrics = config_container["metrics"]["stages"]["train"]
+
+        assert config.metrics._target_ == "src.common.metrics.MetricEngine"
+        assert train_metrics["layer_coverages"]["repeat"]["count"] == "${num_hierarchies}"
+        assert train_metrics["layer_coverages"]["repeat"]["input"]["index"] == "{layer_idx}"
+        assert train_metrics["layer_id_entropy"]["repeat"]["count"] == "${num_hierarchies}"
+        assert train_metrics["layer_id_entropy"]["repeat"]["input"]["index"] == "{layer_idx}"
+        assert "optional" not in train_metrics["first_residuals_norm_ratio"]["input"]
+        assert "optional" not in train_metrics["layer_coverages"]["repeat"]["input"]
+        assert "loss" in config.metrics.stages.val
+        assert "loss" in config.metrics.stages.test
+
+    rqvae_config = OmegaConf.load(PROJECT_ROOT / "configs/model/rqvae_train.yaml")
+    assert "reconstruction_loss" in rqvae_config.metrics.stages.train
 
 
 def test_quantization_training_configs_do_not_expose_training_loop_function():

@@ -25,3 +25,108 @@ training_model_config:
     lr: 0.001
     weight_decay: 0.0
   scheduler: null
+
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: loss
+      quantization_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: quantization_loss
+      first_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input:
+          key: first_residuals_norm_ratio
+      last_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input:
+          key: last_residuals_norm_ratio
+      first_centroids_norm:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input:
+          key: first_centroids_norm
+      last_centroids_norm:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input:
+          key: last_centroids_norm
+      frac_unique_ids:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input:
+          key: frac_unique_ids
+      mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input:
+          key: mse
+      layer_coverages:
+        repeat:
+          count: ${num_hierarchies}
+          index_name: layer_idx
+          name_template: layer_{layer_idx}/frac_layer_coverages
+          metric:
+            _target_: torchmetrics.MeanMetric
+          input:
+            key: layer_coverages
+            index: "{layer_idx}"
+      layer_id_entropy:
+        repeat:
+          count: ${num_hierarchies}
+          index_name: layer_idx
+          name_template: layer_{layer_idx}/id_entropy
+          metric:
+            _target_: torchmetrics.MeanMetric
+          input:
+            key: layer_id_entropies
+            index: "{layer_idx}"
+    val:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: loss
+      first_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: first_residuals_norm_ratio
+      last_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: last_residuals_norm_ratio
+      frac_unique_ids:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: frac_unique_ids
+      mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: mse
+    test:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: loss
+      first_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: first_residuals_norm_ratio
+      last_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: last_residuals_norm_ratio
+      frac_unique_ids:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: frac_unique_ids
+      mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        input: mse

@@ -4,9 +4,7 @@ import torch
 import transformers
 from lightning import LightningModule
 from torch import nn
-from torchmetrics import MeanMetric
 
-from src.common.components.eval_metrics import Evaluator
 from src.common.configs.model import TrainingModelConfig
 from src.data.components.data_models import (
     TigerLabelData,
@@ -40,28 +38,15 @@ class Tiger(LightningModule):
         should_check_prefix: bool = False,
         should_add_sep_token: bool = True,
         training_model_config: TrainingModelConfig | None = None,
-        evaluator: Evaluator | None = None,
     ):
         super().__init__()
 
         if training_model_config is None:
             training_model_config = TrainingModelConfig()
 
-        self.save_hyperparameters(
-            logger=False,
-            ignore=[
-                "encoder",
-                "decoder",
-                "semantic_ids",
-                "training_model_config",
-                "evaluator",
-            ],
-        )
-
         self.optimizer = training_model_config.optimizer
         self.scheduler = training_model_config.scheduler
         self.loss_function = training_model_config.loss_function
-        self.evaluator = evaluator
 
         self.num_embeddings_per_hierarchy = codebook_size
         self.embedding_dim = embedding_dim
@@ -77,14 +62,6 @@ class Tiger(LightningModule):
                 f"semantic_ids second dimension ({semantic_ids.size(1)}) must be >= num_hierarchies ({num_hierarchies})."
             )
         self.semantic_ids = semantic_ids[:, :num_hierarchies].long()
-
-        if self.evaluator:  # For inference, evaluator is not set.
-            for metric_name, metric_object in self.evaluator.metrics.items():
-                setattr(self, metric_name, metric_object)
-
-            self.train_loss = MeanMetric()
-            self.val_loss = MeanMetric()
-            self.test_loss = MeanMetric()
 
         self.sid_embedding_table = nn.Embedding(
             num_embeddings=self.num_embeddings_per_hierarchy * self.num_hierarchies,
@@ -195,7 +172,7 @@ class Tiger(LightningModule):
         ) * self.num_embeddings_per_hierarchy
         global_target_ids = target_ids + hierarchy_offsets
 
-        loss = 0
+        loss = torch.tensor(0., dtype=torch.float).to(logits.device)
         for hierarchy in range(self.num_hierarchies):
             loss += self.loss_function(
                 input=logits[:, hierarchy],
@@ -222,38 +199,11 @@ class Tiger(LightningModule):
             }
         return {"optimizer": optimizer}
 
-    def log_metrics(
-        self,
-        prefix: str,
-        on_step=False,
-        on_epoch=True,
-        sync_dist=False,
-        logger=True,
-        prog_bar=False,
-        call_compute=False,
-    ):
-        if self.evaluator is None:
-            return
-
-        metrics_dict = {
-            f"{prefix}/{metric_name}": metric_object.compute() if call_compute else metric_object
-            for metric_name, metric_object in self.evaluator.metrics.items()
-        }
-
-        self.log_dict(
-            metrics_dict,
-            on_step=on_step,
-            on_epoch=on_epoch,
-            sync_dist=sync_dist,
-            logger=logger,
-            prog_bar=prog_bar,
-        )
-
     def training_step(
         self,
         batch: tuple[TigerModelInput, TigerLabelData | None],
         batch_idx: int,
-    ) -> torch.Tensor:
+    ) -> dict[str, torch.Tensor]:
         model_input, label_data = batch
         if label_data is None:
             raise ValueError("Tiger training_step requires label_data.")
@@ -266,29 +216,13 @@ class Tiger(LightningModule):
         )
         loss = self._compute_loss(logits=logits, target_ids=target_ids)
 
-        if self.evaluator:
-            self.train_loss(loss)
-            self.log(
-                "train/loss",
-                self.train_loss,
-                on_step=True,
-                on_epoch=False,
-                prog_bar=False,
-                logger=True,
-                sync_dist=True,
-            )
-
-        return loss
+        return {"loss": loss}
 
     def eval_step(
         self,
         batch: tuple[TigerModelInput, TigerLabelData],
-        loss_to_aggregate: MeanMetric,
-    ):
+    ) -> dict[str, torch.Tensor]:
         """Perform a TIGER generation evaluation step."""
-        if self.evaluator is None:
-            return
-
         model_input: TigerModelInput = batch[0]
         label_data: TigerLabelData = batch[1]
         target_ids = label_data.target_ids
@@ -305,59 +239,26 @@ class Tiger(LightningModule):
             input_ids=model_input.input_ids,
         )
 
-        self.evaluator(
-            marginal_probs=marginal_probs,
-            generated_ids=generated_ids,
-            labels=label_data.target_ids.to(marginal_probs.device),
-        )
-
-        loss_to_aggregate(loss)
+        return {
+            "loss": loss,
+            "marginal_probs": marginal_probs,
+            "generated_ids": generated_ids,
+            "labels": label_data.target_ids.to(marginal_probs.device),
+        }
 
     def validation_step(
         self,
         batch: Any,
         batch_idx: int,
     ):
-        if self.evaluator is None:
-            return
-        self.eval_step(batch, self.val_loss)
+        return self.eval_step(batch)
 
     def test_step(
         self,
         batch: Any,
         batch_idx: int,
     ):
-        if self.evaluator is None:
-            return
-        self.eval_step(batch, self.test_loss)
-
-    def on_train_start(self):
-        super().on_train_start()
-        if self.evaluator:
-            self.val_loss.reset()
-            self.evaluator.reset()
-            self.train_loss.reset()
-            self.test_loss.reset()
-
-    def on_validation_epoch_start(self):
-        if self.evaluator:
-            self.val_loss.reset()
-            self.evaluator.reset()
-
-    def on_test_epoch_start(self):
-        if self.evaluator:
-            self.test_loss.reset()
-            self.evaluator.reset()
-
-    def on_validation_epoch_end(self):
-        if self.evaluator:
-            self.log("val/loss", self.val_loss, sync_dist=False, prog_bar=False, logger=True)
-            self.log_metrics("val")
-
-    def on_test_epoch_end(self):
-        if self.evaluator:
-            self.log("test/loss", self.test_loss, sync_dist=False, prog_bar=False, logger=True)
-            self.log_metrics("test")
+        return self.eval_step(batch)
 
     def on_exception(self, exception):
         self.trainer.should_stop = True

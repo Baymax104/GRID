@@ -6,7 +6,6 @@ from lightning import LightningModule
 from lightning.pytorch.trainer.states import TrainerFn
 from torch import nn
 from torch.distributions import Categorical
-from torchmetrics import MeanMetric
 
 from src.common.components.loss_functions import WeightedSquaredError
 from src.common.configs.model import TrainingModelConfig
@@ -140,32 +139,6 @@ class ResidualQuantizationVAE(LightningModule):
         )
         self.init_buffers: list[torch.Tensor] = [torch.tensor([]) for _ in range(n_layers)]
         self.is_initialized_list: list[bool] = [False for _ in range(n_layers)]
-
-        # Metrics
-        self.train_loss = MeanMetric()
-        self.train_quantization_loss = MeanMetric()
-        self.train_reconstruction_loss = MeanMetric()
-        self.train_first_residuals_norm_ratio = MeanMetric()
-        self.train_last_residuals_norm_ratio = MeanMetric()
-        self.first_centroids_norm = MeanMetric()
-        self.last_centroids_norm = MeanMetric()
-        self.train_frac_unique_ids = MeanMetric()
-        self.train_mse = MeanMetric()
-        for layer_idx in range(self.n_layers):
-            setattr(self, f"train_layer_coverages_{layer_idx}", MeanMetric())
-            setattr(self, f"train_layer_id_entropy_{layer_idx}", MeanMetric())
-
-        self.val_loss = MeanMetric()
-        self.val_first_residuals_norm_ratio = MeanMetric()
-        self.val_last_residuals_norm_ratio = MeanMetric()
-        self.val_mse = MeanMetric()
-        self.val_frac_unique_ids = MeanMetric()
-
-        self.test_loss = MeanMetric()
-        self.test_first_residuals_norm_ratio = MeanMetric()
-        self.test_last_residuals_norm_ratio = MeanMetric()
-        self.test_mse = MeanMetric()
-        self.test_frac_unique_ids = MeanMetric()
 
     # ------------------------------------------------------------------ #
     # Per-layer VQ logic + K-Means convergence initialization
@@ -327,7 +300,7 @@ class ResidualQuantizationVAE(LightningModule):
     # Training
     # ------------------------------------------------------------------ #
 
-    def training_step(self, model_input: ItemBatch) -> torch.Tensor:
+    def training_step(self, model_input: ItemBatch) -> dict[str, Any]:
         input_embeddings = model_input.features["input_embedding"].to(self.device)
         normalized_input_embeddings = self.normalization_layer(input_embeddings)
         encoded_embeddings = self.encoder(normalized_input_embeddings)
@@ -342,97 +315,43 @@ class ResidualQuantizationVAE(LightningModule):
             reconstruction_loss = torch.tensor(0.0).to(self.device)
 
         loss = self.quantization_loss_weight * quantization_loss + self.reconstruction_loss_weight * reconstruction_loss
-        self.train_loss(loss)
-        self.train_quantization_loss(quantization_loss)
-        self.train_reconstruction_loss(reconstruction_loss)
-        train_dict_to_log = {
-            "train/quantization_loss": self.train_quantization_loss,
-            "train/reconstruction_loss": self.train_reconstruction_loss,
-        }
 
         with torch.no_grad():
-            if self.global_step % self.trainer.log_every_n_steps == 0:
-                (
-                    train_first_residuals_norm_ratio,
-                    train_last_residuals_norm_ratio,
-                    first_centroids_norm,
-                    last_centroids_norm,
-                    train_frac_unique_ids,
-                    train_mse,
-                    train_layer_coverages,
-                    train_layer_id_entropies,
-                ) = self._compute_output_stats(
-                    cluster_ids=cluster_ids,
-                    all_residuals=all_residuals,
-                    input_embeddings=model_input.features["input_embedding"],
-                )
-                self.train_first_residuals_norm_ratio(train_first_residuals_norm_ratio)
-                self.train_last_residuals_norm_ratio(train_last_residuals_norm_ratio)
-                self.first_centroids_norm(first_centroids_norm)
-                self.last_centroids_norm(last_centroids_norm)
-                self.train_frac_unique_ids(train_frac_unique_ids)
-                self.train_mse(train_mse)
-                for layer_idx in range(self.n_layers):
-                    getattr(self, f"train_layer_coverages_{layer_idx}")(train_layer_coverages[layer_idx])
-                    getattr(self, f"train_layer_id_entropy_{layer_idx}")(train_layer_id_entropies[layer_idx])
-
-                train_dict_to_log.update(
-                    {
-                        "train/last_residuals_norm_ratio": self.train_last_residuals_norm_ratio,
-                        "train/first_residuals_norm_ratio": self.train_first_residuals_norm_ratio,
-                        "train/first_centroids_norm": self.first_centroids_norm,
-                        "train/last_centroids_norm": self.last_centroids_norm,
-                        "train/frac_unique_ids": self.train_frac_unique_ids,
-                        "train/mse": self.train_mse,
-                    }
-                )
-                train_dict_to_log.update(
-                    {
-                        f"train/layer_{layer_idx}/frac_layer_coverages": getattr(
-                            self, f"train_layer_coverages_{layer_idx}"
-                        )
-                        for layer_idx in range(self.n_layers)
-                    }
-                )
-                train_dict_to_log.update(
-                    {
-                        f"train/layer_{layer_idx}/id_entropy": getattr(self, f"train_layer_id_entropy_{layer_idx}")
-                        for layer_idx in range(self.n_layers)
-                    }
-                )
-
-        train_dict_to_log["train/loss"] = self.train_loss
-
-        self.log_dict(
-            train_dict_to_log,
-            on_step=True,
-            on_epoch=False,
-            prog_bar=False,
-            logger=True,
-            sync_dist=True,
-        )
-
-        return loss
+            (
+                train_first_residuals_norm_ratio,
+                train_last_residuals_norm_ratio,
+                first_centroids_norm,
+                last_centroids_norm,
+                train_frac_unique_ids,
+                train_mse,
+                train_layer_coverages,
+                train_layer_id_entropies,
+            ) = self._compute_output_stats(
+                cluster_ids=cluster_ids,
+                all_residuals=all_residuals,
+                input_embeddings=model_input.features["input_embedding"],
+            )
+        metric_payload = {
+            "loss": loss,
+            "quantization_loss": quantization_loss,
+            "reconstruction_loss": reconstruction_loss,
+            "last_residuals_norm_ratio": train_last_residuals_norm_ratio,
+            "first_residuals_norm_ratio": train_first_residuals_norm_ratio,
+            "first_centroids_norm": first_centroids_norm,
+            "last_centroids_norm": last_centroids_norm,
+            "frac_unique_ids": train_frac_unique_ids,
+            "mse": train_mse,
+            "layer_coverages": train_layer_coverages,
+            "layer_id_entropies": train_layer_id_entropies,
+        }
+        return metric_payload
 
     def on_train_start(self):
-        if hasattr(self, "train_loss"):
-            self.train_loss.reset()
-
         for idx in range(self.n_layers):
             self.init_buffers[idx] = torch.tensor([], device=self.device)
             self.centroids_list[idx] = self.centroids_list[idx].to(self.device)
 
         logger.info(f"Device {self.device}: Training all layers simultaneously")
-
-        self.train_first_residuals_norm_ratio.reset()
-        self.train_last_residuals_norm_ratio.reset()
-        self.train_frac_unique_ids.reset()
-        self.first_centroids_norm.reset()
-        self.last_centroids_norm.reset()
-        self.train_mse.reset()
-        for layer_idx in range(self.n_layers):
-            getattr(self, f"train_layer_coverages_{layer_idx}").reset()
-            getattr(self, f"train_layer_id_entropy_{layer_idx}").reset()
 
     # ------------------------------------------------------------------ #
     # Stats / Eval / Predict
@@ -478,17 +397,11 @@ class ResidualQuantizationVAE(LightningModule):
     def eval_step(
         self,
         batch: ItemBatch,
-        loss_to_aggregate: MeanMetric,
-        first_residuals_norm_ratio_metric: MeanMetric,
-        last_residuals_norm_ratio_metric: MeanMetric,
-        frac_unique_ids_metric: MeanMetric,
-        mse_metric: MeanMetric,
-    ):
+    ) -> dict[str, torch.Tensor]:
         input_embeddings = batch.features["input_embedding"].to(self.device)
         normalized_input_embeddings = self.normalization_layer(input_embeddings)
         encoded_embeddings = self.encoder(normalized_input_embeddings)
         cluster_ids, all_residuals, _, loss = self.forward(encoded_embeddings)
-        loss_to_aggregate(loss)
 
         (
             first_residuals_norm_ratio,
@@ -504,72 +417,19 @@ class ResidualQuantizationVAE(LightningModule):
             all_residuals=all_residuals,
             input_embeddings=batch.features["input_embedding"],
         )
-        last_residuals_norm_ratio_metric(last_residuals_norm_ratio)
-        first_residuals_norm_ratio_metric(first_residuals_norm_ratio)
-        frac_unique_ids_metric(frac_unique_ids)
-        mse_metric(mse)
+        return {
+            "loss": loss,
+            "first_residuals_norm_ratio": first_residuals_norm_ratio,
+            "last_residuals_norm_ratio": last_residuals_norm_ratio,
+            "frac_unique_ids": frac_unique_ids,
+            "mse": mse,
+        }
 
     def validation_step(self, batch: ItemBatch, batch_idx: int):
-        self.eval_step(
-            batch,
-            self.val_loss,
-            self.val_first_residuals_norm_ratio,
-            self.val_last_residuals_norm_ratio,
-            self.val_frac_unique_ids,
-            self.val_mse,
-        )
-        self.log_dict(
-            {
-                "val/first_residuals_norm_ratio": self.val_first_residuals_norm_ratio,
-                "val/last_residuals_norm_ratio": self.val_last_residuals_norm_ratio,
-                "val/frac_unique_ids": self.val_frac_unique_ids,
-                "val/mse": self.val_mse,
-                "val/loss": self.val_loss,
-            },
-            on_step=False,
-            on_epoch=True,
-            prog_bar=False,
-            logger=True,
-            sync_dist=True,
-        )
-
-    def on_validation_start(self):
-        self.val_loss.reset()
-        self.val_first_residuals_norm_ratio.reset()
-        self.val_last_residuals_norm_ratio.reset()
-        self.val_frac_unique_ids.reset()
-        self.val_mse.reset()
+        return self.eval_step(batch)
 
     def test_step(self, batch: ItemBatch, batch_idx: int):
-        self.eval_step(
-            batch,
-            self.test_loss,
-            self.test_first_residuals_norm_ratio,
-            self.test_last_residuals_norm_ratio,
-            self.test_frac_unique_ids,
-            self.test_mse,
-        )
-        self.log_dict(
-            {
-                "test/first_residuals_norm_ratio": self.test_first_residuals_norm_ratio,
-                "test/last_residuals_norm_ratio": self.test_last_residuals_norm_ratio,
-                "test/frac_unique_ids": self.test_frac_unique_ids,
-                "test/mse": self.test_mse,
-                "test/loss": self.test_loss,
-            },
-            on_step=False,
-            on_epoch=True,
-            prog_bar=False,
-            logger=True,
-            sync_dist=True,
-        )
-
-    def on_test_start(self):
-        self.test_loss.reset()
-        self.test_first_residuals_norm_ratio.reset()
-        self.test_last_residuals_norm_ratio.reset()
-        self.test_frac_unique_ids.reset()
-        self.test_mse.reset()
+        return self.eval_step(batch)
 
     def predict_step(self, batch: ItemBatch) -> ModelOutput:
         input_embeddings = batch.features["input_embedding"].to(self.device)

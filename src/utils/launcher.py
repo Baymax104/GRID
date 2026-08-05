@@ -10,6 +10,7 @@ from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, open_dict
 
 import src.utils.logging as logging_utils
+from src.common.metrics import MetricCallback
 from src.utils.file import (
     get_last_modified_file,
     has_no_extension,
@@ -181,6 +182,18 @@ def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
     return loggers
 
 
+def attach_metric_callback(callbacks: list[Callback], cfg: DictConfig) -> list[Callback]:
+    """Attach config-declared model metrics through the shared metric callback."""
+    metrics_cfg = cfg.get("model", {}).get("metrics")
+    if not metrics_cfg:
+        return callbacks
+
+    logger.info("Attaching config-declared metric callback.")
+    metric_engine = hydra.utils.instantiate(metrics_cfg, _recursive_=False)
+    callbacks.append(MetricCallback(engine=metric_engine))
+    return callbacks
+
+
 def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
     """
     Initialize and instantiate various objects required for running pipelines.
@@ -210,6 +223,7 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
 
     logger.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
+    callbacks = attach_metric_callback(callbacks, cfg)
     callbacks = ensure_training_progress_bar(callbacks, cfg)
 
     logger.info("Instantiating loggers...")
