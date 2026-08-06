@@ -196,6 +196,7 @@ class TigerDecoder(torch.nn.Module):
             inputs_embeds=sequence_embedding,
             encoder_hidden_states=encoder_output,
             encoder_attention_mask=encoder_attention_mask,
+            use_cache=False,
         )
 
         # Shape (batch_size, num_hierarchies, embedding_dim)
@@ -237,6 +238,7 @@ class TigerDecoder(torch.nn.Module):
                 inputs_embeds=sequence_embedding,
                 encoder_hidden_states=repeated_encoder_output,
                 encoder_attention_mask=repeated_encoder_attention_mask,
+                use_cache=False,
             )
 
             # Shape (batch_size, embedding_dim)

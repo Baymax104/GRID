@@ -204,6 +204,24 @@ def test_quantization_train_configs_declare_runtime_metrics_with_repeat():
     assert "reconstruction_loss" in rqvae_config.metrics.stages.train
 
 
+def test_rkmeans_inference_config_matches_train_model_structure():
+    train_config = OmegaConf.load(PROJECT_ROOT / "configs/model/rkmeans_train.yaml")
+    inference_config = OmegaConf.load(PROJECT_ROOT / "configs/model/rkmeans_inference.yaml")
+    train_root = OmegaConf.to_container(train_config.root, resolve=False)
+    inference_root = OmegaConf.to_container(inference_config.root, resolve=False)
+
+    assert inference_root["_target_"] == train_root["_target_"]
+    assert inference_root["n_layers"] == train_root["n_layers"]
+    assert inference_root["n_clusters"] == train_root["n_clusters"]
+    assert inference_root["n_features"] == train_root["n_features"]
+    assert inference_root["sub_layer"] == train_root["sub_layer"]
+    assert "training_model_config" not in inference_config
+    assert "training_model_config" not in inference_root
+    assert "init_buffer_size" not in inference_root
+    assert "optimizer" not in inference_root
+    assert "scheduler" not in inference_root
+
+
 def test_quantization_output_stats_return_metric_payload_dict():
     models = [
         create_residual_kmeans(n_layers=2),

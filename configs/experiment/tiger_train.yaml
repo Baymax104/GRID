@@ -11,16 +11,16 @@ data_dir: ???
 semantic_id_path: ???
 num_hierarchies: ???
 codebook_size: ???
-embedding_dim: ???
 devices: ???
 
-sequence_length: 200
+sequence_length: 180
 run_mode: train
 task_name: tiger_train
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 run_test_after_training: true
 ckpt_path: null
 seed: 42
+
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -29,6 +29,7 @@ paths:
   work_dir: ${hydra:runtime.cwd}
   profile_dir: ${hydra:run.dir}/profile_output
   metadata_dir: ${paths.output_dir}/metadata
+
 extras:
   ignore_warnings: false
   print_config_warnings: true

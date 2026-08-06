@@ -5,6 +5,9 @@ root:
   n_layers: ${num_hierarchies}
   n_clusters: ${codebook_size}
   n_features: ${embedding_dim}
-  init_buffer_size: 3072
-  optimizer: null
-  scheduler: null
+  sub_layer:
+    _target_: src.quantization.rkmeans.kmeans_layer.KMeansLayer
+    _partial_: true
+    n_clusters: ${codebook_size}
+    n_features: ${embedding_dim}
+    init_buffer_size: 3072

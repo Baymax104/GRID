@@ -19,3 +19,9 @@ def broadcast_from_rank_zero(tensor: torch.Tensor) -> torch.Tensor:
     if is_distributed_initialized():
         dist.broadcast(tensor, src=0)
     return tensor
+
+
+def distributed_barrier() -> None:
+    """Synchronize all distributed ranks when torch distributed is initialized."""
+    if is_distributed_initialized():
+        dist.barrier()

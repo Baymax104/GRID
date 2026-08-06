@@ -4,4 +4,3 @@ pickle_writer:
   _target_: src.inference.prediction_writers.LocalPickleWriter
   output_dir: ${paths.output_dir}/pickle
   flush_frequency: 100000
-  write_interval: batch

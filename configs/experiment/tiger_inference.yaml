@@ -6,16 +6,19 @@ defaults:
 - /callbacks@callbacks: tiger_inference
 - /logger@logger: tiger_inference
 - /trainer@trainer: tiger_inference
+
 data_dir: ???
 semantic_id_path: ???
 ckpt_path: ???
 num_hierarchies: ???
 codebook_size: ???
+
 run_mode: inference
 task_name: tiger_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 seed: 42
-sequence_length: 120
+sequence_length: 180
+
 paths:
   root_dir: .
   data_dir: ${data_dir}
@@ -24,6 +27,7 @@ paths:
   work_dir: ${hydra:runtime.cwd}
   profile_dir: ${hydra:run.dir}/profile_output
   metadata_dir: ${paths.output_dir}/metadata
+
 extras:
   ignore_warnings: false
   print_config_warnings: true

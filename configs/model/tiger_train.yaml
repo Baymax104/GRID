@@ -10,16 +10,16 @@ root:
     file_path: ${semantic_id_path}
   num_hierarchies: ${num_hierarchies}
   codebook_size: ${codebook_size}
-  embedding_dim: ${embedding_dim}
+  embedding_dim: 256
   should_check_prefix: true
 
 encoder:
   _target_: transformers.T5EncoderModel
   config:
     _target_: transformers.T5Config
-    vocab_size: 256
-    d_model: 128
-    num_heads: 6
+    vocab_size: ${model.root.codebook_size}
+    d_model: ${model.root.embedding_dim}
+    num_heads: 4
     dropout_rate: 0.1
     d_ff: 1024
     d_kv: 64
@@ -30,12 +30,12 @@ decoder:
   config:
     _target_: transformers.models.t5.configuration_t5.T5Config
     vocab_size: ${model.encoder.config.vocab_size}
-    d_model: ${model.encoder.config.d_model}
+    d_model: ${model.root.embedding_dim}
     num_heads: ${model.encoder.config.num_heads}
-    dropout_rate: 0.1
+    dropout_rate: ${model.encoder.config.dropout_rate}
     d_ff: ${model.encoder.config.d_ff}
     d_kv: ${model.encoder.config.d_kv}
-    num_layers: 4
+    num_layers: ${model.encoder.config.num_layers}
     is_decoder: true
     is_encoder_decoder: false
 

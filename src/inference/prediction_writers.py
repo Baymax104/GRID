@@ -1,32 +1,31 @@
 import datetime
 import os
 import pickle
-from typing import Any, Literal
+from typing import Any
 
 import torch
 from lightning import LightningModule, Trainer
-from lightning.pytorch.callbacks import BasePredictionWriter
+from lightning.pytorch.callbacks import Callback
 
 from src.inference.model_output import ModelOutput
 from src.utils.decorators import retry
+from src.utils.distributed import distributed_barrier
 from src.utils.file import sync_file
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-class BaseBufferedWriter(BasePredictionWriter):
+class BaseBufferedWriter(Callback):
     def __init__(
         self,
         flush_frequency: int = 5000,
-        write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
     ):
         """
         Args:
             flush_frequency: Number of samples to accumulate before flushing.
-            write_interval: "batch" or "epoch".
         """
-        super().__init__(write_interval)
+        super().__init__()
         self.flush_frequency = flush_frequency
         self.buffer: list[ModelOutput] = []
         self.global_rank = None
@@ -65,30 +64,17 @@ class BaseBufferedWriter(BasePredictionWriter):
         if self._buffer_sample_count() >= self.flush_frequency:
             self.flush_buffer()
 
-    def write_on_batch_end(
+    def on_predict_batch_end(
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        prediction: ModelOutput,
-        batch_indices: list[int],
+        outputs: ModelOutput,
         batch: Any,
         batch_idx: int,
-        dataloader_idx: int,
+        dataloader_idx: int = 0,
     ):
         """Called at the end of each prediction batch."""
-        self.handle_batch(prediction)
-
-    def write_on_epoch_end(
-        self,
-        trainer: Trainer,
-        pl_module: LightningModule,
-        predictions: list[ModelOutput],
-        batch_indices: list[list[int]],
-    ):
-        """Called at the end of a prediction epoch."""
-        for batch_pred in predictions:
-            self.handle_batch(batch_pred)
-        self.flush_buffer()
+        self.handle_batch(outputs)
 
     def on_predict_end(
         self,
@@ -109,46 +95,34 @@ class LocalPickleWriter(BaseBufferedWriter):
         self,
         output_dir: str,
         flush_frequency: int = 1000,
-        write_interval: Literal["batch", "epoch", "batch_and_epoch"] = "batch",
         post_processing_functions: list[callable] | None = None,
     ):
         """
         Args:
             output_dir: Directory to save the pickle files.
             flush_frequency: Number of samples to accumulate before writing to a pickle file.
-            write_interval: "batch" or "epoch".
             post_processing_functions: list of ordered post-processing functions to apply to the files.
         """
-        super().__init__(write_interval=write_interval, flush_frequency=flush_frequency)
+        super().__init__(flush_frequency=flush_frequency)
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
         self.post_processing_functions = post_processing_functions if post_processing_functions else []
 
-    def _create_file_path(self) -> str:
-        """Create a file path for the pickle file."""
-        return (
-            f"predictions_{self.global_rank}_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%dT%H%M%S%f')[:-3]}.pkl"
-        )
 
-    def _local_file_path(self, file_path: str | None = None) -> str:
+    def _local_file_path(self, file_path: str) -> str:
         """Create a local file path for the pickle file."""
-        return f"{self.output_dir}/{file_path if file_path else self._create_file_path()}"
-
-    def _distributed_barrier(self):
-        if torch.distributed.is_available() and torch.distributed.is_initialized():
-            torch.distributed.barrier()
-        else:
-            logger.info("Distributed not available, skipping distributed barrier.")
+        return f"{self.output_dir}/{file_path}"
 
     @retry()
     def _flush_buffer(self):
         """Flush the buffer to a local temporary pickle file."""
-        file_path = self._create_file_path()
+        file_path = f"predictions_{self.global_rank}_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%dT%H%M%S%f')[:-3]}.pkl"
         with open(self._local_file_path(file_path=file_path), "wb") as f:
             pickle.dump(self.buffer, f)
 
         logger.info(
-            f"Global Rank: {self.global_rank} wrote {self._buffer_sample_count()} samples to {self._local_file_path(file_path=file_path)}."
+            f"Global Rank: {self.global_rank} wrote {self._buffer_sample_count()} "
+            f"samples to {self._local_file_path(file_path=file_path)}."
         )
 
     @retry()
@@ -161,7 +135,7 @@ class LocalPickleWriter(BaseBufferedWriter):
 
         super().on_predict_end(trainer, pl_module)
 
-        self._distributed_barrier()
+        distributed_barrier()
         if self.global_rank != 0:
             logger.info(f"Rank {self.global_rank} exits on predict end.")
             return
@@ -190,7 +164,4 @@ class LocalPickleWriter(BaseBufferedWriter):
         predictions = torch.cat([torch.as_tensor(output.predictions) for output in all_outputs], dim=0)
         cpu_bundle = {"keys": keys.cpu(), "predictions": predictions.cpu()}
         torch.save(cpu_bundle, os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
-        logger.info(
-            "Merged %s keyed rows into merged_predictions_tensor.pt as model output bundle.",
-            len(cpu_bundle["keys"]),
-        )
+        logger.info(f"Merged {len(cpu_bundle['keys'])} keyed rows into merged_predictions_tensor.pt as model output bundle.")

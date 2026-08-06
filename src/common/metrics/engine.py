@@ -22,7 +22,7 @@ class MetricEngine(nn.Module):
             self._add_stage(stage, stage_definitions or {})
 
     def has_stage(self, stage: str) -> bool:
-        stage_key = self._stage_keys.get(stage)
+        stage_key = self._stage_keys.get(stage, "")
         return stage_key in self.metrics and len(self.metrics[stage_key]) > 0
 
     def update(self, stage: str, payload: Mapping[str, Any]) -> None:
