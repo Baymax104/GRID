@@ -111,16 +111,7 @@ class ResidualVectorQuantization(LightningModule):
         loss = self.quantization_loss_weight * quantization_loss
 
         with torch.no_grad():
-            (
-                train_first_residuals_norm_ratio,
-                train_last_residuals_norm_ratio,
-                first_centroids_norm,
-                last_centroids_norm,
-                train_frac_unique_ids,
-                train_mse,
-                train_layer_coverages,
-                train_layer_id_entropies,
-            ) = self._compute_output_stats(
+            output_stats = self._compute_output_stats(
                 cluster_ids=cluster_ids,
                 all_residuals=all_residuals,
                 input_embeddings=model_input.features["input_embedding"],
@@ -129,14 +120,7 @@ class ResidualVectorQuantization(LightningModule):
         metric_payload = {
             "loss": loss,
             "quantization_loss": quantization_loss,
-            "last_residuals_norm_ratio": train_last_residuals_norm_ratio,
-            "first_residuals_norm_ratio": train_first_residuals_norm_ratio,
-            "first_centroids_norm": first_centroids_norm,
-            "last_centroids_norm": last_centroids_norm,
-            "frac_unique_ids": train_frac_unique_ids,
-            "mse": train_mse,
-            "layer_coverages": train_layer_coverages,
-            "layer_id_entropies": train_layer_id_entropies,
+            **output_stats,
         }
 
         if (
@@ -177,7 +161,7 @@ class ResidualVectorQuantization(LightningModule):
         cluster_ids: torch.Tensor,
         all_residuals: torch.Tensor,
         input_embeddings: torch.Tensor,
-    ) -> tuple:
+    ) -> dict[str, Any]:
         input_embedding_norm = torch.linalg.matrix_norm(input_embeddings)
         first_residuals_norm_ratio = torch.linalg.matrix_norm(all_residuals[:, :, 0]) / input_embedding_norm
         last_residuals_norm = torch.linalg.matrix_norm(all_residuals[:, :, -1])
@@ -198,16 +182,16 @@ class ResidualVectorQuantization(LightningModule):
             layer_coverages.append(cluster_counts.shape[0] / self.n_clusters)
             layer_id_entropies.append(entropy)
 
-        return (
-            first_residuals_norm_ratio,
-            last_residuals_norm_ratio,
-            first_centroids_norm,
-            last_centroids_norm,
-            frac_unique_ids,
-            mse,
-            layer_coverages,
-            layer_id_entropies,
-        )
+        return {
+            "first_residuals_norm_ratio": first_residuals_norm_ratio,
+            "last_residuals_norm_ratio": last_residuals_norm_ratio,
+            "first_centroids_norm": first_centroids_norm,
+            "last_centroids_norm": last_centroids_norm,
+            "frac_unique_ids": frac_unique_ids,
+            "mse": mse,
+            "layer_coverages": layer_coverages,
+            "layer_id_entropies": layer_id_entropies,
+        }
 
     def eval_step(
         self,
@@ -216,26 +200,17 @@ class ResidualVectorQuantization(LightningModule):
         input_embeddings = batch.features["input_embedding"].to(self.device)
         cluster_ids, all_residuals, _, loss = self.forward(input_embeddings)
 
-        (
-            first_residuals_norm_ratio,
-            last_residuals_norm_ratio,
-            _,
-            _,
-            frac_unique_ids,
-            mse,
-            _,
-            _,
-        ) = self._compute_output_stats(
+        output_stats = self._compute_output_stats(
             cluster_ids=cluster_ids,
             all_residuals=all_residuals,
             input_embeddings=batch.features["input_embedding"],
         )
         return {
             "loss": loss,
-            "first_residuals_norm_ratio": first_residuals_norm_ratio,
-            "last_residuals_norm_ratio": last_residuals_norm_ratio,
-            "frac_unique_ids": frac_unique_ids,
-            "mse": mse,
+            "first_residuals_norm_ratio": output_stats["first_residuals_norm_ratio"],
+            "last_residuals_norm_ratio": output_stats["last_residuals_norm_ratio"],
+            "frac_unique_ids": output_stats["frac_unique_ids"],
+            "mse": output_stats["mse"],
         }
 
     def validation_step(self, batch: ItemBatch, batch_idx: int):

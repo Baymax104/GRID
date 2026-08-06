@@ -204,6 +204,44 @@ def test_quantization_train_configs_declare_runtime_metrics_with_repeat():
     assert "reconstruction_loss" in rqvae_config.metrics.stages.train
 
 
+def test_quantization_output_stats_return_metric_payload_dict():
+    models = [
+        create_residual_kmeans(n_layers=2),
+        create_residual_vector_quantization(n_layers=2),
+        ResidualQuantizationVAE(
+            n_layers=2,
+            n_clusters=2,
+            n_features=2,
+            training_model_config=create_training_model_config(),
+            init_buffer_size=4,
+        ),
+    ]
+    expected_keys = {
+        "first_residuals_norm_ratio",
+        "last_residuals_norm_ratio",
+        "first_centroids_norm",
+        "last_centroids_norm",
+        "frac_unique_ids",
+        "mse",
+        "layer_coverages",
+        "layer_id_entropies",
+    }
+    cluster_ids = torch.tensor([[0, 1], [1, 0]])
+    all_residuals = torch.ones(2, 2, 2)
+    input_embeddings = torch.ones(2, 2)
+
+    for model in models:
+        output_stats = model._compute_output_stats(
+            cluster_ids=cluster_ids,
+            all_residuals=all_residuals,
+            input_embeddings=input_embeddings,
+        )
+
+        assert set(output_stats) == expected_keys
+        assert len(output_stats["layer_coverages"]) == model.n_layers
+        assert len(output_stats["layer_id_entropies"]) == model.n_layers
+
+
 def test_quantization_training_configs_do_not_expose_training_loop_function():
     config_paths = [
         PROJECT_ROOT / "configs/model/rkmeans_train.yaml",
