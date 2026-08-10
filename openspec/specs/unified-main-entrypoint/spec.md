@@ -41,7 +41,7 @@ TBD - created by archiving change unify-main-entrypoint. Update Purpose after ar
 #### Scenario: Repository source layout after migration
 - **WHEN** 开发者查看运行入口源码
 - **THEN** 仓库中必须只保留统一主入口文件
-- **AND** `src/inference/` 包仅可作为推理组件包存在，不得提供替代主入口语义
+- **AND** 仓库中 MUST NOT 存在 `src/inference.py` 或 `src/inference/` 作为替代主入口
 
 ### Requirement: Command templates SHALL use the unified entrypoint
 仓库中的默认脚本与文档命令模板 SHALL 切换到统一入口。

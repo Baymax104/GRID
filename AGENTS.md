@@ -40,12 +40,14 @@
 - 默认 `print_config=True`。若不想在启动时打印完整配置树，可在 experiment 的 `extras.print_config` 中关闭。
 - 推理类 experiment 通常会在 experiment 顶层显式提供 `ckpt_path`；只有像 `sem_embeds_inference` 这种实验才会显式覆盖成 `null`。
 - `src/utils/launcher.py` 是统一入口 `src/main.py` 共用的装配入口：这里实例化 datamodule、model、callbacks、loggers、trainer，并处理 checkpoint 恢复逻辑。
-- `src/inference/` 只是推理输出组件包，不是运行入口；不要恢复旧的 `src/inference.py` 双入口语义。
+- `src/common/inference/` 是跨实验复用的推理输出写入组件包；不要恢复旧的 `src/inference.py` 双入口语义，也不要恢复 `src/inference/` 包。
 
 ## 代码结构（只记最影响判断的）
 - `src/main.py`：统一 Hydra 入口、`extras(cfg)`，再根据 experiment 中的 `run_mode` 分发到 train / inference 链路。
 - `src/data/`：自定义数据管线核心。`BaseDataModule.setup()` 先按 GPU rank 分文件，再由自定义 iterable dataloader 读 TFRecord；数据加载共享 helper 位于 `src/data/utils.py`。
-- `src/inference/`：推理输出协议与落盘链路，包括 `ModelOutput`、`LocalPickleWriter`、推理结果后处理，以及 keyed prediction bundle 加载/查询工具。
+- `src/common/inference/`：推理输出落盘链路，包括 `LocalPickleWriter` 与推理结果后处理。
+- `src/data/components/data_models.py`：运行时数据容器，包括 `ModelOutput`。
+- `src/data/utils.py`：数据加载共享 helper，以及 keyed prediction bundle 加载/查询工具。
 - `src/embedding/`、`src/quantization/`、`src/recommendation/`：分别对应语义向量、量化器、生成推荐模型三段主 pipeline。
 - `src/common/components/`：仅保留跨阶段通用组件，如 metrics、loss、scheduler；不要把推理 writer 或推理输出协议放回这里。
 - `src/utils/`：保留跨域基础工具，如 launcher、logging、file I/O、Rich 输出；不要放 data 专用 helper 或 inference bundle 协议。

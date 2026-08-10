@@ -4,9 +4,9 @@ from types import SimpleNamespace
 import torch
 from lightning.pytorch.callbacks import BasePredictionWriter, Callback
 
-import src.inference.prediction_writers as prediction_writers
-from src.inference.model_output import ModelOutput
-from src.inference.prediction_writers import LocalPickleWriter
+import src.common.inference.prediction_writers as prediction_writers
+from src.common.inference.prediction_writers import LocalPickleWriter
+from src.data.components.data_models import ModelOutput
 
 
 def test_local_pickle_writer_is_batch_only_callback(tmp_path):

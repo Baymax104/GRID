@@ -7,7 +7,7 @@ import torch
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import Callback
 
-from src.inference.model_output import ModelOutput
+from src.data.components.data_models import ModelOutput
 from src.utils.decorators import retry
 from src.utils.distributed import distributed_barrier
 from src.utils.file import sync_file
@@ -108,7 +108,6 @@ class LocalPickleWriter(BaseBufferedWriter):
         os.makedirs(self.output_dir, exist_ok=True)
         self.post_processing_functions = post_processing_functions if post_processing_functions else []
 
-
     def _local_file_path(self, file_path: str) -> str:
         """Create a local file path for the pickle file."""
         return f"{self.output_dir}/{file_path}"
@@ -164,4 +163,6 @@ class LocalPickleWriter(BaseBufferedWriter):
         predictions = torch.cat([torch.as_tensor(output.predictions) for output in all_outputs], dim=0)
         cpu_bundle = {"keys": keys.cpu(), "predictions": predictions.cpu()}
         torch.save(cpu_bundle, os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
-        logger.info(f"Merged {len(cpu_bundle['keys'])} keyed rows into merged_predictions_tensor.pt as model output bundle.")
+        logger.info(
+            f"Merged {len(cpu_bundle['keys'])} keyed rows into merged_predictions_tensor.pt as model output bundle."
+        )

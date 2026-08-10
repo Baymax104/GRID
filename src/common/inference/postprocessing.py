@@ -2,7 +2,7 @@
 
 import torch
 
-from src.inference.utils import load_model_output
+from src.data.utils import load_model_output
 
 
 def deduplicate_rows_in_tensor(file_path: str):

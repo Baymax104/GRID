@@ -4,9 +4,9 @@ from typing import Any
 import numpy as np
 import torch
 
+from src.data.components.data_models import ModelOutput
 from src.data.components.tokenization import load_tokenize
-from src.inference.model_output import ModelOutput
-from src.inference.utils import gather_predictions_by_keys
+from src.data.utils import gather_predictions_by_keys
 from src.utils.file import load_json
 
 

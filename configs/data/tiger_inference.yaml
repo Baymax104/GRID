@@ -25,7 +25,7 @@ preprocessing_functions:
 - _target_: src.data.components.preprocessing.map_sparse_id_to_semantic_id
   _partial_: true
   semantic_id_bundle:
-    _target_: src.inference.utils.load_model_output
+    _target_: src.data.utils.load_model_output
     file_path: ${semantic_id_path}
   features_to_apply:
   - sequence_data

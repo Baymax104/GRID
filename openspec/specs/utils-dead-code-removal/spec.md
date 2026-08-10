@@ -27,9 +27,9 @@ TBD - created by archiving change delete-utils-dead-code. Update Purpose after a
 ### Requirement: 工具函数 SHALL 在无调用者时删除
 `src/utils/` 各模块中在仓库内（Python 导入 + YAML `_target_` + OmegaConf resolver）无任何调用者的函数 SHALL 被删除。
 
-#### Scenario: inference utils 死函数被删除
+#### Scenario: 旧 inference utils 死函数被删除
 - **WHEN** 维护者在仓库中搜索 `locations_to_index_tuple`、`extract_locations`、`transpose_tensor_from_file`
-- **THEN** `src/inference/utils.py` MUST NOT 包含这些函数定义
+- **THEN** 仓库中 MUST NOT 包含这些函数定义
 
 #### Scenario: utils.py 死函数被删除
 - **WHEN** 维护者在仓库中搜索 `get_var_if_not_none`、`get_class_name_str`、`lightning_precision_to_dtype`、`sample_gumbel`、`gumbel_softmax_sample`
@@ -62,4 +62,3 @@ TBD - created by archiving change delete-utils-dead-code. Update Purpose after a
 #### Scenario: logging.py 清理孤立 import
 - **WHEN** 维护者检查 `logging.py` 的 import 语句
 - **THEN** 文件 MUST NOT 包含 `import json`
-

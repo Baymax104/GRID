@@ -144,9 +144,9 @@ normalization_layer:
   _args_:
   - _target_: torch.nn.BatchNorm1d
     num_features: ${embedding_dim}
-  - _target_: src.common.modules.normalize_layer.NormalizeLayer
+  - _target_: src.quantization.rqvae.normalize_layer.NormalizeLayer
 encoder:
-  _target_: src.common.modules.mlp.MLP
+  _target_: src.quantization.rqvae.mlp.MLP
   input_dim: ${embedding_dim}
   hidden_dim_list:
   - 768
@@ -157,7 +157,7 @@ encoder:
     _target_: torch.nn.ReLU
     _partial_: true
 decoder:
-  _target_: src.common.modules.mlp.MLP
+  _target_: src.quantization.rqvae.mlp.MLP
   input_dim: ${model.encoder.output_dim}
   hidden_dim_list:
   - 128

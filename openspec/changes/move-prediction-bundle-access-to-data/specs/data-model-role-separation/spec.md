@@ -1,8 +1,5 @@
-# data-model-role-separation Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving. Update Purpose after archive.
-## Requirements
 ### Requirement: data components 中的配置类与批数据类 SHALL 分离定义
 用于描述数据管线配置的 dataclass 与用于承载运行时 batch / label / model input / keyed prediction output 的 dataclass SHALL 位于不同模块，且不得继续混放在同一个文件中。数据配置 dataclass SHALL 位于 common config package，运行时数据 dataclass SHALL 留在 data package。
 

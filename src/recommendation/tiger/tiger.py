@@ -7,10 +7,10 @@ from torch import nn
 
 from src.common.configs.model import TrainingModelConfig
 from src.data.components.data_models import (
+    ModelOutput,
     TigerLabelData,
     TigerModelInput,
 )
-from src.inference.model_output import ModelOutput
 from src.recommendation.tiger.decoder import TigerDecoder
 from src.recommendation.tiger.encoder import TigerEncoder
 from src.utils.pylogger import RankedLogger

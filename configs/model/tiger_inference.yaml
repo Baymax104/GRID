@@ -8,7 +8,7 @@ root:
   codebook_size: ${codebook_size}
   embedding_dim: ${embedding_dim}
   semantic_ids:
-    _target_: src.inference.utils.load_semantic_id_tensor
+    _target_: src.data.utils.load_semantic_id_tensor
     file_path: ${semantic_id_path}
   top_k_for_generation: 10
 

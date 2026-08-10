@@ -1,8 +1,5 @@
-# prediction-output-protocol Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change simplify-prediction-output-protocol. Update Purpose after archive.
-## Requirements
 ### Requirement: ModelOutput SHALL 直接持有 keys + predictions tensor
 
 `ModelOutput` 作为 keyed prediction output 的字段规范层，SHALL 定义于 `src.data.components.data_models`，并直接持有 `keys` 和 `predictions` 两个属性，SHALL NOT 携带 `key_name`/`prediction_name` 等字段命名映射参数。`prediction_step` SHALL 直接构造 `ModelOutput(keys=..., predictions=...)`，使写入数据在实现中一目了然。

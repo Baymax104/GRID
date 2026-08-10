@@ -1,23 +1,4 @@
-# Keyed Prediction Bundle Artifact
-
-## Purpose
-
-定义 keyed prediction bundle 的持久化与加载协议，确保推理阶段导出的 item embedding、semantic IDs 等预测结果能够通过业务主键稳定查询，同时为模型侧提供明确的 semantic ID tensor 加载路径。
-
-## Requirements
-
-### Requirement: keyed 预测产物 SHALL 以单文件 bundle 形式保存
-凡是由推理阶段导出的 keyed predictions（例如 item embedding、semantic IDs），`merged_predictions_tensor.pt` MUST 保存为单文件 bundle，而非可直接按业务主键索引的裸 tensor。
-
-#### Scenario: bundle 结构统一
-- **WHEN** 推理回调将 keyed predictions 落盘为 `merged_predictions_tensor.pt`
-- **THEN** 文件内容 MUST 为一个包含 `keys` 与 `predictions` 字段的对象
-- **THEN** `keys` 与 `predictions` 的第一维长度 MUST 一致
-
-#### Scenario: 文件名保留但语义升级
-- **WHEN** 维护者或脚本引用 `.../pickle/merged_predictions_tensor.pt`
-- **THEN** 路径约定 MAY 保持不变
-- **BUT** 文件内容 MUST NOT 再被视为“item_id 可直接索引的裸 tensor”
+## MODIFIED Requirements
 
 ### Requirement: keyed prediction bundle SHALL NOT 假设业务主键等于 tensor 行号
 推理产物协议不得依赖业务主键（如 `item_id`）是从 0 开始且连续的数组下标。加载时 SHALL 按 key 值排序 keys 和 predictions，查询时 SHALL 使用 `torch.searchsorted` 二分查找行号，SHALL NOT 使用 Python dict 运行时索引。加载时 SHALL 检测重复 key 并 raise。keyed prediction bundle 的加载与查询函数 SHALL 位于 `src.data.utils`。

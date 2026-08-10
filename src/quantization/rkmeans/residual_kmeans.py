@@ -9,8 +9,7 @@ from torch import Tensor, nn
 from torch.distributions import Categorical
 
 from src.common.configs.model import TrainingModelConfig
-from src.data.components.data_models import ItemBatch
-from src.inference.model_output import ModelOutput
+from src.data.components.data_models import ItemBatch, ModelOutput
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)

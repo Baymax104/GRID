@@ -25,7 +25,7 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 DRY_RUN_DISABLED_CALLBACK_TARGETS = {
     "lightning.pytorch.callbacks.ModelCheckpoint",
     "lightning.pytorch.callbacks.EarlyStopping",
-    "src.inference.prediction_writers.LocalPickleWriter",
+    "src.common.inference.prediction_writers.LocalPickleWriter",
 }
 
 DRY_RUN_DISABLED_LOGGER_TARGETS = {
