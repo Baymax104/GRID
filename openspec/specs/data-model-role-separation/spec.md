@@ -41,3 +41,4 @@ TBD - created by archiving. Update Purpose after archive.
 #### Scenario: Python import 指向 common 配置模型模块
 - **WHEN** 代码导入 `DatasetConfig` 或其他 dataset / dataloader 配置 dataclass
 - **THEN** import MUST 来自 `src.common.configs.data`
+
