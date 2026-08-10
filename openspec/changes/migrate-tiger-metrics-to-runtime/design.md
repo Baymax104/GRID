@@ -26,14 +26,14 @@ TIGER 的指标逻辑包括：
 
 ## Decisions
 
-### 使用 MetricGroup 承接 SID retrieval
+### 使用 spec adapter 承接 SID retrieval
 
-新增 `SIDRetrievalMetricGroup`，内部持有按 top-k 展开的 NDCG/Recall 指标，并提供 `update_from_payload(payload)`。
+新增 TIGER SID retrieval spec adapter，将 `marginal_probs`、`generated_ids`、`labels` 转换成 NDCG/Recall 需要的 `preds`、`target`、`indexes`。TIGER config 直接声明 `ndcg@5`、`recall@10` 等独立 metric 实例，并通过 `spec.adapter` 复用该转换。
 
 理由：
 
 - SID retrieval 需要从 `marginal_probs`、`generated_ids`、`labels` 构造 ranking target，属于 TIGER 领域转换，不应塞进通用 engine。
-- group 对外仍表现为一个 metric module，适配 `MetricEngine`。
+- 每个 retrieval metric 对外仍表现为普通 metric definition，适配 `MetricEngine` 的统一 spec resolver。
 
 ### launcher 自动注入 MetricCallback
 
@@ -67,5 +67,5 @@ TIGER 的指标逻辑包括：
 - [Risk] callback 自动注入可能在没有指标配置的模型上误触发。  
   Mitigation: 仅当 `cfg.model.metrics` 存在且非空时追加。
 
-- [Risk] retrieval group 与旧 `SIDRetrievalEvaluator` 同时存在造成重复概念。  
-  Mitigation: 本阶段保留兼容，后续全量迁移完成后统一清理。
+- [Risk] retrieval adapter 与旧 `SIDRetrievalEvaluator` 同时存在造成重复概念。  
+  Mitigation: 本阶段保留旧 evaluator 兼容，后续全量迁移完成后统一清理。

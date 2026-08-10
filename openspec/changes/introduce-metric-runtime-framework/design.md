@@ -16,7 +16,7 @@
 - 指标定义可由 model 配置声明，并支持 train/val/test stage 隔离。
 - 用单一 `MetricCallback` 统一接入 Lightning hooks。
 - 支持根据配置值动态展开指标，例如 quantization 的 per-layer coverage/entropy。
-- 支持普通 scalar 指标和自定义指标组。
+- 支持普通 scalar 指标和配置化 spec adapter。
 - 提供不运行完整 experiment 的单元测试。
 
 **Non-Goals:**
@@ -49,14 +49,14 @@
 - torchmetrics 本身是 `nn.Module`，需要参与 device 迁移。
 - 单一 engine 比大量模型属性更容易测试和迁移。
 
-### 指标输入通过 resolver 配置声明
+### 指标输入通过 spec resolver 配置声明
 
-每个指标声明 `input`，默认从 callback 提供的 payload 中按 key 取值，也支持按 index 取列表/张量元素。
+每个指标声明 `spec`，默认从 callback 提供的 payload 中按 key 取值，也支持按 index 取列表/张量元素；复杂输入可通过 `spec.adapter` 纯函数转换为 `metric.update(**kwargs)`。
 
 理由：
 
 - 普通 `MeanMetric` 和动态 layer 指标可以共用同一机制。
-- 复杂领域转换可放到自定义 metric group 内部，避免把转换逻辑扩散到模型。
+- 复杂领域转换可放到领域 adapter 内部，避免把转换逻辑扩散到模型或通用 engine。
 
 ### 动态指标通过 repeat 展开
 
@@ -64,7 +64,7 @@
 
 - `count`
 - `name_template`
-- `input.index`
+- `spec.index`
 - 可选 `index_name`
 
 engine 初始化时把 repeat 规范展开为多个真实指标。
@@ -83,7 +83,7 @@ engine 初始化时把 repeat 规范展开为多个真实指标。
   Mitigation: 后续模型迁移的 OpenSpec 必须明确每个模型返回的 payload 字段，并用单元测试覆盖。
 
 - [Risk] 复杂指标输入转换可能让通用 engine 膨胀。  
-  Mitigation: engine 只处理通用生命周期和简单 input resolve；复杂领域指标放到 metric group 中。
+  Mitigation: engine 只处理通用生命周期和 spec adapter 调度；复杂领域转换放到领域 adapter 中。
 
 ## Migration Plan
 

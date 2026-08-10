@@ -34,7 +34,7 @@ The metric runtime SHALL support repeat definitions that expand one configured m
 - **THEN** each expanded metric MUST use the rendered metric name
 
 #### Scenario: Repeat metrics read indexed values
-- **WHEN** an expanded metric definition declares an input key and index placeholder
+- **WHEN** an expanded metric definition declares a metric spec key and index placeholder
 - **THEN** metric update MUST read the indexed value from the payload field
 - **THEN** no dynamic `LightningModule` attribute is required for the expanded metric
 

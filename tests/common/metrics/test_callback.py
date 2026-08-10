@@ -20,7 +20,7 @@ def test_metric_callback_routes_train_batch_output_and_logs_on_step():
             "train": {
                 "loss": {
                     "metric": MeanMetric(),
-                    "input": "loss",
+                    "spec": "loss",
                 }
             }
         }
@@ -48,7 +48,7 @@ def test_metric_callback_logs_and_resets_validation_epoch_metrics():
             "val": {
                 "loss": {
                     "metric": MeanMetric(),
-                    "input": "loss",
+                    "spec": "loss",
                 }
             }
         }

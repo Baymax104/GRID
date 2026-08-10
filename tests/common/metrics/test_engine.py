@@ -1,3 +1,4 @@
+import pytest
 import torch
 from torchmetrics import MeanMetric
 
@@ -18,7 +19,7 @@ def test_metric_engine_updates_computes_resets_and_logs_scalar_metric():
             "train": {
                 "loss": {
                     "metric": MeanMetric(),
-                    "input": {"key": "loss"},
+                    "spec": {"key": "loss"},
                 }
             }
         }
@@ -63,7 +64,7 @@ def test_metric_engine_expands_repeat_metrics_with_indexed_payload_values():
                         "index_name": "layer_idx",
                         "name_template": "layer_{layer_idx}/frac_layer_coverages",
                         "metric": MeanMetric,
-                        "input": {
+                        "spec": {
                             "key": "layer_coverages",
                             "index": "{layer_idx}",
                         },
@@ -106,7 +107,7 @@ def test_metric_engine_passes_kwargs_to_metric():
             "val": {
                 "difference": {
                     "metric": DifferenceMetric(),
-                    "input": {
+                    "spec": {
                         "kwargs": {
                             "preds": {"key": "preds"},
                             "target": {"key": "target"},
@@ -128,13 +129,69 @@ def test_metric_engine_passes_kwargs_to_metric():
     assert torch.equal(engine.compute("val")["difference"], torch.tensor(2.5))
 
 
+def test_metric_engine_passes_adapter_output_as_kwargs():
+    class DifferenceMetric(MeanMetric):
+        def update(self, preds, target):
+            super().update(torch.mean(preds - target))
+
+    def difference_inputs(payload):
+        return {
+            "preds": payload["model_output"],
+            "target": payload["labels"],
+        }
+
+    engine = MetricEngine(
+        stages={
+            "val": {
+                "difference": {
+                    "metric": DifferenceMetric(),
+                    "spec": {
+                        "adapter": difference_inputs,
+                    },
+                }
+            }
+        }
+    )
+
+    engine.update(
+        "val",
+        {
+            "model_output": torch.tensor([3.0, 5.0]),
+            "labels": torch.tensor([1.0, 2.0]),
+        },
+    )
+
+    assert torch.equal(engine.compute("val")["difference"], torch.tensor(2.5))
+
+
+def test_metric_engine_rejects_non_mapping_adapter_output():
+    def invalid_inputs(payload):
+        return payload["loss"]
+
+    engine = MetricEngine(
+        stages={
+            "train": {
+                "loss": {
+                    "metric": MeanMetric(),
+                    "spec": {
+                        "adapter": invalid_inputs,
+                    },
+                }
+            }
+        }
+    )
+
+    with pytest.raises(TypeError, match="adapter must return a mapping"):
+        engine.update("train", {"loss": torch.tensor(2.0)})
+
+
 def test_metric_engine_moves_metrics_to_module_device():
     engine = MetricEngine(
         stages={
             "train": {
                 "loss": {
                     "metric": MeanMetric(),
-                    "input": "loss",
+                    "spec": "loss",
                 }
             }
         }

@@ -63,42 +63,97 @@ metrics:
       loss:
         metric:
           _target_: torchmetrics.MeanMetric
-        input: loss
+        spec:
+          key: loss
     val:
       loss:
         metric:
           _target_: torchmetrics.MeanMetric
-        input: loss
-      retrieval:
-        name: ""
+        spec:
+          key: loss
+      ndcg@5:
         metric:
-          _target_: src.common.metrics.SIDRetrievalMetricGroup
-          top_k_list:
-          - 5
-          - 10
-          metrics:
-            ndcg:
-              _target_: src.common.components.eval_metrics.NDCG
-              _partial_: true
-            recall:
-              _target_: src.common.components.eval_metrics.Recall
-              _partial_: true
+          _target_: src.common.components.eval_metrics.NDCG
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
+      ndcg@10:
+        metric:
+          _target_: src.common.components.eval_metrics.NDCG
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
+      recall@5:
+        metric:
+          _target_: src.common.components.eval_metrics.Recall
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
+      recall@10:
+        metric:
+          _target_: src.common.components.eval_metrics.Recall
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
     test:
       loss:
         metric:
           _target_: torchmetrics.MeanMetric
-        input: loss
-      retrieval:
-        name: ""
+        spec:
+          key: loss
+      ndcg@5:
         metric:
-          _target_: src.common.metrics.SIDRetrievalMetricGroup
-          top_k_list:
-          - 5
-          - 10
-          metrics:
-            ndcg:
-              _target_: src.common.components.eval_metrics.NDCG
-              _partial_: true
-            recall:
-              _target_: src.common.components.eval_metrics.Recall
-              _partial_: true
+          _target_: src.common.components.eval_metrics.NDCG
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
+      ndcg@10:
+        metric:
+          _target_: src.common.components.eval_metrics.NDCG
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
+      recall@5:
+        metric:
+          _target_: src.common.components.eval_metrics.Recall
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true
+      recall@10:
+        metric:
+          _target_: src.common.components.eval_metrics.Recall
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _partial_: true

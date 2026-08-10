@@ -17,7 +17,7 @@ def test_attach_metric_callback_appends_callback_when_model_metrics_exist():
                                 "metric": {
                                     "_target_": "torchmetrics.MeanMetric",
                                 },
-                                "input": "loss",
+                                "spec": "loss",
                             }
                         }
                     },

@@ -38,7 +38,7 @@
 - `layer_{layer_idx}/frac_layer_coverages`
 - `layer_{layer_idx}/id_entropy`
 
-`input.index` 使用 `{layer_idx}` 模板。
+`spec.index` 使用 `{layer_idx}` 模板。
 
 ### 训练 step 返回 dict
 

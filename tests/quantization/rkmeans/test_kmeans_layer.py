@@ -192,11 +192,11 @@ def test_quantization_train_configs_declare_runtime_metrics_with_repeat():
 
         assert config.metrics._target_ == "src.common.metrics.MetricEngine"
         assert train_metrics["layer_coverages"]["repeat"]["count"] == "${num_hierarchies}"
-        assert train_metrics["layer_coverages"]["repeat"]["input"]["index"] == "{layer_idx}"
+        assert train_metrics["layer_coverages"]["repeat"]["spec"]["index"] == "{layer_idx}"
         assert train_metrics["layer_id_entropy"]["repeat"]["count"] == "${num_hierarchies}"
-        assert train_metrics["layer_id_entropy"]["repeat"]["input"]["index"] == "{layer_idx}"
-        assert "optional" not in train_metrics["first_residuals_norm_ratio"]["input"]
-        assert "optional" not in train_metrics["layer_coverages"]["repeat"]["input"]
+        assert train_metrics["layer_id_entropy"]["repeat"]["spec"]["index"] == "{layer_idx}"
+        assert "optional" not in train_metrics["first_residuals_norm_ratio"]["spec"]
+        assert "optional" not in train_metrics["layer_coverages"]["repeat"]["spec"]
         assert "loss" in config.metrics.stages.val
         assert "loss" in config.metrics.stages.test
 

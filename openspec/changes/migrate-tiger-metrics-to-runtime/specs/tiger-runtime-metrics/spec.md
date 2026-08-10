@@ -14,11 +14,11 @@ TIGER SHALL return metric payloads from train, validation, and test steps and SH
 - **THEN** it MUST NOT reset or log framework-managed metrics directly
 
 ### Requirement: TIGER retrieval metrics SHALL use metric runtime
-TIGER SID retrieval metrics SHALL be computed through a metric group managed by `MetricEngine`.
+TIGER SID retrieval metrics SHALL be computed as concrete metric instances managed by `MetricEngine`.
 
-#### Scenario: Retrieval metric group computes configured top-k metrics
-- **WHEN** the metric group receives payload fields `marginal_probs`, `generated_ids`, and `labels`
-- **THEN** it MUST update each configured retrieval metric for each configured top-k
+#### Scenario: Retrieval metric adapter computes configured metric instances
+- **WHEN** the metric runtime receives payload fields `marginal_probs`, `generated_ids`, and `labels`
+- **THEN** it MUST use the configured SID retrieval spec adapter to update each configured retrieval metric instance
 - **THEN** compute MUST return metric names such as `ndcg@5` and `recall@10`
 
 ### Requirement: TIGER train config SHALL declare runtime metrics

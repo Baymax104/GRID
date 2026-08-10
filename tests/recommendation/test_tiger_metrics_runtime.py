@@ -1,10 +1,15 @@
 import inspect
+from pathlib import Path
 
+import hydra
 import torch
+from omegaconf import OmegaConf
 from transformers import T5Config, T5EncoderModel
 from transformers.models.t5.modeling_t5 import T5Stack
 
 from src.recommendation.tiger.tiger import Tiger
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def create_tiger() -> Tiger:
@@ -61,3 +66,38 @@ def test_tiger_does_not_create_metric_attributes():
     assert not hasattr(model, "log_metrics")
     assert "on_validation_epoch_end" not in Tiger.__dict__
     assert "on_test_epoch_end" not in Tiger.__dict__
+
+
+def test_tiger_config_declares_retrieval_metrics_as_concrete_instances():
+    config = OmegaConf.load(PROJECT_ROOT / "configs/model/tiger_train.yaml")
+
+    for stage_name in ["val", "test"]:
+        stage_metrics = config.metrics.stages[stage_name]
+        assert "retrieval" not in stage_metrics
+        assert set(stage_metrics) == {"loss", "ndcg@5", "ndcg@10", "recall@5", "recall@10"}
+        assert stage_metrics["ndcg@5"].metric.top_k == 5
+        assert stage_metrics["ndcg@10"].metric.top_k == 10
+        assert stage_metrics["recall@5"].metric.top_k == 5
+        assert stage_metrics["recall@10"].metric.top_k == 10
+        assert stage_metrics["ndcg@5"].spec.adapter._target_ == (
+            "src.recommendation.tiger.metric_adapters.sid_retrieval_inputs"
+        )
+
+
+def test_tiger_metric_config_instantiates_adapter_metrics():
+    config = OmegaConf.load(PROJECT_ROOT / "configs/model/tiger_train.yaml")
+
+    engine = hydra.utils.instantiate(config.metrics, _recursive_=False)
+    engine.update(
+        "val",
+        {
+            "loss": torch.tensor(1.0),
+            "marginal_probs": torch.tensor([[0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]]),
+            "generated_ids": torch.tensor(
+                [[[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [9, 9], [10, 10]]]
+            ),
+            "labels": torch.tensor([[1, 1]]),
+        },
+    )
+
+    assert set(engine.compute("val")) == {"loss", "ndcg@5", "ndcg@10", "recall@5", "recall@10"}
