@@ -1,10 +1,5 @@
 # @package _global_
 
-csv:
-  _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-  save_dir: ${paths.output_dir}
-  name: csv/
-  prefix: ''
 wandb:
   _target_: lightning.pytorch.loggers.wandb.WandbLogger
   name: ${now_tz:%Y-%m-%d_%H-%M-%S}
