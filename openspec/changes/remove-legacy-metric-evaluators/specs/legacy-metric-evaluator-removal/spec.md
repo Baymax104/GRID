@@ -4,10 +4,9 @@
 The project SHALL remove legacy evaluator wrapper classes after model metrics migrate to the runtime framework.
 
 #### Scenario: Old evaluator classes are unavailable
-- **WHEN** a maintainer inspects `src/common/components/eval_metrics.py`
-- **THEN** it MUST NOT define `Evaluator`
-- **THEN** it MUST NOT define `SIDRetrievalEvaluator`
+- **WHEN** a maintainer inspects `src/common/components`
+- **THEN** it MUST NOT contain `eval_metrics.py`
 
-#### Scenario: Retrieval metrics remain available
+#### Scenario: TIGER retrieval metrics remain available
 - **WHEN** runtime retrieval metrics are used
-- **THEN** `NDCG` and `Recall` MUST remain importable
+- **THEN** `NDCG` and `Recall` MUST remain importable from `src.recommendation.tiger.metrics`

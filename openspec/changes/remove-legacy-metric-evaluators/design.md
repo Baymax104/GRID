@@ -7,19 +7,18 @@
 **Goals:**
 
 - 删除旧 evaluator 包装层。
-- 保留基础 retrieval metric 类供 adapter-based runtime 使用。
+- 将基础 retrieval metric 类移动到 TIGER 领域目录，供 adapter-based runtime 使用。
 - 确保配置和模型不再引用旧 evaluator。
 
 **Non-Goals:**
 
 - 不改变 NDCG/Recall 计算公式。
-- 不移动 `eval_metrics.py` 中的基础 metric 类。
 
 ## Decisions
 
-### 删除 wrapper，保留 metric
+### 删除 common wrapper，移动 metric
 
-只删除 `Evaluator` / `SIDRetrievalEvaluator`，因为它们代表旧生命周期框架；`NDCG` / `Recall` 是实际 metric implementation，仍由 adapter-based runtime 复用。
+删除 `Evaluator` / `SIDRetrievalEvaluator`，因为它们代表旧生命周期框架；`NDCG` / `Recall` 只服务 TIGER SID retrieval，因此移动到 `src/recommendation/tiger/metrics.py` 并直接作为 flattened torchmetrics implementation 使用。
 
 ## Risks / Trade-offs
 

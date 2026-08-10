@@ -5,7 +5,7 @@ TIGER 当前仍通过 `Evaluator`、`MeanMetric` 属性和模型内 validation/t
 ## What Changes
 
 - 将 TIGER 训练指标从模型内部迁移到 `MetricCallback` / `MetricEngine`。
-- 新增 TIGER SID retrieval spec adapter，用于复用现有 NDCG/Recall 计算逻辑。
+- 新增 TIGER SID retrieval metrics module，用于复用现有 NDCG/Recall 计算逻辑。
 - 修改 TIGER step 输出，使 callback 能从返回值中读取 loss、generated IDs、marginal probabilities 和 labels。
 - 修改 `configs/model/tiger_train.yaml`，用 `model.metrics` 声明训练/验证/测试指标。
 - 在 pipeline 初始化中自动根据 `cfg.model.metrics` 追加 metric callback。
@@ -21,7 +21,7 @@ TIGER 当前仍通过 `Evaluator`、`MeanMetric` 属性和模型内 validation/t
 ## Impact
 
 - 影响 `src/recommendation/tiger/tiger.py`。
-- 影响 `src/common/metrics/` 和 `src/recommendation/tiger/metric_adapters.py`，新增 TIGER retrieval spec adapter。
+- 影响 `src/common/metrics/` 和 `src/recommendation/tiger/metrics.py`，新增 TIGER retrieval metrics module。
 - 影响 `src/utils/launcher.py`，自动追加 metric callback。
 - 影响 `configs/model/tiger_train.yaml`。
 - 新增 focused unit tests，不运行完整 experiment。

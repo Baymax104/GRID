@@ -42,11 +42,11 @@ loss:
 
 ndcg@5:
   metric:
-    _target_: src.common.components.eval_metrics.NDCG
+    _target_: src.recommendation.tiger.metrics.NDCG
     top_k: 5
   spec:
     adapter:
-      _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+      _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
       _partial_: true
 ```
 
@@ -74,7 +74,7 @@ adapter 不接收 metric 实例，不调用 `compute/reset/log`，不产生副�
 
 ### TIGER SID adapter 留在领域目录
 
-新增 `src/recommendation/tiger/metric_adapters.py`，实现 `sid_retrieval_inputs(payload)`：
+新增 `src/recommendation/tiger/metrics.py`，实现 `sid_retrieval_inputs(payload)`：
 
 - 读取 `marginal_probs`、`generated_ids`、`labels`。
 - 通过完整 SID 匹配构造 retrieval `target`。

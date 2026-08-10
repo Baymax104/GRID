@@ -28,7 +28,7 @@ TIGER 的指标逻辑包括：
 
 ### 使用 spec adapter 承接 SID retrieval
 
-新增 TIGER SID retrieval spec adapter，将 `marginal_probs`、`generated_ids`、`labels` 转换成 NDCG/Recall 需要的 `preds`、`target`、`indexes`。TIGER config 直接声明 `ndcg@5`、`recall@10` 等独立 metric 实例，并通过 `spec.adapter` 复用该转换。
+新增 TIGER SID retrieval metrics module，将 `marginal_probs`、`generated_ids`、`labels` 转换成 NDCG/Recall 需要的 `preds`、`target`、`indexes`。TIGER config 直接声明 `ndcg@5`、`recall@10` 等独立 metric 实例，并通过 `spec.adapter` 复用该转换。
 
 理由：
 

@@ -34,13 +34,12 @@ distance_functions、clustering_initializers、aggregation_strategy、quantizati
 - **THEN** 配置 MUST 不再包含 aggregation_strategy 的 `_target_` 引用
 
 ### Requirement: common/components SHALL 不保留死代码
-common/components 中保留的模块（model_output、loss_functions、scheduler、eval_metrics）SHALL NOT 包含零引用的死类；已展平的模块文件 SHALL 删除。
+common/components 中保留的模块（model_output、loss_functions、scheduler）SHALL NOT 包含零引用的死类；已展平的模块文件 SHALL 删除。
 
 #### Scenario: 保留模块无死类
-- **WHEN** 维护者检查 loss_functions.py 和 eval_metrics.py
-- **THEN** 它们 MUST 不包含零引用的类（FullBatchCrossEntropyLoss、RetrievalEvaluator 已删除）
+- **WHEN** 维护者检查 loss_functions.py
+- **THEN** 它 MUST 不包含零引用的类（FullBatchCrossEntropyLoss 已删除）
 
 #### Scenario: 展平模块文件已删除
 - **WHEN** 维护者检查 common/components 目录
-- **THEN** distance_functions.py、clustering_initializers.py、aggregation_strategy.py、quantization_strategies.py、optimizer.py MUST 不存在
-
+- **THEN** distance_functions.py、clustering_initializers.py、aggregation_strategy.py、quantization_strategies.py、optimizer.py、eval_metrics.py MUST 不存在

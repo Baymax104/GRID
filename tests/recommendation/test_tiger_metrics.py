@@ -1,6 +1,6 @@
 import torch
 
-from src.recommendation.tiger.metric_adapters import sid_retrieval_inputs
+from src.recommendation.tiger.metrics import NDCG, Recall, sid_retrieval_inputs
 
 
 def test_sid_retrieval_inputs_converts_tiger_payload_to_retrieval_kwargs():
@@ -34,3 +34,18 @@ def test_sid_retrieval_inputs_converts_tiger_payload_to_retrieval_kwargs():
     assert inputs["preds"].device == payload["marginal_probs"].device
     assert inputs["target"].device == payload["marginal_probs"].device
     assert inputs["indexes"].device == payload["marginal_probs"].device
+
+
+def test_tiger_sid_retrieval_metrics_compute_ndcg_and_recall_at_k():
+    preds = torch.tensor([0.9, 0.1, 0.8, 0.2])
+    target = torch.tensor([True, False, False, True])
+    indexes = torch.tensor([0, 0, 1, 1])
+
+    ndcg = NDCG(top_k=1)
+    recall = Recall(top_k=2)
+
+    ndcg.update(preds=preds, target=target, indexes=indexes)
+    recall.update(preds=preds, target=target, indexes=indexes)
+
+    assert torch.isclose(ndcg.compute(), torch.tensor(0.5))
+    assert torch.isclose(recall.compute(), torch.tensor(1.0))

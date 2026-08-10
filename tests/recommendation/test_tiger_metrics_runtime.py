@@ -79,8 +79,10 @@ def test_tiger_config_declares_retrieval_metrics_as_concrete_instances():
         assert stage_metrics["ndcg@10"].metric.top_k == 10
         assert stage_metrics["recall@5"].metric.top_k == 5
         assert stage_metrics["recall@10"].metric.top_k == 10
+        assert stage_metrics["ndcg@5"].metric._target_ == "src.recommendation.tiger.metrics.NDCG"
+        assert stage_metrics["recall@5"].metric._target_ == "src.recommendation.tiger.metrics.Recall"
         assert stage_metrics["ndcg@5"].spec.adapter._target_ == (
-            "src.recommendation.tiger.metric_adapters.sid_retrieval_inputs"
+            "src.recommendation.tiger.metrics.sid_retrieval_inputs"
         )
 
 

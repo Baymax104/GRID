@@ -73,43 +73,43 @@ metrics:
           key: loss
       ndcg@5:
         metric:
-          _target_: src.common.components.eval_metrics.NDCG
+          _target_: src.recommendation.tiger.metrics.NDCG
           top_k: 5
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
       ndcg@10:
         metric:
-          _target_: src.common.components.eval_metrics.NDCG
+          _target_: src.recommendation.tiger.metrics.NDCG
           top_k: 10
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
       recall@5:
         metric:
-          _target_: src.common.components.eval_metrics.Recall
+          _target_: src.recommendation.tiger.metrics.Recall
           top_k: 5
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
       recall@10:
         metric:
-          _target_: src.common.components.eval_metrics.Recall
+          _target_: src.recommendation.tiger.metrics.Recall
           top_k: 10
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
     test:
       loss:
@@ -119,41 +119,41 @@ metrics:
           key: loss
       ndcg@5:
         metric:
-          _target_: src.common.components.eval_metrics.NDCG
+          _target_: src.recommendation.tiger.metrics.NDCG
           top_k: 5
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
       ndcg@10:
         metric:
-          _target_: src.common.components.eval_metrics.NDCG
+          _target_: src.recommendation.tiger.metrics.NDCG
           top_k: 10
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
       recall@5:
         metric:
-          _target_: src.common.components.eval_metrics.Recall
+          _target_: src.recommendation.tiger.metrics.Recall
           top_k: 5
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true
       recall@10:
         metric:
-          _target_: src.common.components.eval_metrics.Recall
+          _target_: src.recommendation.tiger.metrics.Recall
           top_k: 10
           sync_on_compute: false
           compute_with_cache: false
         spec:
           adapter:
-            _target_: src.recommendation.tiger.metric_adapters.sid_retrieval_inputs
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
             _partial_: true

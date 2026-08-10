@@ -18,7 +18,7 @@ TIGER SID retrieval metrics SHALL be computed as concrete metric instances manag
 
 #### Scenario: Retrieval metric adapter computes configured metric instances
 - **WHEN** the metric runtime receives payload fields `marginal_probs`, `generated_ids`, and `labels`
-- **THEN** it MUST use the configured SID retrieval spec adapter to update each configured retrieval metric instance
+- **THEN** it MUST use the configured SID retrieval metrics module to update each configured retrieval metric instance
 - **THEN** compute MUST return metric names such as `ndcg@5` and `recall@10`
 
 ### Requirement: TIGER train config SHALL declare runtime metrics

@@ -5,6 +5,6 @@
 
 ## 2. Tests and Validation
 
-- [x] 2.1 Add tests for legacy evaluator removal and retained NDCG/Recall imports.
+- [x] 2.1 Add tests for legacy evaluator removal and TIGER-local NDCG/Recall imports.
 - [x] 2.2 Run focused tests.
 - [x] 2.3 Run scoped ruff checks.

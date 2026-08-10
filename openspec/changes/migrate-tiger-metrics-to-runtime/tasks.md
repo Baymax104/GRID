@@ -1,6 +1,6 @@
 ## 1. Runtime Extensions
 
-- [x] 1.1 Add TIGER SID retrieval spec adapter under `src/recommendation/tiger/`.
+- [x] 1.1 Add TIGER SID retrieval metrics module under `src/recommendation/tiger/`.
 - [x] 1.2 Update metric runtime spec resolution for adapter-based retrieval metrics.
 - [x] 1.3 Add launcher auto-attachment for `MetricCallback` from `cfg.model.metrics`.
 
@@ -13,7 +13,7 @@
 
 ## 3. Tests and Validation
 
-- [x] 3.1 Add unit tests for the SID retrieval spec adapter.
+- [x] 3.1 Add unit tests for the SID retrieval metrics module.
 - [x] 3.2 Add unit tests proving TIGER no longer exposes metric constructor arguments or metric attributes.
 - [x] 3.3 Add unit tests for launcher metric callback attachment.
 - [x] 3.4 Run focused tests without full experiments.

@@ -4,9 +4,8 @@
 
 ## What Changes
 
-- 删除 `src.common.components.eval_metrics.Evaluator`。
-- 删除 `src.common.components.eval_metrics.SIDRetrievalEvaluator`。
-- 保留仍被 runtime group 使用的 `CustomRetrievalMetric`、`NDCG`、`Recall`。
+- 删除 `src.common.components.eval_metrics` 中的旧 evaluator 和基础 retrieval metric 实现。
+- 将 `NDCG`、`Recall` 移入 TIGER 领域目录，作为 TIGER SID retrieval runtime metric。
 - 增加测试确保旧 evaluator 不再作为公开入口存在。
 
 ## Capabilities
@@ -18,5 +17,5 @@
 
 ## Impact
 
-- 影响 `src/common/components/eval_metrics.py`。
+- 影响 `src/common/components/eval_metrics.py` 和 `src/recommendation/tiger/metrics.py`。
 - 影响 focused metric tests。

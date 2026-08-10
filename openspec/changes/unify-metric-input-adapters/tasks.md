@@ -7,7 +7,7 @@
 
 ## 2. TIGER Adapter
 
-- [x] 2.1 Add `src/recommendation/tiger/metric_adapters.py` with a pure `sid_retrieval_inputs(payload)` adapter.
+- [x] 2.1 Add `src/recommendation/tiger/metrics.py` with a pure `sid_retrieval_inputs(payload)` adapter.
 - [x] 2.2 Unit-test the adapter with minimal `marginal_probs`, `generated_ids`, and `labels` tensors.
 - [x] 2.3 Ensure the adapter returns `preds`, `target`, and `indexes` on the correct device and with candidate-aligned flattened shapes.
 
