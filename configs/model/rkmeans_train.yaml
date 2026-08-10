@@ -16,13 +16,13 @@ root:
 training_model_config:
   _target_: src.common.configs.model.TrainingModelConfig
   loss_function:
-    _target_: src.common.components.loss_functions.WeightedSquaredError
+    _target_: src.common.loss.weighted_squared_error.WeightedSquaredError
   optimizer:
     _target_: torch.optim.SGD
     _partial_: true
     lr: 0.5
   scheduler:
-    _target_: src.common.components.scheduler.WarmupCosineSchedulerNonzeroMin
+    _target_: src.common.scheduler.warmup_cosine_scheduler_nonzero_min.WarmupCosineSchedulerNonzeroMin
     _partial_: true
     warmup_steps: 100
     min_ratio: 0.3

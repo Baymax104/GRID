@@ -49,7 +49,7 @@
 - `src/data/components/data_models.py`：运行时数据容器，包括 `ModelOutput`。
 - `src/data/utils.py`：数据加载共享 helper，以及 keyed prediction bundle 加载/查询工具。
 - `src/embedding/`、`src/quantization/`、`src/recommendation/`：分别对应语义向量、量化器、生成推荐模型三段主 pipeline。
-- `src/common/components/`：仅保留跨阶段通用组件，如 metrics、loss、scheduler；不要把推理 writer 或推理输出协议放回这里。
+- `src/common/loss/`、`src/common/scheduler/`：跨阶段复用的 loss 与 scheduler 实现，文件按具体实现命名。
 - `src/utils/`：保留跨域基础工具，如 launcher、logging、file I/O、Rich 输出；不要放 data 专用 helper 或 inference bundle 协议。
 
 ## 验证现实

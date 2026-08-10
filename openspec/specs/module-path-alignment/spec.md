@@ -15,11 +15,15 @@ TBD - created by archiving change align-module-paths-and-rename-common. Update P
 - **THEN** 必须使用新的 `src.quantization.*` 或 `src.recommendation.*` 路径
 
 ### Requirement: Common modules SHALL live under `src.common`
-公有模块 SHALL 统一位于 `src.common` 命名空间下；实验专属模块 SHALL 位于对应实验领域命名空间下。跨实验复用的推理输出写入组件 SHALL 位于 `src.common.inference` 命名空间下。
+公有模块 SHALL 统一位于 `src.common` 命名空间下；实验专属模块 SHALL 位于对应实验领域命名空间下。跨实验复用的推理输出写入组件 SHALL 位于 `src.common.inference` 命名空间下；共享 loss 与 scheduler 实现 SHALL 分别位于 `src.common.loss` 与 `src.common.scheduler` 命名空间下。
 
-#### Scenario: Code imports shared components
-- **WHEN** 代码导入共享 components
-- **THEN** 必须使用 `src.common.components.*` 路径
+#### Scenario: Code imports shared loss components
+- **WHEN** 代码导入共享 loss 实现
+- **THEN** 必须使用 `src.common.loss.*` 路径
+
+#### Scenario: Code imports shared scheduler components
+- **WHEN** 代码导入共享 scheduler 实现
+- **THEN** 必须使用 `src.common.scheduler.*` 路径
 
 #### Scenario: Code imports experiment-owned modules
 - **WHEN** 代码导入 embedding、quantization 或 recommendation 专属模块
@@ -30,9 +34,13 @@ TBD - created by archiving change align-module-paths-and-rename-common. Update P
 - **WHEN** 代码导入 prediction writer 或推理结果后处理函数
 - **THEN** 必须使用 `src.common.inference.*` 路径
 
-#### Scenario: Config instantiates shared components
-- **WHEN** 配置实例化共享 components
-- **THEN** `_target_` 必须使用 `src.common.components.*` 路径
+#### Scenario: Config instantiates shared loss components
+- **WHEN** 配置实例化共享 loss 实现
+- **THEN** `_target_` 必须使用 `src.common.loss.*` 路径
+
+#### Scenario: Config instantiates shared scheduler components
+- **WHEN** 配置实例化共享 scheduler 实现
+- **THEN** `_target_` 必须使用 `src.common.scheduler.*` 路径
 
 #### Scenario: Config instantiates experiment-owned modules
 - **WHEN** 配置实例化 embedding、quantization 或 recommendation 专属模块

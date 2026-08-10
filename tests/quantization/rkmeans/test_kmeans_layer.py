@@ -7,8 +7,8 @@ from lightning.pytorch.trainer.states import TrainerFn
 from omegaconf import OmegaConf
 
 import src.utils.distributed as distributed_utils
-from src.common.components.loss_functions import WeightedSquaredError
 from src.common.configs.model import TrainingModelConfig
+from src.common.loss.weighted_squared_error import WeightedSquaredError
 from src.quantization.rkmeans.kmeans_layer import KMeansLayer, _kmeans_plus_plus_init
 from src.quantization.rkmeans.residual_kmeans import ResidualKMeans
 from src.quantization.rqvae.residual_quantization_vae import ResidualQuantizationVAE

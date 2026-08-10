@@ -7,8 +7,8 @@ from lightning.pytorch.trainer.states import TrainerFn
 from torch import nn
 from torch.distributions import Categorical
 
-from src.common.components.loss_functions import WeightedSquaredError
 from src.common.configs.model import TrainingModelConfig
+from src.common.loss.weighted_squared_error import WeightedSquaredError
 from src.data.components.data_models import ItemBatch, ModelOutput
 from src.utils.pylogger import RankedLogger
 

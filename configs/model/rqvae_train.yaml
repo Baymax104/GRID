@@ -17,7 +17,7 @@ root:
 training_model_config:
   _target_: src.common.configs.model.TrainingModelConfig
   loss_function:
-    _target_: src.common.components.loss_functions.BetaQuantizationLoss
+    _target_: src.common.loss.beta_quantization_loss.BetaQuantizationLoss
     beta: 0.25
     reduction: mean
   reconstruction_loss_function:

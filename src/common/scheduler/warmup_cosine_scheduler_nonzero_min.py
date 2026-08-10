@@ -49,12 +49,10 @@ class WarmupCosineSchedulerNonzeroMin(torch.optim.lr_scheduler.LambdaLR):
         step: int,
     ) -> float:
         """Return the factor to mulitply the initial learning rate with."""
-        if step < self.warmup_steps:  # linear warm-up
+        if step < self.warmup_steps:
             return float(step) / float(max(1, self.warmup_steps))
         if step <= self.scheduler_steps:
-            # cosine decay
             decay_ratio = float(step - self.warmup_steps) / float(max(1, self.scheduler_steps - self.warmup_steps))
             coeff = 0.5 * (1.0 + math.cos(math.pi * float(self.num_cycles) * 2.0 * decay_ratio))
             return max(self.min_ratio, self.min_ratio + coeff * (1 - self.min_ratio))
-        else:  # current_step > self.scheduler_steps
-            return self.min_ratio
+        return self.min_ratio
