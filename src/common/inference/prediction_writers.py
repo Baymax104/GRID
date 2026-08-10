@@ -162,7 +162,7 @@ class LocalPickleWriter(BaseBufferedWriter):
         keys = torch.tensor([int(k) for output in all_outputs for k in output.keys], dtype=torch.long)
         predictions = torch.cat([torch.as_tensor(output.predictions) for output in all_outputs], dim=0)
         cpu_bundle = {"keys": keys.cpu(), "predictions": predictions.cpu()}
-        torch.save(cpu_bundle, os.path.join(self.output_dir, "merged_predictions_tensor.pt"))
-        logger.info(
-            f"Merged {len(cpu_bundle['keys'])} keyed rows into merged_predictions_tensor.pt as model output bundle."
-        )
+        output_path = os.path.join(self.output_dir, "merged_predictions_tensor.pt")
+        torch.save(cpu_bundle, output_path)
+        logger.info(f"Merged {len(cpu_bundle['keys'])} keyed rows into model output bundle.")
+        logger.info(f"Model output bundle saved to {output_path}.")
