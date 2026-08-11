@@ -3,34 +3,36 @@
 ## Purpose
 TBD - created by archiving change componentize-experiment-configs. Update Purpose after archive.
 ## Requirements
-### Requirement: Official experiment configs SHALL expose a components section for major assembly nodes
-Each official experiment configuration SHALL define a top-level `components` section that holds the experiment's major instantiate-oriented configuration nodes, so the main execution chain is no longer buried inside parameter domains.
+### Requirement: Official experiment configs SHALL use component config groups for major assembly nodes
+Each official experiment configuration SHALL compose major instantiate-oriented configuration nodes from repo-level component config groups, so the execution chain is not buried inside parameter domains.
 
-#### Scenario: Major data loading and model assembly nodes are named under components
+#### Scenario: Major assembly nodes are provided by component groups
 - **WHEN** a maintainer opens an official experiment config
-- **THEN** the config MUST expose a top-level `components` section
-- **THEN** the main dataloader/dataset/model subtrees that define the experiment's primary assembly flow MUST appear as named nodes under `components`
+- **THEN** the config MUST use defaults entries such as `/data@data`, `/model@model`, `/trainer@trainer`, `/callbacks@callbacks`, `/logger@logger`, or `/analysis@analysis` as applicable
+- **THEN** the primary assembly flow MUST NOT depend on an obsolete experiment-local `components` section
 
-### Requirement: Data loading and model domains SHALL primarily act as parameter domains
-The `data_loading` and `model` top-level domains in official experiment configs SHALL primarily carry pure parameters, shared values, mappings, and references to named components rather than embedding most major instantiate subtrees inline.
+### Requirement: Data, model, and analysis domains SHALL expose active component entrypoints
+The `data`, `model`, and `analysis` top-level domains in official experiment configs SHALL expose the active Hydra `_target_` entrypoints consumed by Python launchers, while still referencing top-level manual inputs where appropriate.
 
-#### Scenario: Parameter domains reference named components
-- **WHEN** an official experiment config defines its datamodule or model assembly inputs
-- **THEN** `data_loading` and `model` MUST primarily reference named nodes from `components`
-- **THEN** they MUST NOT remain dominated by large inline instantiate subtrees for the experiment's primary assembly flow
+#### Scenario: Lightning experiment exposes active entrypoints
+- **WHEN** an official train or inference experiment config is composed
+- **THEN** `cfg.data.datamodule` and `cfg.model.root` MUST identify the active data and model entrypoints
 
-### Requirement: Official experiments SHALL remain self-contained
-Componentization SHALL happen within each experiment file; official experiment configs SHALL NOT depend on new repo-level shared component config files or cross-experiment component imports created solely for this restructuring.
+#### Scenario: Analysis experiment exposes active entrypoint
+- **WHEN** an official analysis experiment config is composed
+- **THEN** `cfg.analysis.runner` MUST identify the active analysis runner entrypoint
 
-#### Scenario: Experiment-local componentization
-- **WHEN** an official experiment config is restructured
-- **THEN** its componentized assembly nodes MUST remain defined within that experiment file
-- **THEN** the restructuring MUST NOT require introducing repo-level shared component config files for reuse across experiments
+### Requirement: Official experiments MAY use repo-level component config files
+Official experiment componentization SHALL use repo-level component config groups when those groups match the current repository structure.
+
+#### Scenario: Experiment imports repo-level component config
+- **WHEN** an official experiment needs data, model, trainer, logger, callbacks, or analysis configuration
+- **THEN** it MAY import the corresponding config from `configs/<component>/<experiment>.yaml`
+- **AND** it MUST keep manual input fields visible at the experiment entry level
 
 ### Requirement: Local inline targets MAY remain for minor one-off nodes
 Componentization SHALL focus on major assembly nodes; small, strongly local, one-off `_target_` definitions MAY remain inline when extracting them would reduce readability.
 
 #### Scenario: Minor one-off node remains inline
 - **WHEN** a `_target_` node is short, local to one use site, and not a primary assembly node
-- **THEN** the config MAY keep that node inline instead of lifting it into `components`
-
+- **THEN** the config MAY keep that node inline instead of lifting it into a component config group
