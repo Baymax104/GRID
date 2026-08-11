@@ -10,4 +10,4 @@ OMP_NUM_THREADS=$(( $(nproc) / NPROC_PER_NODE )) \
   codebook_size=256 \
   semantic_id_path=logs/rkmeans_inference/runs/2026-08-06/15-09-18/pickle/merged_predictions_tensor.pt \
   data_dir=data/beauty \
-  num_hierarchies=3 --dry-run
+  num_hierarchies=4 --dry-run

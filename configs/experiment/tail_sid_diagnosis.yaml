@@ -1,0 +1,32 @@
+# @package _global_
+
+defaults:
+- /analysis@analysis: tail_sid_diagnosis
+
+data_dir: ???
+semantic_id_path: ???
+embedding_path: null
+raw_num_hierarchies: ???
+head_ratio: 0.2
+tail_ratio: 0.2
+max_neighbors_per_bucket: 512
+top_k_report: 10
+
+run_mode: analysis
+task_name: tail_sid_diagnosis
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+seed: 42
+
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
+  profile_dir: ${hydra:run.dir}/profile_output
+  metadata_dir: ${paths.output_dir}/metadata
+
+extras:
+  ignore_warnings: false
+  print_config_warnings: true
+  print_config: true

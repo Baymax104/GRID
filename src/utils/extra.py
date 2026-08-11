@@ -10,9 +10,13 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 def print_warnings_for_missing_configs(cfg: DictConfig):
-    _DEFAULT_CONFIGS = ["data", "model"]
+    run_mode = cfg.get("run_mode")
+    if run_mode == "analysis":
+        default_configs = ["analysis"]
+    else:
+        default_configs = ["data", "model"]
     has_warnings = False
-    for config in _DEFAULT_CONFIGS:
+    for config in default_configs:
         if not cfg.get(config):
             logger.warning(f"Config {config} was not found in the config tree. Make sure this is expected.")
             has_warnings = True

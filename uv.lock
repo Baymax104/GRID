@@ -547,6 +547,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "modelscope" },
     { name = "omegaconf" },
+    { name = "prettytable" },
     { name = "pytz" },
     { name = "rootutils" },
     { name = "sentencepiece" },
@@ -576,6 +577,7 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.11.0" },
     { name = "modelscope", specifier = ">=1.38.0" },
     { name = "omegaconf", specifier = ">=2.3.1" },
+    { name = "prettytable", specifier = ">=3.18.0" },
     { name = "pytz", specifier = ">=2026.2" },
     { name = "rootutils", specifier = ">=1.0.7" },
     { name = "sentencepiece", specifier = "==0.2.1" },
@@ -1678,6 +1680,18 @@ source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746" },
+]
+
+[[package]]
+name = "prettytable"
+version = "3.18.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "wcwidth" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/81/74/ba08d81e668ccfe8658d7520a307e63c19862c08eb4ccb26f356c5239a7a/prettytable-3.18.0.tar.gz", hash = "sha256:439217116152244369caf3d9f1caf2f9fe29b03bd79e88d2928c8e718c95d680" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/fe/be/2e6798ace5cc036f5d05d36b7b2fd85346f1a708c87060890b070d0ec607/prettytable-3.18.0-py3-none-any.whl", hash = "sha256:b3346e0e6f79180833aebaac088ae926340586cf6d7d991b9eb125b65f72313a" },
 ]
 
 [[package]]

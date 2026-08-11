@@ -6,6 +6,7 @@ import torch
 from omegaconf import DictConfig
 
 import src.utils.hydra_resolvers  # noqa: F401  — registers now_tz OmegaConf resolver
+from src.common.analysis import run_analysis_runner
 from src.utils.cli import rewrite_dry_run_flag
 from src.utils.extra import extras
 from src.utils.launcher import pipeline_launcher
@@ -69,6 +70,10 @@ def run_inference(cfg: DictConfig):
         )
 
 
+def run_analysis(cfg: DictConfig):
+    run_analysis_runner(cfg)
+
+
 def run(cfg: DictConfig):
     run_mode = cfg.get("run_mode")
     if run_mode == "train":
@@ -77,8 +82,13 @@ def run(cfg: DictConfig):
     if run_mode == "inference":
         run_inference(cfg)
         return
+    if run_mode == "analysis":
+        run_analysis(cfg)
+        return
 
-    raise ValueError(f"Unsupported run_mode={run_mode!r}. Official experiments must declare run_mode: train|inference.")
+    raise ValueError(
+        f"Unsupported run_mode={run_mode!r}. Official experiments must declare run_mode: train|inference|analysis."
+    )
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="main.yaml")
