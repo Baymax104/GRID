@@ -77,7 +77,7 @@ predict_dataloader:
 
 
 datamodule:
-  _target_: src.data.data_module.BaseDataModule
+  _target_: src.data.datamodule.FileDataModule
   predict_dataloader_config: ${data.predict_dataloader}
 
 tokenizer:

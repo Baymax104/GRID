@@ -41,6 +41,22 @@ class ItemBatch:
     features: dict[str, torch.Tensor] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class SIDViews:
+    item_ids: torch.Tensor
+    raw_sid: torch.Tensor
+    model_sid: torch.Tensor
+    dedup_digit: torch.Tensor
+
+
+@dataclass(frozen=True)
+class DiagnosisBatch:
+    sid_views: SIDViews
+    frequencies: dict[int, int]
+    groups_by_item: dict[int, str]
+    embeddings: torch.Tensor | None
+
+
 class ModelOutput:
     """
     推理结果写入的字段规范层，直接持有 keys + predictions。

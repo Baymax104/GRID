@@ -1,0 +1,85 @@
+# @package _global_
+
+root:
+  _target_: src.quantization.tail_sid_diagnosis.module.TailSIDDiagnosisModule
+  max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  stages:
+    test:
+      structural:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.StructuralSIDMetric
+        spec:
+          kwargs:
+            sid_views:
+              key: sid_views
+            item_ids:
+              key: item_ids
+            groups_by_index:
+              key: groups_by_index
+            buckets:
+              key: buckets
+            strict_depth:
+              key: strict_depth
+            sid_length:
+              key: sid_length
+      semantic:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.SemanticMismatchMetric
+          max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+        spec:
+          kwargs:
+            sid_views:
+              key: sid_views
+            groups_by_index:
+              key: groups_by_index
+            buckets:
+              key: buckets
+            strict_depth:
+              key: strict_depth
+            embeddings:
+              key: embeddings
+      damage:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.DamageScoreMetric
+          max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+        spec:
+          kwargs:
+            sid_views:
+              key: sid_views
+            groups_by_index:
+              key: groups_by_index
+            buckets:
+              key: buckets
+            strict_depth:
+              key: strict_depth
+            sid_length:
+              key: sid_length
+            embeddings:
+              key: embeddings
+      prefix_risk:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.PrefixRiskMetric
+          max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+        spec:
+          kwargs:
+            sid_views:
+              key: sid_views
+            frequencies:
+              key: frequencies
+            groups_by_item:
+              key: groups_by_item
+            embeddings:
+              key: embeddings
+            item_ids:
+              key: item_ids
+            groups_by_index:
+              key: groups_by_index
+            buckets:
+              key: buckets
+            strict_depth:
+              key: strict_depth
+            sid_length:
+              key: sid_length

@@ -1,10 +1,10 @@
-"""Shared LightningDataModule for file-backed iterable datasets."""
+"""File-backed LightningDataModule for iterable datasets."""
 
-from lightning import LightningDataModule
 from lightning.pytorch.trainer.states import TrainerFn
 from omegaconf import DictConfig
 
 from src.data.dataloaders import DataloaderWithIterationRetry
+from src.data.datamodule.stage import StageDataModule
 from src.data.utils import assign_files_to_workers
 from src.utils.file import list_files
 from src.utils.pylogger import RankedLogger
@@ -12,8 +12,8 @@ from src.utils.pylogger import RankedLogger
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 
-class BaseDataModule(LightningDataModule):
-    """Shared file-assignment and dataloader assembly for loading pipelines."""
+class FileDataModule(StageDataModule):
+    """File-assignment and dataloader assembly for loading pipelines."""
 
     def __init__(
         self,
@@ -22,19 +22,13 @@ class BaseDataModule(LightningDataModule):
         test_dataloader_config: DictConfig | None = None,
         predict_dataloader_config: DictConfig | None = None,
     ):
-        super().__init__()
-
-        self.stage_to_config = {
-            TrainerFn.FITTING: train_dataloader_config,
-            TrainerFn.VALIDATING: val_dataloader_config,
-            TrainerFn.TESTING: test_dataloader_config,
-            TrainerFn.PREDICTING: predict_dataloader_config,
-        }
+        super().__init__(
+            train_dataloader_config=train_dataloader_config,
+            val_dataloader_config=val_dataloader_config,
+            test_dataloader_config=test_dataloader_config,
+            predict_dataloader_config=predict_dataloader_config,
+        )
         self.stage_to_file_map: dict[TrainerFn, dict[int, list[str]]] = {}
-
-    @staticmethod
-    def _get_shuffle_files(config: DictConfig) -> bool:
-        return getattr(config.dataset_config, "shuffle_files", False)
 
     def get_file_suffix_from_config(self, config: DictConfig) -> str:
         file_format: str | None = getattr(config.dataset_config, "file_format", None)
@@ -44,38 +38,24 @@ class BaseDataModule(LightningDataModule):
         data_reader_target = getattr(data_reader_factory, "func", data_reader_factory)
         return data_reader_target.get_file_suffix()  # noqa
 
-    def setup(self, stage: str):
-        if not hasattr(self, "trainer") or self.trainer is None:
-            raise AttributeError("self.trainer must be initialized before call to setup().")
+    def setup_stage(self, stage: TrainerFn) -> None:
+        if stage in self.stage_to_file_map:
+            return
 
-        for trainer_stage, config in self.stage_to_config.items():
-            if config is None:
-                self.stage_to_file_map[trainer_stage] = {}
-                continue
+        config = self.get_stage_config(stage)
+        list_of_files = list_files(
+            folder_path=config.data_folder,
+            suffix=f"*{self.get_file_suffix_from_config(config)}",
+        )
+        if hasattr(config, "limit_files") and config.limit_files:
+            list_of_files = list_of_files[: config.limit_files]
 
-            if trainer_stage in self.stage_to_file_map:
-                continue
-
-            list_of_files = list_files(
-                folder_path=config.data_folder,
-                suffix=f"*{self.get_file_suffix_from_config(config)}",
-            )
-            if hasattr(config, "limit_files") and config.limit_files:
-                list_of_files = list_of_files[: config.limit_files]
-
-            self.stage_to_file_map[trainer_stage], _ = assign_files_to_workers(
-                list_of_files=list_of_files,
-                total_workers=self.trainer.world_size,
-                assign_by_size=config.assign_files_by_size,
-                shuffle_files=self._get_shuffle_files(config),
-            )
-
-    def _get_stage_config(self, stage: TrainerFn) -> DictConfig | None:
-        if not hasattr(self, "trainer"):
-            raise AttributeError("self.trainer must be initialized before call to get_dataloader().")
-        if not self.stage_to_file_map[stage]:
-            raise AttributeError(f"Stage {stage} must initialize file map.")
-        return self.stage_to_config[stage]
+        self.stage_to_file_map[stage], _ = assign_files_to_workers(
+            list_of_files=list_of_files,
+            total_workers=self.trainer.world_size,
+            assign_by_size=config.assign_files_by_size,
+            shuffle_files=getattr(config.dataset_config, "shuffle_files", False),
+        )
 
     def _build_dataset(self, stage: TrainerFn, curr_config: DictConfig):
         assert self.trainer is not None
@@ -101,9 +81,10 @@ class BaseDataModule(LightningDataModule):
     def _build_collate_fn(self, curr_config: DictConfig):
         return curr_config.collate_fn
 
-    def get_dataloader(self, stage: TrainerFn):
-        curr_config = self.stage_to_config[stage]
-        assert curr_config is not None
+    def build_dataloader(self, stage: TrainerFn):
+        if stage not in self.stage_to_file_map:
+            raise AttributeError(f"Stage {stage} must initialize file map.")
+        curr_config = self.get_stage_config(stage)
 
         dataset = self._build_dataset(stage, curr_config)
         collate_fn = self._build_collate_fn(curr_config)
@@ -119,15 +100,3 @@ class BaseDataModule(LightningDataModule):
             collate_fn=collate_fn,
             timeout=curr_config.timeout,
         )
-
-    def train_dataloader(self):
-        return self.get_dataloader(stage=TrainerFn.FITTING)
-
-    def val_dataloader(self):
-        return self.get_dataloader(stage=TrainerFn.VALIDATING)
-
-    def test_dataloader(self):
-        return self.get_dataloader(stage=TrainerFn.TESTING)
-
-    def predict_dataloader(self):
-        return self.get_dataloader(stage=TrainerFn.PREDICTING)

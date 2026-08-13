@@ -1,0 +1,31 @@
+# @package _global_
+
+datamodule:
+  _target_: src.data.datamodule.DiagnosisDataModule
+  test_dataloader_config: ${data.test_dataloader}
+
+dataset_config:
+  preprocessing_functions:
+    - _target_: src.data.components.preprocessing.assign_frequency_groups
+      _partial_: true
+      head_ratio: ${head_ratio}
+      tail_ratio: ${tail_ratio}
+
+test_dataloader:
+  dataset_class:
+    _target_: src.data.datasets.DiagnosisDataset
+    _partial_: true
+  dataset_config: ${data.dataset_config}
+  data_folder: ${paths.data_dir}
+  semantic_id_path: ${semantic_id_path}
+  raw_num_hierarchies: ${raw_num_hierarchies}
+  embedding_path: ${embedding_path}
+  batch_size_per_device: 1
+  num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  drop_last: false
+  timeout: 0
+  collate_fn:
+    _target_: src.data.components.collate.collate_fn_single_diagnosis_batch
+    _partial_: true

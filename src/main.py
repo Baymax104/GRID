@@ -6,7 +6,6 @@ import torch
 from omegaconf import DictConfig
 
 import src.utils.hydra_resolvers  # noqa: F401  — registers now_tz OmegaConf resolver
-from src.common.analysis import run_analysis_runner
 from src.utils.cli import rewrite_dry_run_flag
 from src.utils.extra import extras
 from src.utils.launcher import pipeline_launcher
@@ -71,7 +70,13 @@ def run_inference(cfg: DictConfig):
 
 
 def run_analysis(cfg: DictConfig):
-    run_analysis_runner(cfg)
+    with pipeline_launcher(cfg) as pipeline_modules:
+        logger.info("Starting analysis!")
+        pipeline_modules.trainer.test(
+            model=pipeline_modules.model,
+            datamodule=pipeline_modules.datamodule,
+            ckpt_path=None,
+        )
 
 
 def run(cfg: DictConfig):

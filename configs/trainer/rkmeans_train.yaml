@@ -3,7 +3,7 @@
 root:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
-  max_steps: 1500
+  max_steps: 20000
   accelerator: gpu
   devices: ${devices}
   precision: bf16-mixed

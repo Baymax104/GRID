@@ -57,7 +57,7 @@ train_dataloader:
   _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
-  batch_size_per_device: 2048
+  batch_size_per_device: 1024
   num_workers: 12
   assign_files_by_size: false
   timeout: 60
@@ -99,7 +99,7 @@ test_dataloader:
   limit_files: null
 
 datamodule:
-  _target_: src.data.data_module.BaseDataModule
+  _target_: src.data.datamodule.FileDataModule
   train_dataloader_config: ${data.train_dataloader}
   val_dataloader_config: ${data.val_dataloader}
   test_dataloader_config: ${data.test_dataloader}

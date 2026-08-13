@@ -65,5 +65,5 @@ predict_dataloader:
   dataset_config: ${data.predict_dataset_config}
   pin_memory: false
 datamodule:
-  _target_: src.data.data_module.BaseDataModule
+  _target_: src.data.datamodule.FileDataModule
   predict_dataloader_config: ${data.predict_dataloader}

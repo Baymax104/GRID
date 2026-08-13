@@ -2,9 +2,11 @@ import os
 from importlib.util import find_spec
 from typing import Any
 
+import hydra
 from dotenv import load_dotenv
 from lightning.pytorch.loggers import Logger
 from lightning_utilities.core.rank_zero import rank_zero_only
+from omegaconf import DictConfig
 
 from src.utils.pylogger import RankedLogger
 
@@ -59,6 +61,29 @@ def login_wandb():
         wandb.login(key=wandb_api_key, relogin=True)
 
 
+def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
+    """Instantiates loggers from config."""
+    loggers: list[Logger] = []
+
+    if not logger_cfg:
+        log.warning("No logger configs found! Skipping...")
+        return loggers
+
+    if not isinstance(logger_cfg, DictConfig):
+        raise TypeError("Logger config must be a DictConfig!")
+
+    for name, lg_conf in logger_cfg.items():
+        if name == "wandb":
+            log.info("Authenticating to W&B!")
+            login_wandb()
+
+        if isinstance(lg_conf, DictConfig) and "_target_" in lg_conf:
+            log.info(f"Instantiating logger <{lg_conf._target_}>")
+            loggers.append(hydra.utils.instantiate(lg_conf))
+
+    return loggers
+
+
 @rank_zero_only
 def finalize_loggers(trainer: Any, status=END_RUN):
     """
@@ -72,7 +97,7 @@ def finalize_loggers(trainer: Any, status=END_RUN):
         if hasattr(logger, "finalize"):
             logger.finalize(status)
 
-    if find_spec("wandb"):  # check if wandb is installed. If so, close connection to wandb.
+    if find_spec("wandb"):
         import wandb
 
         if wandb.run:

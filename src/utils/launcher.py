@@ -161,25 +161,7 @@ def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
     :param logger_cfg: A DictConfig object containing logger configurations.
     :return: A list of instantiated loggers.
     """
-    loggers: list[Logger] = []
-
-    if not logger_cfg:
-        logger.warning("No logger configs found! Skipping...")
-        return loggers
-
-    if not isinstance(logger_cfg, DictConfig):
-        raise TypeError("Logger config must be a DictConfig!")
-
-    for name, lg_conf in logger_cfg.items():
-        if name == "wandb":
-            logger.info("Authenticating to W&B!")
-            logging_utils.login_wandb()
-
-        if isinstance(lg_conf, DictConfig) and "_target_" in lg_conf:
-            logger.info(f"Instantiating logger <{lg_conf._target_}>")
-            loggers.append(hydra.utils.instantiate(lg_conf))
-
-    return loggers
+    return logging_utils.instantiate_loggers(logger_cfg)
 
 
 def attach_metric_callback(callbacks: list[Callback], cfg: DictConfig) -> list[Callback]:

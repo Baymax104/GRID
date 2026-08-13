@@ -5,7 +5,7 @@
 ## 对应入口
 
 - 配置：`configs/experiment/sem_embeds_inference.yaml`
-- datamodule：`src.data.data_module.BaseDataModule`
+- datamodule：`src.data.datamodule.FileDataModule`
 - collate：`src.data.components.collate.collate_fn_items`
 - 模型：`src.embedding.semantic_embedder.SemanticEmbedder`
 

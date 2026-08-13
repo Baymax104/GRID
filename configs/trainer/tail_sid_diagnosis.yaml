@@ -1,0 +1,10 @@
+# @package _global_
+
+root:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.output_dir}
+  accelerator: cpu
+  devices: 1
+  precision: 32-true
+  enable_checkpointing: false
+  enable_model_summary: false

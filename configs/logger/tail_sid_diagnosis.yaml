@@ -1,0 +1,8 @@
+# @package _global_
+
+wandb:
+  _target_: lightning.pytorch.loggers.wandb.WandbLogger
+  name: ${now_tz:%Y-%m-%d_%H-%M-%S}
+  save_dir: ${paths.output_dir}
+  project: GRID
+  group: tail_sid_diagnosis

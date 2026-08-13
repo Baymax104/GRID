@@ -1,10 +1,11 @@
 from collections.abc import Iterator
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
 import torch
 
-from src.data.components.data_models import ModelOutput
+from src.data.components.data_models import DiagnosisBatch, ModelOutput
 from src.data.components.tokenization import load_tokenize
 from src.data.utils import gather_predictions_by_keys
 from src.utils.file import load_json
@@ -24,6 +25,37 @@ def is_feature_in_features_to_apply(features_to_apply: list[str] | None, k: str)
     if features_to_apply and k not in features_to_apply:
         return False
     return True
+
+
+def assign_frequency_groups(
+    batch: DiagnosisBatch,
+    head_ratio: float,
+    tail_ratio: float,
+) -> DiagnosisBatch:
+    if not 0 <= head_ratio <= 1 or not 0 <= tail_ratio <= 1 or head_ratio + tail_ratio > 1:
+        raise ValueError("head_ratio and tail_ratio must be within [0, 1] and sum to at most 1.")
+
+    groups: dict[int, str] = {}
+    item_ids = batch.sid_views.item_ids
+    frequencies = batch.frequencies
+    non_cold = [int(item_id) for item_id in item_ids.tolist() if frequencies.get(int(item_id), 0) > 0]
+    non_cold.sort(key=lambda item_id: (-frequencies[item_id], item_id))
+    total = len(non_cold)
+
+    for rank, item_id in enumerate(non_cold):
+        percentile = rank / total if total else 0.0
+        if percentile < head_ratio:
+            groups[item_id] = "Head"
+        elif percentile >= 1.0 - tail_ratio:
+            groups[item_id] = "Tail"
+        else:
+            groups[item_id] = "Mid"
+
+    for item_id in item_ids.tolist():
+        item_id = int(item_id)
+        if frequencies.get(item_id, 0) == 0:
+            groups[item_id] = "Tail-Cold"
+    return replace(batch, groups_by_item=groups)
 
 
 def filter_features_to_consider(
