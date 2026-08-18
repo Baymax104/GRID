@@ -470,17 +470,41 @@ def test_rvq_initializes_in_the_same_step_without_transition_state():
     model = create_residual_vector_quantization(n_layers=1, init_buffer_size=4)
     residuals = torch.tensor([[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]])
 
-    ids, embeddings, quantization_loss_embeddings = model.layers[0](residuals)
+    output = model.layers[0](residuals)
 
-    assert ids.shape == (4,)
-    assert embeddings.shape == residuals.shape
-    assert quantization_loss_embeddings is None
+    assert output.ids.shape == (4,)
+    assert output.residual_embeddings.shape == residuals.shape
+    assert output.codebook_embeddings_for_loss is None
     assert model.layers[0].is_initialized
     assert model.layers[0].init_buffer.numel() == 0
     assert not hasattr(model, "is_initial_step_list")
     assert not hasattr(model, "init_centroids_list")
     assert not hasattr(model, "init_loss_function")
     assert not torch.equal(model.layers[0].centroids.detach(), torch.zeros_like(model.layers[0].centroids))
+
+
+def test_rvq_layer_output_names_separate_ste_from_codebook_loss_embeddings():
+    layer = VectorQuantizationLayer(n_clusters=2, n_features=2, init_buffer_size=2)
+    layer.is_initialized = True
+    layer.centroids.data = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+    residuals = torch.tensor([[0.9, 0.1], [0.2, 0.8]], requires_grad=True)
+
+    output = layer(residuals)
+
+    assert torch.equal(output.ids, torch.tensor([0, 1]))
+    assert output.codebook_embeddings_for_loss is not None
+    assert torch.allclose(output.residual_embeddings, output.codebook_embeddings_for_loss)
+
+    output.residual_embeddings.sum().backward(retain_graph=True)
+    assert residuals.grad is not None
+    assert torch.equal(residuals.grad, torch.ones_like(residuals))
+    assert layer.centroids.grad is None
+
+    residuals.grad = None
+    output.codebook_embeddings_for_loss.sum().backward()
+    assert residuals.grad is None
+    assert layer.centroids.grad is not None
+    assert layer.centroids.grad.norm() > 0
 
 
 def test_rqvae_initializes_in_the_same_step_after_convergence_without_transition_state():
@@ -522,13 +546,13 @@ def test_rvq_distributed_non_zero_rank_receives_broadcasted_initial_centroids(mo
         tensor.copy_(broadcasted_centroids)
 
     monkeypatch.setattr(distributed_utils.dist, "broadcast", fake_broadcast)
-    ids, embeddings, quantization_loss_embeddings = model.layers[0](residuals)
+    output = model.layers[0](residuals)
 
-    assert quantization_loss_embeddings is None
+    assert output.codebook_embeddings_for_loss is None
     assert model.layers[0].is_initialized
     assert torch.equal(model.layers[0].centroids.detach(), broadcasted_centroids)
-    assert torch.equal(ids, torch.tensor([0, 0, 1, 1]))
-    assert torch.equal(embeddings, broadcasted_centroids[ids])
+    assert torch.equal(output.ids, torch.tensor([0, 0, 1, 1]))
+    assert torch.equal(output.residual_embeddings, broadcasted_centroids[output.ids])
 
 
 def test_rqvae_rank_zero_broadcasts_refined_initial_centroids(monkeypatch):

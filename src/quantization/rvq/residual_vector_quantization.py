@@ -81,11 +81,14 @@ class ResidualVectorQuantization(LightningModule):
                 train_layer = idx == self.current_layer
 
             if train_layer:
-                layer_ids, layer_embeddings, quantization_loss_embeddings = layer(current_residuals)
-                if quantization_loss_embeddings is None:
+                layer_output = layer(current_residuals)
+                layer_ids = layer_output.ids
+                layer_embeddings = layer_output.residual_embeddings
+                codebook_embeddings_for_loss = layer_output.codebook_embeddings_for_loss
+                if codebook_embeddings_for_loss is None:
                     layer_loss = layer.centroids.sum() * 0.0
                 else:
-                    layer_loss = self.loss_function(current_residuals, quantization_loss_embeddings)
+                    layer_loss = self.loss_function(current_residuals, codebook_embeddings_for_loss)
                 quantization_loss += layer_loss
             else:
                 layer_ids, layer_embeddings = layer.predict(current_residuals)

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import NamedTuple
 
 import torch
 from torch import nn
@@ -63,9 +64,17 @@ def _ste_quantize(
     """Quantize using the Straight-Through Estimator (STE)."""
     dists = distance_fn(batch, codebook)
     ids = torch.argmin(dists, dim=-1)
-    embeddings = codebook[ids]
-    reconstruction_loss_embeddings = batch + (embeddings - batch).detach()
-    return ids, embeddings, reconstruction_loss_embeddings
+    codebook_embeddings = codebook[ids]
+    ste_embeddings = batch + (codebook_embeddings - batch).detach()
+    return ids, codebook_embeddings, ste_embeddings
+
+
+class VectorQuantizationOutput(NamedTuple):
+    """Output of a trainable RVQ layer step."""
+
+    ids: torch.Tensor
+    residual_embeddings: torch.Tensor
+    codebook_embeddings_for_loss: torch.Tensor | None
 
 
 class VectorQuantizationLayer(nn.Module):
@@ -90,18 +99,22 @@ class VectorQuantizationLayer(nn.Module):
         """Reset runtime training state on the target device."""
         self.init_buffer = torch.tensor([], device=device)
 
-    def forward(self, residuals: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    def forward(self, residuals: torch.Tensor) -> VectorQuantizationOutput:
         """Initialize or train this layer with VQ-STE quantization inputs."""
         residuals = residuals.to(self.centroids.device)
 
         if not self.is_initialized:
             return self._initialization_step(residuals)
 
-        ids, embeddings, reconstruction_loss_embeddings = _ste_quantize(
+        ids, codebook_embeddings, ste_embeddings = _ste_quantize(
             codebook=self.centroids,
             batch=residuals,
         )
-        return ids, reconstruction_loss_embeddings, embeddings
+        return VectorQuantizationOutput(
+            ids=ids,
+            residual_embeddings=ste_embeddings,
+            codebook_embeddings_for_loss=codebook_embeddings,
+        )
 
     def predict(self, residuals: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Return nearest centroid ids and embeddings without updating layer state."""
@@ -124,13 +137,17 @@ class VectorQuantizationLayer(nn.Module):
             return torch.zeros_like(self.centroids.data)
         return _kmeans_plus_plus_init(buffer, self.n_clusters)
 
-    def _initialization_step(self, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    def _initialization_step(self, batch: torch.Tensor) -> VectorQuantizationOutput:
         self._buffer_points(batch)
 
         if self.init_buffer.shape[0] < self.init_buffer_size:
             batch_zero_embeddings = torch.zeros_like(batch, dtype=batch.dtype, device=self.centroids.device)
             batch_zero_assignments = torch.zeros(batch.shape[0], dtype=torch.long, device=self.centroids.device)
-            return batch_zero_assignments, batch_zero_embeddings, None
+            return VectorQuantizationOutput(
+                ids=batch_zero_assignments,
+                residual_embeddings=batch_zero_embeddings,
+                codebook_embeddings_for_loss=None,
+            )
 
         initial_centroids = self._compute_initial_centroids_for_current_rank(self.init_buffer)
         initial_centroids = broadcast_from_rank_zero(initial_centroids)
@@ -141,4 +158,8 @@ class VectorQuantizationLayer(nn.Module):
 
         distances = _compute_squared_euclidean_distance(batch, self.centroids.data)
         assignments = torch.argmin(distances, dim=1).to(self.centroids.device)
-        return assignments, self.centroids[assignments], None
+        return VectorQuantizationOutput(
+            ids=assignments,
+            residual_embeddings=self.centroids[assignments],
+            codebook_embeddings_for_loss=None,
+        )
