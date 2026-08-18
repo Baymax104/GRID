@@ -6,3 +6,4 @@ wandb:
   save_dir: ${paths.output_dir}
   project: GRID
   group: tail_sid_diagnosis
+  notes: null

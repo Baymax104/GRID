@@ -2,7 +2,15 @@ from omegaconf import OmegaConf
 from torchmetrics import MeanMetric
 
 from src.common.metrics import MetricCallback
-from src.utils.launcher import attach_metric_callback
+from src.utils.launcher import attach_metric_callback, log_hyperparameters
+
+
+class CapturingLogger:
+    def __init__(self):
+        self.logged_hyperparams = []
+
+    def log_hyperparams(self, params, *args, **kwargs):
+        self.logged_hyperparams.append(params)
 
 
 def test_attach_metric_callback_appends_callback_when_model_metrics_exist():
@@ -71,3 +79,33 @@ def test_attach_metric_callback_leaves_callbacks_unchanged_without_model_metrics
     callbacks = attach_metric_callback([existing_callback], cfg)
 
     assert callbacks == [existing_callback]
+
+
+def test_log_hyperparameters_logs_resolved_hydra_config_to_all_loggers():
+    logger_a = CapturingLogger()
+    logger_b = CapturingLogger()
+    cfg = OmegaConf.create(
+        {
+            "data_dir": "data/beauty",
+            "paths": {
+                "data_dir": "${data_dir}",
+            },
+        }
+    )
+
+    log_hyperparameters([logger_a, logger_b], cfg)
+
+    expected = {
+        "data_dir": "data/beauty",
+        "paths": {
+            "data_dir": "data/beauty",
+        },
+    }
+    assert logger_a.logged_hyperparams == [expected]
+    assert logger_b.logged_hyperparams == [expected]
+
+
+def test_log_hyperparameters_ignores_empty_logger_list():
+    cfg = OmegaConf.create({"data_dir": "data/beauty"})
+
+    log_hyperparameters([], cfg)

@@ -164,6 +164,17 @@ def instantiate_loggers(logger_cfg: DictConfig) -> list[Logger]:
     return logging_utils.instantiate_loggers(logger_cfg)
 
 
+def log_hyperparameters(loggers: list[Logger], cfg: DictConfig):
+    """Log the resolved Hydra config through every configured Lightning logger."""
+    if len(loggers) == 0:
+        return
+
+    hparams = OmegaConf.to_container(cfg, resolve=True)
+    logger.info("Logging hyperparameters!")
+    for experiment_logger in loggers:
+        experiment_logger.log_hyperparams(hparams)
+
+
 def attach_metric_callback(callbacks: list[Callback], cfg: DictConfig) -> list[Callback]:
     """Attach config-declared model metrics through the shared metric callback."""
     metrics_cfg = cfg.get("model", {}).get("metrics")
@@ -263,9 +274,7 @@ def pipeline_launcher(cfg: DictConfig):
     pipeline_modules: PipelineModules | None = None
     try:
         pipeline_modules: PipelineModules = initialize_pipeline_modules(cfg)
-        # Log hyperparameters if loggers are present
-        if len(pipeline_modules.loggers) > 0:
-            logger.info("Logging hyperparameters!")
+        log_hyperparameters(pipeline_modules.loggers, pipeline_modules.cfg)
         yield pipeline_modules
     except Exception as ex:
         raise ex
