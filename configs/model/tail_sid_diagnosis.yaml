@@ -4,6 +4,10 @@ root:
   _target_: src.quantization.tail_sid_diagnosis.module.TailSIDDiagnosisModule
   max_neighbors_per_bucket: ${max_neighbors_per_bucket}
 
+metric_callback:
+  logging_modes:
+    test: summary
+
 metrics:
   _target_: src.common.metrics.MetricEngine
   stages:

@@ -33,8 +33,8 @@ TBD - created by archiving change unify-main-entrypoint. Update Purpose after ar
 
 #### Scenario: User launches analysis through unified entrypoint
 - **WHEN** 用户通过统一入口执行一个 `run_mode: analysis` 的 experiment
-- **THEN** 系统必须执行 analysis runner 链路
-- **AND** 不得进入训练或推理链路
+- **THEN** 系统必须执行 Lightning test analysis 链路
+- **AND** 不得进入训练、推理、或 offline runner 链路
 
 ### Requirement: Main configuration SHALL be unified and thin
 主配置文件 SHALL 统一为单一入口层，并只承担 defaults 导入与通用运行开关职责。

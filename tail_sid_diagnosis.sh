@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DATA_DIR="${DATA_DIR:-data/beauty}"
-SEMANTIC_ID_PATH="${SEMANTIC_ID_PATH:-logs/rkmeans_inference/runs/2026-08-11/18-51-16/pickle/merged_predictions_tensor.pt}"
+SEMANTIC_ID_PATH="${SEMANTIC_ID_PATH:-logs/rkmeans_inference/runs/2026-08-14/10-33-53/pickle/merged_predictions_tensor.pt}"
 EMBEDDING_PATH="${EMBEDDING_PATH:-logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt}"
 RAW_NUM_HIERARCHIES="${RAW_NUM_HIERARCHIES:-3}"
 

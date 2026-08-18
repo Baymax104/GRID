@@ -1,13 +1,13 @@
 #!/bin/bash
 
-NPROC_PER_NODE=2
+NPROC_PER_NODE=1
 
 OMP_NUM_THREADS=$(( $(nproc) / NPROC_PER_NODE )) \
   uv run \
   torchrun --nproc_per_node=$NPROC_PER_NODE -m src.main \
   experiment=rkmeans_inference \
   embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt \
-  ckpt_path=logs/rkmeans_train/runs/2026-08-11/18-27-10/checkpoints/checkpoint_000_020000.ckpt \
+  ckpt_path=logs/rkmeans_train/runs/2026-08-13/19-10-49/checkpoints/checkpoint_000_020000.ckpt \
   devices=[0] \
   data_dir=data/beauty \
   embedding_dim=768 \

@@ -41,7 +41,7 @@ class ItemBatch:
     features: dict[str, torch.Tensor] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclass
 class SIDViews:
     item_ids: torch.Tensor
     raw_sid: torch.Tensor
@@ -49,7 +49,7 @@ class SIDViews:
     dedup_digit: torch.Tensor
 
 
-@dataclass(frozen=True)
+@dataclass
 class DiagnosisBatch:
     sid_views: SIDViews
     frequencies: dict[int, int]

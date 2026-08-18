@@ -7,7 +7,7 @@ from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, ModelSummary
 from lightning.pytorch.callbacks.progress import ProgressBar
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig, open_dict
+from omegaconf import DictConfig, OmegaConf, open_dict
 
 import src.utils.logging as logging_utils
 from src.common.metrics import MetricCallback
@@ -172,7 +172,9 @@ def attach_metric_callback(callbacks: list[Callback], cfg: DictConfig) -> list[C
 
     logger.info("Attaching config-declared metric callback.")
     metric_engine = hydra.utils.instantiate(metrics_cfg, _recursive_=False)
-    callbacks.append(MetricCallback(engine=metric_engine))
+    callback_cfg = cfg.get("model", {}).get("metric_callback")
+    callback_kwargs = OmegaConf.to_container(callback_cfg, resolve=True) if callback_cfg else {}
+    callbacks.append(MetricCallback(engine=metric_engine, **callback_kwargs))
     return callbacks
 
 

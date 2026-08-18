@@ -66,12 +66,13 @@ class MetricEngine(nn.Module):
                 metric.reset()
 
     def log(self, pl_module: Any, stage: str, only_updated: bool = False, **log_kwargs: Any) -> dict[str, Any]:
-        metrics = {
-            _prefix_stage(stage, name): value for name, value in self.compute(stage, only_updated=only_updated).items()
-        }
+        metrics = self.compute_prefixed(stage, only_updated=only_updated)
         if metrics:
             pl_module.log_dict(metrics, **log_kwargs)
         return metrics
+
+    def compute_prefixed(self, stage: str, only_updated: bool = False) -> dict[str, Any]:
+        return {_prefix_stage(stage, name): value for name, value in self.compute(stage, only_updated=only_updated).items()}
 
     def _add_stage(self, stage: str, definitions: Mapping[str, Any]) -> None:
         stage_metrics = nn.ModuleDict()

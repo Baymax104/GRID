@@ -1,3 +1,4 @@
+import pytest
 import torch
 from torchmetrics import MeanMetric
 
@@ -12,6 +13,15 @@ class LoggingModule:
 
     def log_dict(self, metrics, **kwargs):
         self.logged.append((metrics, kwargs))
+
+
+class SummaryLogger:
+    def __init__(self):
+        self.experiment = type("Experiment", (), {"summary": {}})()
+
+
+class UnsupportedLogger:
+    experiment = object()
 
 
 def test_metric_callback_routes_train_batch_output_and_logs_on_step():
@@ -78,6 +88,93 @@ def test_metric_callback_logs_and_resets_validation_epoch_metrics():
     assert module.logged[0][1]["on_epoch"]
     engine.update("val", {"loss": torch.tensor(10.0)})
     assert torch.equal(engine.compute("val")["loss"], torch.tensor(10.0))
+
+
+def test_metric_callback_summary_mode_writes_run_summary_without_log_dict():
+    engine = MetricEngine(
+        stages={
+            "test": {
+                "loss": {
+                    "metric": MeanMetric(),
+                    "spec": "loss",
+                }
+            }
+        }
+    )
+    callback = MetricCallback(engine=engine, logging_modes={"test": "summary"})
+    module = LoggingModule()
+    summary_logger = SummaryLogger()
+    trainer = type("Trainer", (), {"loggers": [summary_logger]})()
+
+    callback.on_test_start(trainer=trainer, pl_module=module)
+    callback.on_test_batch_end(
+        trainer=trainer,
+        pl_module=module,
+        outputs={"loss": torch.tensor(2.0)},
+        batch=None,
+        batch_idx=0,
+    )
+    callback.on_test_epoch_end(trainer=trainer, pl_module=module)
+
+    assert module.logged == []
+    assert summary_logger.experiment.summary["test/loss"] == 2.0
+    engine.update("test", {"loss": torch.tensor(10.0)})
+    assert torch.equal(engine.compute("test")["loss"], torch.tensor(10.0))
+
+
+def test_metric_callback_rejects_unsupported_logging_mode():
+    with pytest.raises(ValueError, match="Unsupported metric logging mode"):
+        MetricCallback(engine=MetricEngine(), logging_modes={"test": "table"})
+
+
+def test_metric_callback_summary_mode_warns_for_unsupported_logger(monkeypatch):
+    warnings = []
+    engine = MetricEngine(
+        stages={
+            "test": {
+                "loss": {
+                    "metric": MeanMetric(),
+                    "spec": "loss",
+                }
+            }
+        }
+    )
+    callback = MetricCallback(engine=engine, logging_modes={"test": "summary"})
+    module = LoggingModule()
+    trainer = type("Trainer", (), {"loggers": [UnsupportedLogger()]})()
+    monkeypatch.setattr("src.common.metrics.callback.logger.warning", warnings.append)
+
+    callback.on_test_batch_end(
+        trainer=trainer,
+        pl_module=module,
+        outputs={"loss": torch.tensor(2.0)},
+        batch=None,
+        batch_idx=0,
+    )
+    callback.on_test_epoch_end(trainer=trainer, pl_module=module)
+
+    assert module.logged == []
+    assert any("unsupported logger" in warning for warning in warnings)
+
+
+def test_metric_callback_summary_mode_skips_non_scalar_metrics(monkeypatch):
+    warnings = []
+    engine = MetricEngine(stages={})
+    callback = MetricCallback(engine=engine, logging_modes={"test": "summary"})
+    module = LoggingModule()
+    summary_logger = SummaryLogger()
+    trainer = type("Trainer", (), {"loggers": [summary_logger]})()
+    monkeypatch.setattr("src.common.metrics.callback.logger.warning", warnings.append)
+    monkeypatch.setattr(
+        engine,
+        "compute_prefixed",
+        lambda stage, only_updated=False: {"test/vector": torch.tensor([1.0, 2.0])},
+    )
+
+    callback.on_test_epoch_end(trainer=trainer, pl_module=module)
+
+    assert summary_logger.experiment.summary == {}
+    assert any("Skipping non-scalar metric" in warning for warning in warnings)
 
 
 def test_metric_callback_ignores_unconfigured_stage():

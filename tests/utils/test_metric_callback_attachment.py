@@ -33,6 +33,37 @@ def test_attach_metric_callback_appends_callback_when_model_metrics_exist():
     assert isinstance(callbacks[0].engine.metrics["stage_train"]["0_loss_loss"], MeanMetric)
 
 
+def test_attach_metric_callback_passes_model_callback_options():
+    cfg = OmegaConf.create(
+        {
+            "model": {
+                "metric_callback": {
+                    "logging_modes": {
+                        "test": "summary",
+                    }
+                },
+                "metrics": {
+                    "_target_": "src.common.metrics.MetricEngine",
+                    "stages": {
+                        "test": {
+                            "loss": {
+                                "metric": {
+                                    "_target_": "torchmetrics.MeanMetric",
+                                },
+                                "spec": "loss",
+                            }
+                        }
+                    },
+                },
+            }
+        }
+    )
+
+    callbacks = attach_metric_callback([], cfg)
+
+    assert callbacks[0].logging_modes == {"test": "summary"}
+
+
 def test_attach_metric_callback_leaves_callbacks_unchanged_without_model_metrics():
     existing_callback = object()
     cfg = OmegaConf.create({"model": {}})

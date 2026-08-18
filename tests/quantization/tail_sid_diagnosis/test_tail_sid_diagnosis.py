@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import torch
 from hydra import compose, initialize_config_dir
+from lightning.fabric.utilities.apply_func import move_data_to_device
 
 from src.common.metrics import MetricCallback, MetricEngine
 from src.data.components.data_models import DiagnosisBatch, ModelOutput, SIDViews
@@ -379,6 +380,26 @@ def test_tail_sid_diagnosis_module_returns_metric_pre_state():
     assert output["buckets"][1][(1,)] == [0, 1]
 
 
+def test_diagnosis_batch_can_be_moved_by_lightning_transfer():
+    batch = DiagnosisBatch(
+        sid_views=load_views_from_model_output(
+            ModelOutput(
+                keys=torch.tensor([1, 2]),
+                predictions=torch.tensor([[1, 1, 0], [1, 2, 0]]),
+            ),
+            raw_num_hierarchies=2,
+        ),
+        frequencies={1: 2, 2: 1},
+        groups_by_item={1: "Head", 2: "Tail"},
+        embeddings=None,
+    )
+
+    moved = move_data_to_device(batch, torch.device("cpu"))
+
+    assert torch.equal(moved.sid_views.item_ids, batch.sid_views.item_ids)
+    assert moved.frequencies == batch.frequencies
+
+
 def test_tail_sid_standard_metric_callback_logs_diagnosis_summary():
     logged = []
     payload = diagnosis_payload(
@@ -432,6 +453,7 @@ def test_tail_sid_diagnosis_hydra_config_composes():
     assert cfg.data.test_dataloader.dataset_class._target_ == "src.data.datasets.DiagnosisDataset"
     assert cfg.model.root._target_ == "src.quantization.tail_sid_diagnosis.module.TailSIDDiagnosisModule"
     assert cfg.model.metrics._target_ == "src.common.metrics.MetricEngine"
+    assert cfg.model.metric_callback.logging_modes.test == "summary"
     assert cfg.model.metrics.stages.test.structural.metric._target_ == (
         "src.quantization.tail_sid_diagnosis.metrics.StructuralSIDMetric"
     )
