@@ -1,22 +1,23 @@
 # @package _global_
 
 defaults:
-- /data@data: rqvae_train
-- /model@model: rqvae_train
-- /callbacks@callbacks: rqvae_train
-- /logger@logger: rqvae_train
-- /trainer@trainer: rqvae_train
+- /data@data: rvq_inference
+- /model@model: rvq_inference
+- /callbacks@callbacks: rvq_inference
+- /logger@logger: rvq_inference
+- /trainer@trainer: rvq_inference
+
 data_dir: ???
 embedding_path: ???
-embedding_dim: ???
-num_hierarchies: ???
 codebook_size: ???
+num_hierarchies: ???
+embedding_dim: ???
+ckpt_path: ???
 devices: ???
-run_mode: train
-task_name: rqvae_train
+
+run_mode: inference
+task_name: rvq_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-run_test_after_training: false
-ckpt_path: null
 seed: 42
 paths:
   root_dir: .
@@ -29,5 +30,4 @@ paths:
 extras:
   ignore_warnings: false
   print_config_warnings: true
-  print_config: false
-
+  print_config: true

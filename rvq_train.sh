@@ -39,6 +39,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$NOTES" ]]; then
+  echo "Error: --notes requires a value." >&2
+  exit 2
+fi
+
 ARGS=(
   experiment=rvq_train
   embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
@@ -49,9 +54,7 @@ ARGS=(
   codebook_size=256
 )
 
-if [[ -n "$NOTES" ]]; then
-  ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
-fi
+ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

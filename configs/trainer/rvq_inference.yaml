@@ -3,12 +3,6 @@
 root:
   _target_: lightning.pytorch.trainer.Trainer
   default_root_dir: ${paths.output_dir}
-  max_steps: 20000
   accelerator: gpu
   devices: ${devices}
   precision: bf16-mixed
-  log_every_n_steps: 10
-  val_check_interval: 50
-  strategy: ddp_find_unused_parameters_true
-  sync_batchnorm: true
-  num_sanity_val_steps: 0

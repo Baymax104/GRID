@@ -1,0 +1,43 @@
+# @package _global_
+
+root:
+  _target_: src.quantization.rqvae.residual_quantization_vae.ResidualQuantizationVAE
+  n_layers: ${num_hierarchies}
+  n_clusters: ${codebook_size}
+  n_features: ${model.encoder.output_dim}
+  init_buffer_size: 3072
+  normalize_residuals: false
+  kmeans_max_iter: 1000
+  normalization_layer: ${model.normalization_layer}
+  encoder: ${model.encoder}
+  decoder: ${model.decoder}
+  reconstruction_loss_weight: 1.0
+
+normalization_layer:
+  _target_: torch.nn.Sequential
+  _args_:
+  - _target_: torch.nn.BatchNorm1d
+    num_features: ${embedding_dim}
+  - _target_: src.quantization.rqvae.normalize_layer.NormalizeLayer
+encoder:
+  _target_: src.quantization.rqvae.mlp.MLP
+  input_dim: ${embedding_dim}
+  hidden_dim_list:
+  - 768
+  - 256
+  - 128
+  output_dim: 64
+  activation:
+    _target_: torch.nn.ReLU
+    _partial_: true
+decoder:
+  _target_: src.quantization.rqvae.mlp.MLP
+  input_dim: ${model.encoder.output_dim}
+  hidden_dim_list:
+  - 128
+  - 256
+  - 768
+  output_dim: ${embedding_dim}
+  activation:
+    _target_: torch.nn.ReLU
+    _partial_: true

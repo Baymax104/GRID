@@ -10,11 +10,7 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 def print_warnings_for_missing_configs(cfg: DictConfig):
-    run_mode = cfg.get("run_mode")
-    if run_mode == "analysis":
-        default_configs = ["analysis"]
-    else:
-        default_configs = ["data", "model"]
+    default_configs = ["data", "model"]
     has_warnings = False
     for config in default_configs:
         if not cfg.get(config):

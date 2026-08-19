@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NPROC_PER_NODE="${NPROC_PER_NODE:-2}"
+NPROC_PER_NODE="${NPROC_PER_NODE:-1}"
 
+CKPT_PATH=""
 SEMANTIC_ID_PATH=""
-NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
-
-quote_hydra_string() {
-  local value="$1"
-  value="${value//\\/\\\\}"
-  value="${value//\"/\\\"}"
-  printf '"%s"' "$value"
-}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -21,16 +14,16 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift
       ;;
-    --notes=*)
-      NOTES="${1#--notes=}"
+    --ckpt-path=*)
+      CKPT_PATH="${1#--ckpt-path=}"
       shift
       ;;
-    --notes)
+    --ckpt-path)
       if [[ $# -lt 2 || "$2" == --* ]]; then
-        echo "Error: --notes requires a value." >&2
+        echo "Error: --ckpt-path requires a value." >&2
         exit 2
       fi
-      NOTES="$2"
+      CKPT_PATH="$2"
       shift 2
       ;;
     --semantic-id-path=*)
@@ -52,8 +45,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$NOTES" ]]; then
-  echo "Error: --notes requires a value." >&2
+if [[ -z "$CKPT_PATH" ]]; then
+  echo "Error: --ckpt-path requires a value." >&2
   exit 2
 fi
 
@@ -63,15 +56,15 @@ if [[ -z "$SEMANTIC_ID_PATH" ]]; then
 fi
 
 ARGS=(
-  experiment=tiger_train
-  devices=[0,1]
-  codebook_size=256
+  experiment=tiger_inference
+  ckpt_path="$CKPT_PATH"
   semantic_id_path="$SEMANTIC_ID_PATH"
+  devices=[0]
   data_dir=data/beauty
   num_hierarchies=4
+  codebook_size=256
+  embedding_dim=256
 )
-
-ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

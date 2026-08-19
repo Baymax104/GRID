@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA_DIR="${DATA_DIR:-data/beauty}"
-SEMANTIC_ID_PATH="${SEMANTIC_ID_PATH:-logs/rkmeans_inference/runs/2026-08-14/10-33-53/pickle/merged_predictions_tensor.pt}"
-EMBEDDING_PATH="${EMBEDDING_PATH:-logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt}"
-RAW_NUM_HIERARCHIES="${RAW_NUM_HIERARCHIES:-3}"
-
+SEMANTIC_ID_PATH=""
 NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
@@ -35,6 +31,18 @@ while [[ $# -gt 0 ]]; do
       NOTES="$2"
       shift 2
       ;;
+    --semantic-id-path=*)
+      SEMANTIC_ID_PATH="${1#--semantic-id-path=}"
+      shift
+      ;;
+    --semantic-id-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --semantic-id-path requires a value." >&2
+        exit 2
+      fi
+      SEMANTIC_ID_PATH="$2"
+      shift 2
+      ;;
     *)
       EXTRA_ARGS+=("$1")
       shift
@@ -42,20 +50,25 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$NOTES" ]]; then
+  echo "Error: --notes requires a value." >&2
+  exit 2
+fi
+
+if [[ -z "$SEMANTIC_ID_PATH" ]]; then
+  echo "Error: --semantic-id-path requires a value." >&2
+  exit 2
+fi
+
 ARGS=(
   experiment=tail_sid_diagnosis
-  data_dir="$DATA_DIR"
+  data_dir=data/beauty
+  raw_num_hierarchies=3
   semantic_id_path="$SEMANTIC_ID_PATH"
-  raw_num_hierarchies="$RAW_NUM_HIERARCHIES"
+  embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
 )
 
-if [[ "$EMBEDDING_PATH" != "null" ]]; then
-  ARGS+=(embedding_path="$EMBEDDING_PATH")
-fi
-
-if [[ -n "$NOTES" ]]; then
-  ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
-fi
+ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

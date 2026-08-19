@@ -1,18 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NPROC_PER_NODE="${NPROC_PER_NODE:-2}"
+NPROC_PER_NODE="${NPROC_PER_NODE:-1}"
 
-NOTES=""
+CKPT_PATH=""
 DRY_RUN=false
 EXTRA_ARGS=()
-
-quote_hydra_string() {
-  local value="$1"
-  value="${value//\\/\\\\}"
-  value="${value//\"/\\\"}"
-  printf '"%s"' "$value"
-}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -20,16 +13,16 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift
       ;;
-    --notes=*)
-      NOTES="${1#--notes=}"
+    --ckpt-path=*)
+      CKPT_PATH="${1#--ckpt-path=}"
       shift
       ;;
-    --notes)
+    --ckpt-path)
       if [[ $# -lt 2 || "$2" == --* ]]; then
-        echo "Error: --notes requires a value." >&2
+        echo "Error: --ckpt-path requires a value." >&2
         exit 2
       fi
-      NOTES="$2"
+      CKPT_PATH="$2"
       shift 2
       ;;
     *)
@@ -39,22 +32,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$NOTES" ]]; then
-  echo "Error: --notes requires a value." >&2
+if [[ -z "$CKPT_PATH" ]]; then
+  echo "Error: --ckpt-path requires a value." >&2
   exit 2
 fi
 
 ARGS=(
-  experiment=rqvae_train
+  experiment=rqvae_inference
   embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
+  ckpt_path="$CKPT_PATH"
+  devices=[0]
   data_dir=data/beauty
-  devices=[0,1]
   embedding_dim=768
   num_hierarchies=3
   codebook_size=256
 )
-
-ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

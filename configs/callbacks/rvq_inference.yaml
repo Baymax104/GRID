@@ -1,0 +1,9 @@
+# @package _global_
+
+pickle_writer:
+  _target_: src.common.inference.prediction_writers.LocalPickleWriter
+  output_dir: ${paths.output_dir}/pickle
+  flush_frequency: 100000
+  post_processing_functions:
+  - _target_: src.common.inference.postprocessing.deduplicate_rows_in_tensor
+    _partial_: true

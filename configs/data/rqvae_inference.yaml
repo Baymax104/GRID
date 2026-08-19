@@ -35,16 +35,7 @@ preprocessing_functions:
     sparse_id_field: id
     embedding_field_to_add: embedding
 
-train_dataset_config:
-  _target_: src.common.configs.data.DatasetConfig
-  shuffle_files: true
-  data_reader:
-    _target_: src.data.components.readers.TFRecordReader
-    _partial_: true
-    shuffle_rows: true
-  preprocessing_functions: ${data.preprocessing_functions}
-
-eval_dataset_config:
+predict_dataset_config:
   _target_: src.common.configs.data.DatasetConfig
   shuffle_files: false
   data_reader:
@@ -53,25 +44,11 @@ eval_dataset_config:
     shuffle_rows: false
   preprocessing_functions: ${data.preprocessing_functions}
 
-train_dataloader:
+predict_dataloader:
   _target_: src.common.configs.data.ItemDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/items
-  batch_size_per_device: 1024
-  num_workers: 12
-  assign_files_by_size: false
-  timeout: 60
-  drop_last: false
-  pin_memory: true
-  persistent_workers: true
-  collate_fn: ${data.collate}
-  dataset_config: ${data.train_dataset_config}
-  limit_files: null
-val_dataloader:
-  _target_: src.common.configs.data.ItemDataloaderConfig
-  dataset_class: ${data.dataset_class}
-  data_folder: ${paths.data_dir}/items
-  batch_size_per_device: 256
+  batch_size_per_device: 128
   num_workers: 2
   assign_files_by_size: true
   timeout: 60
@@ -79,24 +56,9 @@ val_dataloader:
   pin_memory: false
   persistent_workers: true
   collate_fn: ${data.collate}
-  dataset_config: ${data.eval_dataset_config}
+  dataset_config: ${data.predict_dataset_config}
   limit_files: null
-test_dataloader:
-  _target_: src.common.configs.data.ItemDataloaderConfig
-  dataset_class: ${data.dataset_class}
-  data_folder: ${paths.data_dir}/items
-  batch_size_per_device: 256
-  num_workers: 2
-  assign_files_by_size: true
-  timeout: 60
-  drop_last: false
-  pin_memory: false
-  persistent_workers: true
-  collate_fn: ${data.collate}
-  dataset_config: ${data.eval_dataset_config}
-  limit_files: null
+
 datamodule:
   _target_: src.data.datamodule.FileDataModule
-  train_dataloader_config: ${data.train_dataloader}
-  val_dataloader_config: ${data.val_dataloader}
-  test_dataloader_config: ${data.test_dataloader}
+  predict_dataloader_config: ${data.predict_dataloader}
