@@ -8,9 +8,9 @@ defaults:
 - /trainer@trainer: rkmeans_train
 data_dir: ???
 embedding_path: ???
-embedding_dim: ???
-num_hierarchies: ???
-codebook_size: ???
+embedding_dim: 768
+num_hierarchies: 3
+codebook_size: 256
 devices: ???
 run_mode: train
 task_name: rkmeans_train

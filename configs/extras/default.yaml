@@ -1,8 +1,8 @@
 # disable python warnings if they annoy you
-ignore_warnings: False
+ignore_warnings: false
 
 # print warnings for missing configs
-print_config_warnings: True
+print_config_warnings: true
 
 # pretty print config tree at the start of the run using Rich library
-print_config: True
+print_config: false

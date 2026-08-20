@@ -2,6 +2,8 @@
 set -euo pipefail
 
 NPROC_PER_NODE="${NPROC_PER_NODE:-1}"
+MASTER_PORT="${MASTER_PORT:-29500}"
+DEVICES="${DEVICES:-[0]}"
 
 CKPT_PATH=""
 DRY_RUN=false
@@ -12,6 +14,30 @@ while [[ $# -gt 0 ]]; do
     --dry-run)
       DRY_RUN=true
       shift
+      ;;
+    --master-port=*)
+      MASTER_PORT="${1#--master-port=}"
+      shift
+      ;;
+    --master-port)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --master-port requires a value." >&2
+        exit 2
+      fi
+      MASTER_PORT="$2"
+      shift 2
+      ;;
+    --devices=*)
+      DEVICES="${1#--devices=}"
+      shift
+      ;;
+    --devices)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --devices requires a value." >&2
+        exit 2
+      fi
+      DEVICES="$2"
+      shift 2
       ;;
     --ckpt-path=*)
       CKPT_PATH="${1#--ckpt-path=}"
@@ -41,11 +67,8 @@ ARGS=(
   experiment=rqvae_inference
   embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
   ckpt_path="$CKPT_PATH"
-  devices=[0]
+  devices="$DEVICES"
   data_dir=data/beauty
-  embedding_dim=768
-  num_hierarchies=3
-  codebook_size=256
 )
 
 if [[ "$DRY_RUN" == true ]]; then
@@ -54,7 +77,12 @@ fi
 
 ARGS+=("${EXTRA_ARGS[@]}")
 
+TORCHRUN_ARGS=(--nproc_per_node="$NPROC_PER_NODE")
+if [[ -n "$MASTER_PORT" ]]; then
+  TORCHRUN_ARGS+=(--master_port="$MASTER_PORT")
+fi
+
 OMP_NUM_THREADS=$(( $(nproc) / NPROC_PER_NODE )) \
   uv run \
-  torchrun --nproc_per_node="$NPROC_PER_NODE" -m src.main \
+  torchrun "${TORCHRUN_ARGS[@]}" -m src.main \
   "${ARGS[@]}"

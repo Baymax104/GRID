@@ -6,11 +6,12 @@ root:
   decoder: ${model.decoder}
   num_hierarchies: ${num_hierarchies}
   codebook_size: ${codebook_size}
-  embedding_dim: ${embedding_dim}
+  embedding_dim: 128
   semantic_ids:
     _target_: src.data.utils.load_semantic_id_tensor
     file_path: ${semantic_id_path}
   top_k_for_generation: 10
+  should_check_prefix: true
 
 encoder:
   _target_: transformers.T5EncoderModel

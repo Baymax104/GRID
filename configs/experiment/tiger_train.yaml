@@ -9,8 +9,8 @@ defaults:
 
 data_dir: ???
 semantic_id_path: ???
-num_hierarchies: ???
-codebook_size: ???
+num_hierarchies: 4
+codebook_size: 256
 devices: ???
 
 sequence_length: 180
@@ -33,4 +33,4 @@ paths:
 extras:
   ignore_warnings: false
   print_config_warnings: true
-  print_config: true
+  print_config: false

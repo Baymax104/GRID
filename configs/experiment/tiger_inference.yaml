@@ -10,8 +10,8 @@ defaults:
 data_dir: ???
 semantic_id_path: ???
 ckpt_path: ???
-num_hierarchies: ???
-codebook_size: ???
+num_hierarchies: 4
+codebook_size: 256
 
 run_mode: inference
 task_name: tiger_inference
@@ -31,4 +31,4 @@ paths:
 extras:
   ignore_warnings: false
   print_config_warnings: true
-  print_config: true
+  print_config: false

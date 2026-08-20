@@ -9,9 +9,9 @@ defaults:
 
 data_dir: ???
 embedding_path: ???
-codebook_size: ???
-num_hierarchies: ???
-embedding_dim: ???
+codebook_size: 256
+num_hierarchies: 3
+embedding_dim: 768
 ckpt_path: ???
 devices: ???
 
@@ -30,4 +30,4 @@ paths:
 extras:
   ignore_warnings: false
   print_config_warnings: true
-  print_config: true
+  print_config: false
