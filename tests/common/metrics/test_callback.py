@@ -52,6 +52,40 @@ def test_metric_callback_routes_train_batch_output_and_logs_on_step():
     assert not module.logged[0][1]["on_epoch"]
 
 
+def test_metric_callback_resets_train_metrics_after_each_logged_batch():
+    engine = MetricEngine(
+        stages={
+            "train": {
+                "loss": {
+                    "metric": MeanMetric(),
+                    "spec": "loss",
+                }
+            }
+        }
+    )
+    callback = MetricCallback(engine=engine)
+    module = LoggingModule()
+
+    callback.setup(trainer=None, pl_module=module, stage="fit")
+    callback.on_train_batch_end(
+        trainer=None,
+        pl_module=module,
+        outputs={"loss": torch.tensor(2.0)},
+        batch=None,
+        batch_idx=0,
+    )
+    callback.on_train_batch_end(
+        trainer=None,
+        pl_module=module,
+        outputs={"loss": torch.tensor(4.0)},
+        batch=None,
+        batch_idx=1,
+    )
+
+    assert torch.equal(module.logged[0][0]["train/loss"], torch.tensor(2.0))
+    assert torch.equal(module.logged[1][0]["train/loss"], torch.tensor(4.0))
+
+
 def test_metric_callback_logs_and_resets_validation_epoch_metrics():
     engine = MetricEngine(
         stages={

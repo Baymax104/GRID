@@ -75,6 +75,7 @@ class MetricCallback(Callback):
     ) -> None:
         self._update("train", outputs, batch, pl_module)
         self._log_stage(trainer, pl_module, "train", only_updated=True, log_kwargs=self.train_log_kwargs)
+        self.engine.reset("train")
 
     def on_validation_batch_end(
         self,

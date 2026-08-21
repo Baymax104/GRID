@@ -15,16 +15,17 @@ model_checkpoint:
   train_time_interval: null
   every_n_epochs: null
   save_on_train_epoch_end: false
-early_stopping:
-  _target_: lightning.pytorch.callbacks.EarlyStopping
-  monitor: val/ndcg@10
-  min_delta: 0.0
-  patience: 10
-  verbose: true
-  mode: max
-  strict: true
-  check_finite: true
-  stopping_threshold: null
-  divergence_threshold: null
-  check_on_train_epoch_end: false
+early_stopping: null
+#early_stopping:
+#  _target_: lightning.pytorch.callbacks.EarlyStopping
+#  monitor: val/ndcg@10
+#  min_delta: 0.0
+#  patience: 10
+#  verbose: true
+#  mode: max
+#  strict: true
+#  check_finite: true
+#  stopping_threshold: null
+#  divergence_threshold: null
+#  check_on_train_epoch_end: false
 model_summary: null

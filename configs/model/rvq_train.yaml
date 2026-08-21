@@ -19,10 +19,12 @@ training_model_config:
   loss_function:
     _target_: src.common.loss.beta_quantization_loss.BetaQuantizationLoss
     beta: 0.25
+    reduction: mean
   optimizer:
-    _target_: torch.optim.SGD
+    _target_: torch.optim.AdamW
     _partial_: true
     lr: 0.001
+    weight_decay: 0.0
   scheduler: null
 
 metrics:
