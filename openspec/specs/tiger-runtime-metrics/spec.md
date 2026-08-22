@@ -40,3 +40,10 @@ The pipeline launcher SHALL attach the metric callback when model metrics are co
 - **THEN** callbacks MUST include one metric callback using those metrics
 - **THEN** models without `cfg.model.metrics` MUST keep their callback list unchanged
 
+### Requirement: TIGER default training callbacks SHALL not early-stop on noisy retrieval metrics
+The official TIGER training callback config SHALL keep early stopping disabled by default so validation retrieval metric jitter does not terminate standard step-budgeted training runs prematurely.
+
+#### Scenario: Maintainer inspects TIGER train callbacks
+- **WHEN** a maintainer inspects `configs/callbacks/tiger_train.yaml`
+- **THEN** `early_stopping` MUST be `null`
+- **AND** the default callback stack MUST NOT instantiate a Lightning `EarlyStopping` callback for `val/ndcg@10`

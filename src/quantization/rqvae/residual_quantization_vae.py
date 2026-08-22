@@ -252,7 +252,13 @@ class ResidualQuantizationVAE(LightningModule):
     # Model-level forward / model_step
     # ------------------------------------------------------------------ #
 
-    def forward(self, embeddings: torch.Tensor):
+    def forward(
+        self,
+        embeddings: torch.Tensor,
+        *,
+        train_unlocked_layers: bool | None = None,
+        compute_quantization_loss: bool | None = None,
+    ):
         """Progressive residual quantization forward pass.
 
         Layers are trained simultaneously with progressive unlocking:
@@ -260,6 +266,11 @@ class ResidualQuantizationVAE(LightningModule):
         - Layer N trains once layer N-1 is initialized
         - Already-initialized layers are frozen until all layers are initialized
         """
+        if train_unlocked_layers is None:
+            train_unlocked_layers = self.trainer.state.fn == TrainerFn.FITTING
+        if compute_quantization_loss is None:
+            compute_quantization_loss = train_unlocked_layers
+
         cluster_ids = []
         current_residuals = embeddings
         all_residuals = []
@@ -271,7 +282,7 @@ class ResidualQuantizationVAE(LightningModule):
                 current_residuals = nn.functional.normalize(current_residuals, dim=-1)
 
             train_layer = False
-            if self.trainer.state.fn == TrainerFn.FITTING:
+            if train_unlocked_layers:
                 if self.is_initialized_list[idx] and not self.is_initialized_list[-1]:
                     # Already initialized but not all layers ready → freeze
                     train_layer = False
@@ -285,6 +296,8 @@ class ResidualQuantizationVAE(LightningModule):
                 quantization_loss += layer_loss
             else:
                 layer_ids, layer_embeddings = self._predict_layer(idx, current_residuals)
+                if compute_quantization_loss and self.is_initialized_list[idx]:
+                    quantization_loss += self.loss_function(current_residuals, layer_embeddings)
 
             cluster_ids.append(layer_ids)
             quantized_embeddings = quantized_embeddings + layer_embeddings
@@ -299,27 +312,52 @@ class ResidualQuantizationVAE(LightningModule):
     # Training
     # ------------------------------------------------------------------ #
 
+    def _compute_reconstruction(
+        self,
+        quantized_embeddings: torch.Tensor,
+        normalized_input_embeddings: torch.Tensor,
+    ) -> tuple[torch.Tensor | None, torch.Tensor]:
+        if self.reconstruction_loss_function is None or not self.is_initialized_list[-1]:
+            return None, torch.tensor(0.0, device=self.device)
+
+        reconstructed_embeddings = self.decoder(quantized_embeddings)
+        reconstruction_loss = self.reconstruction_loss_function(
+            reconstructed_embeddings,
+            normalized_input_embeddings,
+        )
+        return reconstructed_embeddings, reconstruction_loss
+
+    def _compute_total_loss(
+        self,
+        quantization_loss: torch.Tensor,
+        reconstruction_loss: torch.Tensor,
+    ) -> torch.Tensor:
+        return self.quantization_loss_weight * quantization_loss + self.reconstruction_loss_weight * reconstruction_loss
+
     def training_step(self, model_input: ItemBatch) -> dict[str, Any]:
         input_embeddings = model_input.features["input_embedding"].to(self.device)
         normalized_input_embeddings = self.normalization_layer(input_embeddings)
         encoded_embeddings = self.encoder(normalized_input_embeddings)
         cluster_ids, all_residuals, quantized_embeddings, quantization_loss = self.forward(encoded_embeddings)
 
-        if self.reconstruction_loss_function is not None and self.is_initialized_list[-1]:
-            reconstructed_embeddings = self.decoder(quantized_embeddings)
-            reconstruction_loss = self.reconstruction_loss_function(
-                reconstructed_embeddings, normalized_input_embeddings
-            )
-        else:
-            reconstruction_loss = torch.tensor(0.0).to(self.device)
+        reconstructed_embeddings, reconstruction_loss = self._compute_reconstruction(
+            quantized_embeddings=quantized_embeddings,
+            normalized_input_embeddings=normalized_input_embeddings,
+        )
 
-        loss = self.quantization_loss_weight * quantization_loss + self.reconstruction_loss_weight * reconstruction_loss
+        loss = self._compute_total_loss(
+            quantization_loss=quantization_loss,
+            reconstruction_loss=reconstruction_loss,
+        )
 
         with torch.no_grad():
             output_stats = self._compute_output_stats(
                 cluster_ids=cluster_ids,
                 all_residuals=all_residuals,
+                encoded_embeddings=encoded_embeddings,
                 input_embeddings=model_input.features["input_embedding"],
+                normalized_input_embeddings=normalized_input_embeddings,
+                reconstructed_embeddings=reconstructed_embeddings,
             )
         metric_payload = {
             "loss": loss,
@@ -344,13 +382,30 @@ class ResidualQuantizationVAE(LightningModule):
         self,
         cluster_ids: torch.Tensor,
         all_residuals: torch.Tensor,
-        input_embeddings: torch.Tensor,
+        encoded_embeddings: torch.Tensor | None = None,
+        input_embeddings: torch.Tensor | None = None,
+        normalized_input_embeddings: torch.Tensor | None = None,
+        reconstructed_embeddings: torch.Tensor | None = None,
     ) -> dict[str, Any]:
-        input_embedding_norm = torch.linalg.matrix_norm(input_embeddings)
-        first_residuals_norm_ratio = torch.linalg.matrix_norm(all_residuals[:, :, 0]) / input_embedding_norm
+        if encoded_embeddings is None:
+            if input_embeddings is None:
+                raise ValueError("encoded_embeddings or input_embeddings must be provided.")
+            encoded_embeddings = input_embeddings
+
+        encoded_embedding_norm = torch.linalg.matrix_norm(encoded_embeddings)
+        encoded_first_residuals_norm_ratio = torch.linalg.matrix_norm(all_residuals[:, :, 0]) / encoded_embedding_norm
         last_residuals_norm = torch.linalg.matrix_norm(all_residuals[:, :, -1])
-        last_residuals_norm_ratio = last_residuals_norm / input_embedding_norm
-        mse = last_residuals_norm**2 / all_residuals[:, :, -1].numel()
+        encoded_last_residuals_norm_ratio = last_residuals_norm / encoded_embedding_norm
+        encoded_mse = last_residuals_norm**2 / all_residuals[:, :, -1].numel()
+
+        if reconstructed_embeddings is not None and normalized_input_embeddings is not None:
+            reconstruction_residuals = reconstructed_embeddings - normalized_input_embeddings
+            reconstruction_residuals_norm = torch.linalg.matrix_norm(reconstruction_residuals)
+            reconstruction_norm_ratio = reconstruction_residuals_norm / torch.linalg.matrix_norm(normalized_input_embeddings)
+            reconstruction_mse = reconstruction_residuals_norm**2 / reconstruction_residuals.numel()
+        else:
+            reconstruction_norm_ratio = torch.tensor(0.0, device=self.device)
+            reconstruction_mse = torch.tensor(0.0, device=self.device)
 
         first_centroids_norm = torch.linalg.matrix_norm(self.centroids_list[0])
         last_centroids_norm = torch.linalg.matrix_norm(self.centroids_list[-1])
@@ -367,12 +422,17 @@ class ResidualQuantizationVAE(LightningModule):
             layer_id_entropies.append(entropy)
 
         return {
-            "first_residuals_norm_ratio": first_residuals_norm_ratio,
-            "last_residuals_norm_ratio": last_residuals_norm_ratio,
+            "encoded_first_residuals_norm_ratio": encoded_first_residuals_norm_ratio,
+            "encoded_last_residuals_norm_ratio": encoded_last_residuals_norm_ratio,
+            "encoded_mse": encoded_mse,
+            "reconstruction_norm_ratio": reconstruction_norm_ratio,
+            "reconstruction_mse": reconstruction_mse,
+            "first_residuals_norm_ratio": encoded_first_residuals_norm_ratio,
+            "last_residuals_norm_ratio": encoded_last_residuals_norm_ratio,
             "first_centroids_norm": first_centroids_norm,
             "last_centroids_norm": last_centroids_norm,
             "frac_unique_ids": frac_unique_ids,
-            "mse": mse,
+            "mse": encoded_mse,
             "layer_coverages": layer_coverages,
             "layer_id_entropies": layer_id_entropies,
         }
@@ -384,15 +444,37 @@ class ResidualQuantizationVAE(LightningModule):
         input_embeddings = batch.features["input_embedding"].to(self.device)
         normalized_input_embeddings = self.normalization_layer(input_embeddings)
         encoded_embeddings = self.encoder(normalized_input_embeddings)
-        cluster_ids, all_residuals, _, loss = self.forward(encoded_embeddings)
+        cluster_ids, all_residuals, quantized_embeddings, quantization_loss = self.forward(
+            encoded_embeddings,
+            train_unlocked_layers=False,
+            compute_quantization_loss=True,
+        )
+        reconstructed_embeddings, reconstruction_loss = self._compute_reconstruction(
+            quantized_embeddings=quantized_embeddings,
+            normalized_input_embeddings=normalized_input_embeddings,
+        )
+        loss = self._compute_total_loss(
+            quantization_loss=quantization_loss,
+            reconstruction_loss=reconstruction_loss,
+        )
 
         output_stats = self._compute_output_stats(
             cluster_ids=cluster_ids,
             all_residuals=all_residuals,
+            encoded_embeddings=encoded_embeddings,
             input_embeddings=batch.features["input_embedding"],
+            normalized_input_embeddings=normalized_input_embeddings,
+            reconstructed_embeddings=reconstructed_embeddings,
         )
         return {
             "loss": loss,
+            "quantization_loss": quantization_loss,
+            "reconstruction_loss": reconstruction_loss,
+            "encoded_first_residuals_norm_ratio": output_stats["encoded_first_residuals_norm_ratio"],
+            "encoded_last_residuals_norm_ratio": output_stats["encoded_last_residuals_norm_ratio"],
+            "encoded_mse": output_stats["encoded_mse"],
+            "reconstruction_norm_ratio": output_stats["reconstruction_norm_ratio"],
+            "reconstruction_mse": output_stats["reconstruction_mse"],
             "first_residuals_norm_ratio": output_stats["first_residuals_norm_ratio"],
             "last_residuals_norm_ratio": output_stats["last_residuals_norm_ratio"],
             "frac_unique_ids": output_stats["frac_unique_ids"],

@@ -51,11 +51,21 @@ metrics:
           _target_: torchmetrics.MeanMetric
         spec:
           key: first_residuals_norm_ratio
+      encoded_first_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: encoded_first_residuals_norm_ratio
       last_residuals_norm_ratio:
         metric:
           _target_: torchmetrics.MeanMetric
         spec:
           key: last_residuals_norm_ratio
+      encoded_last_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: encoded_last_residuals_norm_ratio
       first_centroids_norm:
         metric:
           _target_: torchmetrics.MeanMetric
@@ -76,6 +86,21 @@ metrics:
           _target_: torchmetrics.MeanMetric
         spec:
           key: mse
+      encoded_mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: encoded_mse
+      reconstruction_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: reconstruction_norm_ratio
+      reconstruction_mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: reconstruction_mse
       layer_coverages:
         repeat:
           count: ${num_hierarchies}
@@ -101,14 +126,30 @@ metrics:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: loss
+      quantization_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: quantization_loss
+      reconstruction_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: reconstruction_loss
       first_residuals_norm_ratio:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: first_residuals_norm_ratio
+      encoded_first_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: encoded_first_residuals_norm_ratio
       last_residuals_norm_ratio:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: last_residuals_norm_ratio
+      encoded_last_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: encoded_last_residuals_norm_ratio
       frac_unique_ids:
         metric:
           _target_: torchmetrics.MeanMetric
@@ -117,19 +158,47 @@ metrics:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: mse
+      encoded_mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: encoded_mse
+      reconstruction_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: reconstruction_norm_ratio
+      reconstruction_mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: reconstruction_mse
     test:
       loss:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: loss
+      quantization_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: quantization_loss
+      reconstruction_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: reconstruction_loss
       first_residuals_norm_ratio:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: first_residuals_norm_ratio
+      encoded_first_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: encoded_first_residuals_norm_ratio
       last_residuals_norm_ratio:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: last_residuals_norm_ratio
+      encoded_last_residuals_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: encoded_last_residuals_norm_ratio
       frac_unique_ids:
         metric:
           _target_: torchmetrics.MeanMetric
@@ -138,6 +207,18 @@ metrics:
         metric:
           _target_: torchmetrics.MeanMetric
         spec: mse
+      encoded_mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: encoded_mse
+      reconstruction_norm_ratio:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: reconstruction_norm_ratio
+      reconstruction_mse:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec: reconstruction_mse
 
 normalization_layer:
   _target_: torch.nn.Sequential

@@ -23,6 +23,22 @@ Official train model configs SHALL pass training-only model dependencies through
 - **THEN** its `training_model_config.scheduler` field MUST be `null`
 - **THEN** model optimizer configuration MUST continue returning an optimizer without a Lightning scheduler entry
 
+### Requirement: RVQ train config SHALL declare the standard VQ training dependencies
+The official RVQ train model config SHALL declare the VQ commitment loss and optimizer settings used for the standard RVQ experiment through `training_model_config`.
+
+#### Scenario: RVQ train config declares quantization loss
+- **WHEN** a maintainer inspects `configs/model/rvq_train.yaml`
+- **THEN** `training_model_config.loss_function` MUST target `src.common.loss.beta_quantization_loss.BetaQuantizationLoss`
+- **AND** it MUST set `beta: 0.25`
+- **AND** it MUST set `reduction: mean`
+
+#### Scenario: RVQ train config declares optimizer
+- **WHEN** a maintainer inspects `configs/model/rvq_train.yaml`
+- **THEN** `training_model_config.optimizer` MUST target `torch.optim.AdamW`
+- **AND** it MUST set `lr: 0.001`
+- **AND** it MUST set `weight_decay: 0.0`
+- **AND** `training_model_config.scheduler` MUST be `null`
+
 ### Requirement: TrainingModelConfig SHALL be a passive runtime container
 `TrainingModelConfig` SHALL be a passive runtime container for instantiated training dependencies and factories. It MUST NOT implement training logic, optimizer stepping, scheduler stepping, or model-family-specific behavior.
 
@@ -44,4 +60,3 @@ Official inference model configs SHALL not add `training_model_config`, because 
 - **WHEN** a maintainer inspects `configs/model/*_inference.yaml`
 - **THEN** those configs MUST NOT add `training_model_config`
 - **THEN** those configs MUST NOT add loss, optimizer, scheduler, or reconstruction loss dependencies solely for structural consistency with train configs
-

@@ -9,6 +9,7 @@ from omegaconf import OmegaConf
 import src.utils.distributed as distributed_utils
 from src.common.configs.model import TrainingModelConfig
 from src.common.loss.weighted_squared_error import WeightedSquaredError
+from src.data.components.data_models import ItemBatch
 from src.quantization.rkmeans.kmeans_layer import KMeansLayer, _kmeans_plus_plus_init
 from src.quantization.rkmeans.residual_kmeans import ResidualKMeans
 from src.quantization.rqvae.residual_quantization_vae import ResidualQuantizationVAE
@@ -55,6 +56,27 @@ def create_residual_vector_quantization(**kwargs) -> ResidualVectorQuantization:
         training_model_config=create_training_model_config(),
         **kwargs,
     )
+
+
+def create_rqvae_for_metric_semantics(**kwargs) -> ResidualQuantizationVAE:
+    training_model_config = create_training_model_config(
+        loss_function=torch.nn.MSELoss(reduction="mean"),
+        reconstruction_loss_function=torch.nn.MSELoss(reduction="mean"),
+    )
+    model = ResidualQuantizationVAE(
+        n_layers=1,
+        n_clusters=2,
+        n_features=2,
+        training_model_config=training_model_config,
+        init_buffer_size=4,
+        reconstruction_loss_weight=2.0,
+        **kwargs,
+    )
+    model._trainer = SimpleNamespace(state=SimpleNamespace(fn=TrainerFn.VALIDATING))
+    model.is_initialized_list = [True]
+    with torch.no_grad():
+        model.centroids_list[0].copy_(torch.tensor([[1.0, 0.0], [0.0, 1.0]]))
+    return model
 
 
 def test_kmeans_layer_buffers_until_init_buffer_is_full():
@@ -204,6 +226,76 @@ def test_quantization_train_configs_declare_runtime_metrics_with_repeat():
     assert "reconstruction_loss" in rqvae_config.metrics.stages.train
 
 
+def test_rqvae_eval_payload_exposes_total_and_component_losses():
+    model = create_rqvae_for_metric_semantics()
+    batch = ItemBatch(
+        item_ids=torch.tensor([1, 2]),
+        features={"input_embedding": torch.tensor([[0.8, 0.2], [0.1, 0.9]])},
+    )
+
+    payload = model.eval_step(batch)
+
+    assert {"loss", "quantization_loss", "reconstruction_loss"}.issubset(payload)
+    expected_loss = (
+        model.quantization_loss_weight * payload["quantization_loss"]
+        + model.reconstruction_loss_weight * payload["reconstruction_loss"]
+    )
+    assert torch.allclose(payload["loss"], expected_loss)
+    assert not torch.allclose(payload["loss"], payload["quantization_loss"])
+
+
+def test_rqvae_output_stats_use_encoded_norm_for_encoded_residual_ratios():
+    model = create_rqvae_for_metric_semantics()
+    cluster_ids = torch.tensor([[0], [1]])
+    all_residuals = torch.tensor([[[0.5]], [[0.5]]])
+    encoded_embeddings = torch.tensor([[1.0], [1.0]])
+    raw_input_embeddings = torch.tensor([[10.0], [10.0]])
+
+    output_stats = model._compute_output_stats(
+        cluster_ids=cluster_ids,
+        all_residuals=all_residuals,
+        encoded_embeddings=encoded_embeddings,
+        input_embeddings=raw_input_embeddings,
+    )
+
+    expected_ratio = torch.linalg.matrix_norm(all_residuals[:, :, -1]) / torch.linalg.matrix_norm(encoded_embeddings)
+    raw_ratio = torch.linalg.matrix_norm(all_residuals[:, :, -1]) / torch.linalg.matrix_norm(raw_input_embeddings)
+    assert torch.allclose(output_stats["encoded_last_residuals_norm_ratio"], expected_ratio)
+    assert not torch.allclose(output_stats["encoded_last_residuals_norm_ratio"], raw_ratio)
+    assert "encoded_mse" in output_stats
+
+
+def test_rqvae_train_config_declares_eval_component_and_space_explicit_metrics():
+    config = OmegaConf.load(PROJECT_ROOT / "configs/model/rqvae_train.yaml")
+
+    for stage_name in ("val", "test"):
+        stage_metrics = config.metrics.stages[stage_name]
+        assert "loss" in stage_metrics
+        assert "quantization_loss" in stage_metrics
+        assert "reconstruction_loss" in stage_metrics
+        assert "encoded_last_residuals_norm_ratio" in stage_metrics
+        assert "encoded_mse" in stage_metrics
+        assert "reconstruction_mse" in stage_metrics
+
+    train_metrics = config.metrics.stages.train
+    assert "encoded_last_residuals_norm_ratio" in train_metrics
+    assert "encoded_mse" in train_metrics
+    assert "reconstruction_mse" in train_metrics
+
+
+def test_rqvae_predict_step_preserves_semantic_id_output_shape():
+    model = create_rqvae_for_metric_semantics()
+    batch = ItemBatch(
+        item_ids=torch.tensor([11, 12]),
+        features={"input_embedding": torch.tensor([[0.8, 0.2], [0.1, 0.9]])},
+    )
+
+    output = model.predict_step(batch)
+
+    assert output.keys == [11, 12]
+    assert output.predictions.shape == (2, 1)
+
+
 def test_rkmeans_inference_config_matches_train_model_structure():
     train_config = OmegaConf.load(PROJECT_ROOT / "configs/model/rkmeans_train.yaml")
     inference_config = OmegaConf.load(PROJECT_ROOT / "configs/model/rkmeans_inference.yaml")
@@ -223,16 +315,17 @@ def test_rkmeans_inference_config_matches_train_model_structure():
 
 
 def test_quantization_output_stats_return_metric_payload_dict():
+    rqvae_model = ResidualQuantizationVAE(
+        n_layers=2,
+        n_clusters=2,
+        n_features=2,
+        training_model_config=create_training_model_config(),
+        init_buffer_size=4,
+    )
     models = [
         create_residual_kmeans(n_layers=2),
         create_residual_vector_quantization(n_layers=2),
-        ResidualQuantizationVAE(
-            n_layers=2,
-            n_clusters=2,
-            n_features=2,
-            training_model_config=create_training_model_config(),
-            init_buffer_size=4,
-        ),
+        rqvae_model,
     ]
     expected_keys = {
         "first_residuals_norm_ratio",
@@ -243,6 +336,13 @@ def test_quantization_output_stats_return_metric_payload_dict():
         "mse",
         "layer_coverages",
         "layer_id_entropies",
+    }
+    rqvae_expected_extra_keys = {
+        "encoded_first_residuals_norm_ratio",
+        "encoded_last_residuals_norm_ratio",
+        "encoded_mse",
+        "reconstruction_norm_ratio",
+        "reconstruction_mse",
     }
     cluster_ids = torch.tensor([[0, 1], [1, 0]])
     all_residuals = torch.ones(2, 2, 2)
@@ -255,7 +355,10 @@ def test_quantization_output_stats_return_metric_payload_dict():
             input_embeddings=input_embeddings,
         )
 
-        assert set(output_stats) == expected_keys
+        if model is rqvae_model:
+            assert set(output_stats) == expected_keys | rqvae_expected_extra_keys
+        else:
+            assert set(output_stats) == expected_keys
         assert len(output_stats["layer_coverages"]) == model.n_layers
         assert len(output_stats["layer_id_entropies"]) == model.n_layers
 

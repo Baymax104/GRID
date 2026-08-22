@@ -111,7 +111,7 @@ train_dataloader:
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/training
   batch_size_per_device: 128
-  num_workers: 16
+  num_workers: 32
   timeout: 60
   assign_files_by_size: false
   drop_last: true
@@ -124,8 +124,8 @@ val_dataloader:
   _target_: src.common.configs.data.SequenceDataloaderConfig
   dataset_class: ${data.dataset_class}
   data_folder: ${paths.data_dir}/evaluation
-  batch_size_per_device: 8
-  num_workers: 8
+  batch_size_per_device: 64
+  num_workers: 16
   timeout: 60
   assign_files_by_size: true
   drop_last: false

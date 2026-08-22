@@ -16,6 +16,12 @@ The system SHALL provide a reusable metric runtime that updates, computes, logs,
 - **THEN** the metric callback MUST compute and log the stage metrics
 - **THEN** the metric callback MUST reset that stage after logging
 
+#### Scenario: Train history metrics are logged as non-cumulative windows
+- **WHEN** a train batch finishes and train metrics are logged through the standard callback
+- **THEN** the metric callback MUST compute and log the current train metric state
+- **THEN** the metric callback MUST reset the train stage after logging
+- **AND** train history metrics MUST represent the latest logged batch or logging window rather than a cumulative aggregate from training start
+
 #### Scenario: Analysis metrics use standard callback lifecycle
 - **WHEN** an analysis experiment declares metrics in model configuration
 - **THEN** the launcher MUST attach the standard metric callback
@@ -86,4 +92,3 @@ The metric runtime SHALL allow each stage to choose whether computed metrics are
 #### Scenario: Invalid logging mode fails clearly
 - **WHEN** metric callback configuration declares an unsupported logging mode
 - **THEN** callback construction MUST fail with a clear error naming the invalid mode
-

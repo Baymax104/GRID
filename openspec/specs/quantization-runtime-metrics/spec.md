@@ -37,3 +37,11 @@ Quantization training steps SHALL compute and return all configured train metric
 - **THEN** it MUST return all configured train metric payload fields
 - **THEN** it MUST NOT branch on `trainer.log_every_n_steps`
 
+### Requirement: Quantization train and validation loss curves SHALL use comparable logging windows
+Official quantization training metrics SHALL rely on the metric runtime's non-cumulative train logging semantics so train loss curves can be compared with validation loss windows without mixing full-training cumulative aggregates and validation-window aggregates.
+
+#### Scenario: Maintainer compares train and validation loss curves
+- **WHEN** a quantization training run logs `train/loss` and `val/loss`
+- **THEN** `train/loss` MUST represent the latest logged train batch or logging window
+- **AND** `val/loss` MUST represent the current validation window
+- **AND** neither curve MUST be interpreted as a cumulative aggregate from training start
