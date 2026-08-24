@@ -3,6 +3,7 @@
 defaults:
 - /data@data: tail_sid_diagnosis
 - /model@model: tail_sid_diagnosis
+- /callbacks@callbacks: tail_sid_diagnosis
 - /logger@logger: tail_sid_diagnosis
 - /trainer@trainer: tail_sid_diagnosis
 
@@ -16,6 +17,8 @@ max_neighbors_per_bucket: 512
 
 run_mode: analysis
 task_name: tail_sid_diagnosis
+project: GRID
+group: tail_sid_diagnosis
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 seed: 42
 ckpt_path: null

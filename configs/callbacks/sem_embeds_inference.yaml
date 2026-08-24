@@ -1,6 +1,21 @@
 # @package _global_
 
-pickle_writer:
-  _target_: src.common.inference.prediction_writers.LocalPickleWriter
-  output_dir: ${paths.output_dir}/pickle
+#pickle_writer:
+#  _target_: src.common.writers.local_pickle_writer.LocalPickleWriter
+#  output_dir: ${paths.output_dir}/pickle
+#  flush_frequency: 64
+wandb_artifact_writer:
+  _target_: src.common.writers.wandb_artifact_writer.WandbArtifactWriter
+  output_dir: ${paths.output_dir}/wandb_artifact
   flush_frequency: 64
+  artifact_name: ${task_name}-semantic-embedding
+  artifact_type: semantic_embedding
+  role: semantic_embedding
+  task_name: ${task_name}
+  aliases:
+  - latest
+
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false
+  clear_after_recording: true

@@ -3,9 +3,10 @@ import sys
 import hydra
 import rootutils
 import torch
-from omegaconf import DictConfig
+from omegaconf import DictConfig, open_dict
 
 import src.utils.hydra_resolvers  # noqa: F401  — registers now_tz OmegaConf resolver
+from src.data.components.artifacts import resolve_checkpoint_path
 from src.utils.cli import rewrite_dry_run_flag
 from src.utils.extra import extras
 from src.utils.launcher import pipeline_launcher
@@ -19,12 +20,14 @@ torch.set_float32_matmul_precision("medium")
 
 
 def run_training(cfg: DictConfig):
+    with open_dict(cfg):
+        cfg.ckpt_path = resolve_checkpoint_path(cfg.get("ckpt_path"), default_project=cfg.get("project", None))
     with pipeline_launcher(cfg) as pipeline_modules:
         logger.info("Starting training!")
         pipeline_modules.trainer.fit(
             model=pipeline_modules.model,
             datamodule=pipeline_modules.datamodule,
-            ckpt_path=cfg.get("ckpt_path"),
+            ckpt_path=pipeline_modules.cfg.get("ckpt_path"),
         )
 
         train_metrics = pipeline_modules.trainer.callback_metrics
@@ -52,6 +55,8 @@ def run_training(cfg: DictConfig):
 
 
 def run_inference(cfg: DictConfig):
+    with open_dict(cfg):
+        cfg.ckpt_path = resolve_checkpoint_path(cfg.get("ckpt_path"), default_project=cfg.get("project", None))
     with pipeline_launcher(cfg) as pipeline_modules:
         logger.info("Starting inference!")
         ckpt_path = pipeline_modules.cfg.get("ckpt_path", None)

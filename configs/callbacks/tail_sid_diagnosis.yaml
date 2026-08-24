@@ -1,0 +1,6 @@
+# @package _global_
+
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false
+  clear_after_recording: true

@@ -7,9 +7,10 @@ import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from src.common.configs.data import DatasetConfig
+from src.data.components.artifacts import load_model_output
 from src.data.components.data_models import DiagnosisBatch, SIDViews
 from src.data.components.readers import TFRecordReader
-from src.data.utils import gather_predictions_by_keys, load_model_output
+from src.data.utils import gather_predictions_by_keys
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)

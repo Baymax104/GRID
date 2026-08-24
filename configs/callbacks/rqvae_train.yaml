@@ -17,3 +17,17 @@ model_checkpoint:
   save_on_train_epoch_end: null
 early_stopping: null
 model_summary: null
+wandb_checkpoint_writer:
+  _target_: src.common.writers.wandb_checkpoint_writer.WandbCheckpointWriter
+  artifact_name: ${task_name}-checkpoint
+  task_name: ${task_name}
+  artifact_type: checkpoint
+  role: checkpoint
+  selection: best
+  aliases:
+  - latest
+  missing_checkpoint: skip
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false
+  clear_after_recording: true

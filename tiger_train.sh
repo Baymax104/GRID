@@ -65,7 +65,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --semantic-id-path)
       if [[ $# -lt 2 || "$2" == --* ]]; then
-        echo "Error: --semantic-id-path requires a value." >&2
+        echo "Error: --semantic-id-path requires a local path or wandb://<run-id> value." >&2
         exit 2
       fi
       SEMANTIC_ID_PATH="$2"
@@ -84,7 +84,7 @@ if [[ -z "$NOTES" ]]; then
 fi
 
 if [[ -z "$SEMANTIC_ID_PATH" ]]; then
-  echo "Error: --semantic-id-path requires a value." >&2
+  echo "Error: --semantic-id-path requires a local path or wandb://<run-id> value." >&2
   exit 2
 fi
 

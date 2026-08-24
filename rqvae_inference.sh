@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --ckpt-path)
       if [[ $# -lt 2 || "$2" == --* ]]; then
-        echo "Error: --ckpt-path requires a value." >&2
+        echo "Error: --ckpt-path requires a local path or wandb://<run-id> value." >&2
         exit 2
       fi
       CKPT_PATH="$2"
@@ -59,13 +59,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$CKPT_PATH" ]]; then
-  echo "Error: --ckpt-path requires a value." >&2
+  echo "Error: --ckpt-path requires a local path or wandb://<run-id> value." >&2
   exit 2
 fi
 
 ARGS=(
   experiment=rqvae_inference
-  embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
+  embedding_path=wandb://01mw1fez
   ckpt_path="$CKPT_PATH"
   devices="$DEVICES"
   data_dir=data/beauty

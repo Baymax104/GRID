@@ -75,3 +75,79 @@ TBD - created by archiving change simplify-prediction-output-protocol. Update Pu
 - **THEN** rank 0 MUST merge pickle shards into `merged_predictions_tensor.pt`
 - **THEN** configured post-processing functions MUST still run on rank 0 after merge
 
+### Requirement: Prediction artifact writing SHALL be separate from local bundle writing
+推理 Artifact 发布 SHALL 由与 `LocalPickleWriter` 平级的 W&B writer 承担，二者 SHOULD 位于 `src/common/writers/`，MUST 分别放在独立 writer 文件中，MUST NOT 保留旧 `src/common/inference/` 兼容导入，MUST NOT 改变 `LocalPickleWriter` 的本地 batch 缓存、flush、merge、post-processing 职责，且 MUST NOT 依赖 `LocalPickleWriter` 产出的本地 bundle。
+
+#### Scenario: Local writer works without W&B writer
+- **WHEN** 推理实验使用 `LocalPickleWriter`
+- **AND** 未启用 W&B Artifact 发布
+- **THEN** writer MUST 继续写入 `${paths.output_dir}/pickle/merged_predictions_tensor.pt`
+- **THEN** 推理流程 MUST NOT 要求存在 W&B logger 或 W&B Artifact writer
+
+#### Scenario: WandbArtifactWriter publishes its own merged output
+- **WHEN** 推理实验启用 W&B Artifact 发布
+- **THEN** `WandbArtifactWriter` MUST 独立 flush、merge、post-process 自己的 prediction shards
+- **THEN** `WandbArtifactWriter` MUST 发布自己合并后的 model output bundle
+
+#### Scenario: W&B logger does not imply W&B writer
+- **WHEN** 推理或训练实验配置了 W&B logger
+- **AND** 未显式启用 W&B Artifact 发布
+- **THEN** 系统 MUST NOT 自动发布推理 output Artifact
+- **THEN** 系统 MUST NOT 要求使用 W&B-specific writer
+
+#### Scenario: W&B writer is not paired to LocalPickleWriter by type
+- **WHEN** `WandbArtifactWriter` 和 `LocalPickleWriter` 同时启用
+- **THEN** `WandbArtifactWriter` MUST 使用自己的 `output_dir` 产出待发布 bundle
+- **THEN** 它 MUST NOT 通过 Python 类型检查或实例引用强制要求同一实验存在 `LocalPickleWriter`
+
+### Requirement: WandbArtifactWriter SHALL be an independent prediction writer
+
+`WandbArtifactWriter` SHALL consume `ModelOutput` directly during prediction and SHALL independently flush, merge, post-process, and publish prediction outputs as W&B Artifacts. It SHALL NOT require `LocalPickleWriter`, SHALL NOT read a `source_path` produced by another writer, and SHALL NOT expose a `source_path` configuration parameter.
+
+#### Scenario: W&B writer handles prediction batch outputs directly
+- **WHEN** Lightning finishes a prediction batch and `WandbArtifactWriter` is enabled
+- **THEN** `WandbArtifactWriter` MUST consume the batch `ModelOutput` from `on_predict_batch_end`
+- **THEN** `WandbArtifactWriter` MUST buffer and flush predictions using sample-count `flush_frequency` semantics
+
+#### Scenario: W&B writer merges its own shards
+- **WHEN** prediction completes
+- **THEN** `WandbArtifactWriter` MUST flush rank-local buffered outputs
+- **THEN** rank 0 MUST merge only the shard files in the W&B writer's own `output_dir`
+- **THEN** rank 0 MUST save `merged_predictions_tensor.pt` in the W&B writer's own `output_dir`
+
+#### Scenario: W&B writer does not depend on local writer output
+- **WHEN** `LocalPickleWriter` is disabled and `WandbArtifactWriter` is enabled
+- **THEN** prediction completion MUST NOT require `${paths.output_dir}/pickle/merged_predictions_tensor.pt`
+- **THEN** W&B publishing MUST use the bundle produced by `WandbArtifactWriter`
+
+#### Scenario: W&B writer and local writer can coexist
+- **WHEN** `LocalPickleWriter` and `WandbArtifactWriter` are both enabled
+- **THEN** each writer MUST write temporary shards and merged bundles under its own configured `output_dir`
+- **THEN** neither writer MUST read, delete, or post-process the other writer's files
+
+### Requirement: W&B prediction artifact writer SHALL require a WandbLogger-owned run
+
+`WandbArtifactWriter` SHALL publish inference output Artifacts only to the W&B run owned by the configured Lightning `WandbLogger`. It MUST NOT create, configure, finish, or otherwise manage a W&B run.
+
+#### Scenario: Inference writer publishes through logger-owned run
+- **WHEN** an inference experiment configures `WandbArtifactWriter`
+- **AND** the trainer has a configured W&B logger whose `experiment` provides a run
+- **THEN** `WandbArtifactWriter` MUST publish its merged model output bundle to that logger-owned run
+- **THEN** the published Artifact metadata MUST include `role`, `task_name`, `local_output_path`, and `bundle_file`
+
+#### Scenario: Missing logger-owned run fails
+- **WHEN** `WandbArtifactWriter` reaches artifact publishing
+- **AND** the trainer does not expose a configured W&B logger whose `experiment` provides a run
+- **THEN** publishing MUST fail with a clear error naming the missing W&B logger run
+- **THEN** `WandbArtifactWriter` MUST NOT call `wandb.init`
+
+#### Scenario: Publish failure is not downgraded
+- **WHEN** `WandbArtifactWriter` fails to create or log a W&B Artifact
+- **THEN** the exception MUST propagate
+- **THEN** `WandbArtifactWriter` MUST NOT provide a `fail_on_error` option
+- **THEN** `WandbArtifactWriter` MUST NOT log a warning and continue as if W&B output succeeded
+
+#### Scenario: Writer configuration excludes run lifecycle fields
+- **WHEN** maintainers inspect official inference callback configs
+- **THEN** `wandb_artifact_writer` MUST NOT declare `project`, `entity`, `group`, `run_name`, `job_type`, `tags`, `notes`, `mode`, `finish_run`, or `fail_on_error`
+- **THEN** W&B run identity MUST be configured through the experiment's logger config

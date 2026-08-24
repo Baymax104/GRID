@@ -467,7 +467,10 @@ def test_tail_sid_diagnosis_hydra_config_composes():
         "src.quantization.tail_sid_diagnosis.metrics.PrefixRiskMetric"
     )
     assert "adapter" not in cfg.model.metrics.stages.test.structural.spec
-    assert "callbacks" not in cfg
+    assert cfg.callbacks.wandb_artifact_lineage._target_ == (
+        "src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback"
+    )
+    assert cfg.callbacks.wandb_artifact_lineage.fail_on_missing_run is False
     assert cfg.trainer.root._target_ == "lightning.pytorch.trainer.Trainer"
     assert cfg.logger.wandb._target_ == "lightning.pytorch.loggers.wandb.WandbLogger"
     assert cfg.logger.wandb.group == "tail_sid_diagnosis"

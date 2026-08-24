@@ -4,8 +4,8 @@ from types import SimpleNamespace
 import torch
 from lightning.pytorch.callbacks import BasePredictionWriter, Callback
 
-import src.common.inference.prediction_writers as prediction_writers
-from src.common.inference.prediction_writers import LocalPickleWriter
+import src.common.writers.local_pickle_writer as local_pickle_writer
+from src.common.writers.local_pickle_writer import LocalPickleWriter
 from src.data.components.data_models import ModelOutput
 
 
@@ -20,8 +20,8 @@ def test_local_pickle_writer_is_batch_only_callback(tmp_path):
 
 
 def test_local_pickle_writer_flushes_batch_outputs_and_merges_bundle(tmp_path, monkeypatch):
-    monkeypatch.setattr(prediction_writers, "sync_file", lambda _: None)
-    monkeypatch.setattr(prediction_writers, "distributed_barrier", lambda: None)
+    monkeypatch.setattr(local_pickle_writer, "sync_file", lambda _: None)
+    monkeypatch.setattr(local_pickle_writer, "distributed_barrier", lambda: None)
     writer = LocalPickleWriter(output_dir=str(tmp_path), flush_frequency=2)
     trainer = SimpleNamespace(global_rank=0)
     output = ModelOutput(

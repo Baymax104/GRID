@@ -1,8 +1,9 @@
 import pytest
 import torch
 
+from src.data.components.artifacts import load_model_output, load_semantic_id_tensor
 from src.data.components.data_models import ModelOutput
-from src.data.utils import gather_predictions_by_keys, load_model_output, load_semantic_id_tensor
+from src.data.utils import gather_predictions_by_keys
 
 
 def test_load_model_output_sorts_predictions_by_key(tmp_path):

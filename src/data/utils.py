@@ -3,12 +3,14 @@
 import heapq
 import random
 from collections import defaultdict
-from typing import Any
 
 import torch
 
+from src.data.components.artifacts import load_model_output, load_semantic_id_tensor
 from src.data.components.data_models import ModelOutput
-from src.utils.file import get_file_size, open_local_or_remote
+from src.utils.file import get_file_size
+
+__all__ = ["gather_predictions_by_keys", "load_model_output", "load_semantic_id_tensor"]
 
 
 def assign_files_to_workers(
@@ -84,60 +86,6 @@ def combine_list_of_tensor_dicts(list_of_dicts: list[dict[str, torch.Tensor]]) -
         for field_name, field_sequence in sequence.items():
             batch[field_name].append(field_sequence)
     return batch
-
-
-def _validate_model_output(bundle: dict[str, Any]):
-    if "keys" not in bundle or "predictions" not in bundle:
-        raise ValueError("Model output must contain 'keys' and 'predictions'.")
-
-    keys = bundle["keys"]
-    predictions = bundle["predictions"]
-    if not isinstance(keys, torch.Tensor) or not isinstance(predictions, torch.Tensor):
-        raise TypeError("Model output fields 'keys' and 'predictions' must both be torch.Tensor.")
-
-    if keys.ndim != 1:
-        raise ValueError(f"Model output 'keys' must be 1-D, got shape {tuple(keys.shape)}.")
-
-    if predictions.ndim == 0:
-        raise ValueError("Model output 'predictions' must have at least 1 dimension.")
-
-    if keys.size(0) != predictions.size(0):
-        raise ValueError(
-            f"Model output first dimension mismatch: len(keys)={keys.size(0)} vs predictions={predictions.size(0)}."
-        )
-
-
-def load_model_output(file_path: str) -> ModelOutput:
-    """Load a model output from disk, sorted by key for binary search lookup."""
-    bundle: dict[str, torch.Tensor] = torch.load(open_local_or_remote(file_path, mode="rb"), weights_only=False)
-    if not isinstance(bundle, dict):
-        raise TypeError(f"Expected model output dict at {file_path}, got {type(bundle).__name__}.")
-
-    _validate_model_output(bundle)
-
-    keys = bundle["keys"]
-    if keys.unique().numel() != keys.numel():
-        raise ValueError("Duplicate keys detected in model output.")
-
-    sort_idx = keys.argsort()
-    model_output = ModelOutput(keys=keys[sort_idx], predictions=bundle["predictions"][sort_idx])
-    return model_output
-
-
-def load_semantic_id_tensor(file_path: str) -> torch.Tensor:
-    """Load semantic IDs from a keyed model output bundle for model-side prefix checks.
-
-    The returned tensor is sorted by key in the same way as :func:`load_model_output`,
-    but only the prediction tensor is exposed to model configs. Expected shape is
-    ``(num_items, num_hierarchies)``.
-    """
-    semantic_ids = load_model_output(file_path).predictions
-    if semantic_ids.ndim != 2:
-        raise ValueError(
-            "Semantic ID tensor must be 2-D with shape "
-            f"(num_items, num_hierarchies), got shape {tuple(semantic_ids.shape)}."
-        )
-    return semantic_ids.long()
 
 
 def gather_predictions_by_keys(

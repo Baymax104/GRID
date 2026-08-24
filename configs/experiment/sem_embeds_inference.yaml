@@ -13,6 +13,8 @@ devices: ???
 embedding_model: ${paths.pretrained_models_dir}/flan-t5-base
 run_mode: inference
 task_name: sem_embeds_inference
+project: GRID
+group: sem_embeds
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 ckpt_path: null
 seed: 42
@@ -27,4 +29,4 @@ paths:
 extras:
   ignore_warnings: false
   print_config_warnings: true
-  print_config: true
+  print_config: false

@@ -30,8 +30,11 @@
 - 数据路径必须通过配置表达，代码不得硬编码用户本地绝对路径。
 - Item 级输入、训练、验证、测试/预测数据目录必须由 data config 明确声明，调用方不得依赖 README 中的旧目录描述。
 - Hydra 输出目录必须由 `paths.output_dir` 统一传播；组件不得自行拼接不受 Hydra 管理的运行目录。
-- 推理输出写入必须使用 `src/common/inference/` 中的共享协议和 writer；不要恢复旧的 `src/inference.py` 或 `src/inference/` 双入口结构。
+- 推理输出写入必须使用 `src/common/writers/` 中的共享 writer；不要恢复旧的 `src/inference.py` 或 `src/inference/` 双入口结构。
 - `LocalPickleWriter` 的合并输出必须保持单文件 model output bundle 语义，默认文件名为 `merged_predictions_tensor.pt`。
+- Artifact/bundle 读取入口归 `src/data/components/artifacts.py`，包括 `load_model_output`、`load_semantic_id_tensor` 与字段级引用解析；底层 `wandb://` URI 解析和 W&B Artifact 下载 helper 归 `src/utils/wandb.py`；不要在 launcher、model 或 writer 中实现 W&B Artifact 下载逻辑。
+- 输出写入与发布归 `src/common/writers/`；`LocalPickleWriter` 和 W&B Artifact writer 必须平级且低耦合，使用本地 writer 不应触发 W&B。
+- W&B Artifact lineage 记录归 `src/common/callbacks/WandbArtifactLineageCallback`；它是 callback，不是 logger 或 writer，只负责对已解析的上游 Artifact 调用 `use_artifact`。
 
 ## 配置与日志规范
 
@@ -49,7 +52,7 @@
 - `src/data/components/data_models.py` 负责运行时 batch/model output 数据容器。
 - `src/data/utils.py` 可承载数据加载共享 helper 和 keyed prediction bundle 查询工具。
 - `src/embedding/`、`src/quantization/`、`src/recommendation/` 分别承载语义向量、量化器、推荐模型的领域逻辑。
-- `src/common/inference/` 承载跨实验复用的推理输出写入与后处理协议。
+- `src/common/writers/` 承载跨实验复用的输出 writer 与 writer 后处理协议。
 - `src/common/loss/`、`src/common/scheduler/` 承载跨阶段复用的 loss 与 scheduler。
 - `src/utils/` 只放跨域基础设施，例如 launcher、logging、file I/O、Rich 输出；不要放 data 专用 helper 或 inference bundle 协议。
 

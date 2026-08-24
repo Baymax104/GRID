@@ -2,7 +2,7 @@ from omegaconf import OmegaConf
 from torchmetrics import MeanMetric
 
 from src.common.metrics import MetricCallback
-from src.utils.launcher import attach_metric_callback, log_hyperparameters
+from src.utils.launcher import apply_dry_run_overrides, attach_metric_callback, log_hyperparameters
 
 
 class CapturingLogger:
@@ -109,3 +109,34 @@ def test_log_hyperparameters_ignores_empty_logger_list():
     cfg = OmegaConf.create({"data_dir": "data/beauty"})
 
     log_hyperparameters([], cfg)
+
+
+def test_dry_run_disables_wandb_artifact_writers():
+    cfg = OmegaConf.create(
+        {
+            "dry_run": True,
+            "run_mode": "inference",
+            "callbacks": {
+                "wandb_artifact_writer": {
+                    "_target_": "src.common.writers.wandb_artifact_writer.WandbArtifactWriter",
+                    "output_dir": "wandb_artifact",
+                    "artifact_name": "predictions",
+                    "artifact_type": "semantic_id",
+                    "role": "semantic_id",
+                    "task_name": "rqvae_inference",
+                },
+                "wandb_checkpoint_writer": {
+                    "_target_": "src.common.writers.wandb_checkpoint_writer.WandbCheckpointWriter",
+                    "artifact_name": "checkpoint",
+                    "task_name": "rqvae_train",
+                },
+            },
+            "logger": {},
+            "trainer": {"root": {}},
+        }
+    )
+
+    updated = apply_dry_run_overrides(cfg)
+
+    assert updated.callbacks.wandb_artifact_writer is None
+    assert updated.callbacks.wandb_checkpoint_writer is None

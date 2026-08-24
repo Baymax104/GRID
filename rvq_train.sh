@@ -72,7 +72,7 @@ fi
 
 ARGS=(
   experiment=rvq_train
-  embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
+  embedding_path=wandb://01mw1fez
   data_dir=data/beauty
   devices="$DEVICES"
 )

@@ -30,8 +30,10 @@ preprocessing_functions:
   - _target_: src.data.components.preprocessing.map_sparse_id_to_embedding
     _partial_: true
     embedding_bundle:
-      _target_: src.data.utils.load_model_output
+      _target_: src.data.components.artifacts.load_model_output
       file_path: ${embedding_path}
+      field_name: embedding_path
+      wandb_project: ${project}
     sparse_id_field: id
     embedding_field_to_add: embedding
 

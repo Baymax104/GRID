@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --semantic-id-path)
       if [[ $# -lt 2 || "$2" == --* ]]; then
-        echo "Error: --semantic-id-path requires a value." >&2
+        echo "Error: --semantic-id-path requires a local path or wandb://<run-id> value." >&2
         exit 2
       fi
       SEMANTIC_ID_PATH="$2"
@@ -56,7 +56,7 @@ if [[ -z "$NOTES" ]]; then
 fi
 
 if [[ -z "$SEMANTIC_ID_PATH" ]]; then
-  echo "Error: --semantic-id-path requires a value." >&2
+  echo "Error: --semantic-id-path requires a local path or wandb://<run-id> value." >&2
   exit 2
 fi
 
@@ -65,7 +65,7 @@ ARGS=(
   data_dir=data/beauty
   raw_num_hierarchies=3
   semantic_id_path="$SEMANTIC_ID_PATH"
-  embedding_path=logs/sem_embeds_inference/runs/2026-08-06/11-30-14/pickle/merged_predictions_tensor.pt
+  embedding_path=wandb://w3p3iops
 )
 
 ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")

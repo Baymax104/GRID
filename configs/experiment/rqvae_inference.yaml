@@ -17,6 +17,8 @@ devices: ???
 
 run_mode: inference
 task_name: rqvae_inference
+project: GRID
+group: rqvae
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 seed: 42
 paths:

@@ -6,8 +6,9 @@ root:
   training_model_config: ${model.training_model_config}
   decoder: ${model.decoder}
   semantic_ids:
-    _target_: src.data.utils.load_semantic_id_tensor
+    _target_: src.data.components.artifacts.load_semantic_id_tensor
     file_path: ${semantic_id_path}
+    wandb_project: ${project}
   num_hierarchies: ${num_hierarchies}
   codebook_size: ${codebook_size}
   embedding_dim: 128
