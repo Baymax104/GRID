@@ -33,6 +33,7 @@ preprocessing_functions:
       _target_: src.data.components.artifacts.load_model_output
       file_path: ${embedding_path}
       field_name: embedding_path
+      wandb_entity: ${user}
       wandb_project: ${project}
     sparse_id_field: id
     embedding_field_to_add: embedding

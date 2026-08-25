@@ -76,29 +76,6 @@ def parse_wandb_uri(uri: str) -> WandbArtifactURI:
     )
 
 
-def active_wandb_attr(name: str) -> str | None:
-    try:
-        import wandb
-    except ImportError:
-        return None
-
-    active_run = getattr(wandb, "run", None)
-    if active_run is None:
-        return None
-    return getattr(active_run, name, None)
-
-
-def default_wandb_entity() -> str | None:
-    try:
-        import wandb
-    except ImportError:
-        return None
-    try:
-        return getattr(wandb.Api(), "default_entity", None)
-    except Exception:
-        return None
-
-
 def require_wandb_logger_run(trainer: Any, purpose: str) -> Any:
     """Return the run owned by the configured Lightning WandbLogger."""
     for experiment_logger in _trainer_loggers(trainer):

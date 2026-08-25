@@ -15,6 +15,7 @@ devices: ???
 run_mode: train
 task_name: rqvae_train
 project: GRID
+user: baymaxam
 group: rqvae
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 run_test_after_training: false

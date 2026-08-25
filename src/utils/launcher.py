@@ -237,11 +237,6 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
         cfg.trainer.root,
         callbacks=callbacks,
         logger=loggers,
-        # The default behavior for lightning it to set `enable_checkpointing` and
-        # `enable_model_summary` to True, which might be misleading when we are trying to
-        # debug. We change the default to False, but this can be overridden by either
-        # setting the parameters in the config file or passing the callbacks as part
-        # of the callbacks YAML.
         enable_checkpointing=cfg.trainer.root.get("enable_checkpointing", enable_checkpointing),
         enable_model_summary=cfg.trainer.root.get("enable_model_summary", enable_model_summary),
     )

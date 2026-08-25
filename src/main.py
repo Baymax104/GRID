@@ -21,7 +21,11 @@ torch.set_float32_matmul_precision("medium")
 
 def run_training(cfg: DictConfig):
     with open_dict(cfg):
-        cfg.ckpt_path = resolve_checkpoint_path(cfg.get("ckpt_path"), default_project=cfg.get("project", None))
+        cfg.ckpt_path = resolve_checkpoint_path(
+            cfg.get("ckpt_path"),
+            default_entity=cfg.get("user", None),
+            default_project=cfg.get("project", None),
+        )
     with pipeline_launcher(cfg) as pipeline_modules:
         logger.info("Starting training!")
         pipeline_modules.trainer.fit(
@@ -56,7 +60,11 @@ def run_training(cfg: DictConfig):
 
 def run_inference(cfg: DictConfig):
     with open_dict(cfg):
-        cfg.ckpt_path = resolve_checkpoint_path(cfg.get("ckpt_path"), default_project=cfg.get("project", None))
+        cfg.ckpt_path = resolve_checkpoint_path(
+            cfg.get("ckpt_path"),
+            default_entity=cfg.get("user", None),
+            default_project=cfg.get("project", None),
+        )
     with pipeline_launcher(cfg) as pipeline_modules:
         logger.info("Starting inference!")
         ckpt_path = pipeline_modules.cfg.get("ckpt_path", None)

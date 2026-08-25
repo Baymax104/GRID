@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from contextvars import ContextVar
 
 import torch
@@ -12,8 +11,6 @@ from src.utils.file import open_local_or_remote
 from src.utils.pylogger import RankedLogger
 from src.utils.wandb import (
     ResolvedArtifactReference,
-    active_wandb_attr,
-    default_wandb_entity,
     is_wandb_reference,
     parse_wandb_uri,
     resolve_wandb_artifact,
@@ -67,14 +64,12 @@ def resolve_reference(
         return reference
 
     uri = parse_wandb_uri(reference)
-    entity = uri.entity or default_entity or os.getenv("WANDB_ENTITY") or active_wandb_attr("entity")
-    project = uri.project or default_project or os.getenv("WANDB_PROJECT") or active_wandb_attr("project")
-    if not entity:
-        entity = default_wandb_entity()
+    entity = uri.entity or default_entity
+    project = uri.project or default_project
     if not entity or not project:
         raise ValueError(
             f"{field_name}={reference!r} uses a short W&B URI. Provide entity/project in the URI "
-            "or set default_entity/default_project or WANDB_ENTITY/WANDB_PROJECT."
+            "or configure experiment user/project defaults."
         )
 
     role = uri.role or DEFAULT_ROLE_BY_FIELD.get(field_name)

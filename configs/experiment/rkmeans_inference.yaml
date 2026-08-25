@@ -18,6 +18,7 @@ devices: ???
 run_mode: inference
 
 project: GRID
+user: baymaxam
 task_name: rkmeans_inference
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 group: rkmeans

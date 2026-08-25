@@ -23,6 +23,7 @@ train_preprocessing_functions:
     _target_: src.data.components.artifacts.load_model_output
     file_path: ${semantic_id_path}
     field_name: semantic_id_path
+    wandb_entity: ${user}
     wandb_project: ${project}
   features_to_apply: [sequence_data]
   num_hierarchies: ${num_hierarchies}
@@ -66,6 +67,7 @@ eval_preprocessing_functions:
     _target_: src.data.components.artifacts.load_model_output
     file_path: ${semantic_id_path}
     field_name: semantic_id_path
+    wandb_entity: ${user}
     wandb_project: ${project}
   features_to_apply: [sequence_data]
   num_hierarchies: ${num_hierarchies}

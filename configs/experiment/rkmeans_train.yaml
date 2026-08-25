@@ -17,6 +17,7 @@ task_name: rkmeans_train
 project: GRID
 group: rkmeans
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+user: baymaxam
 run_test_after_training: false
 ckpt_path: null
 seed: 42

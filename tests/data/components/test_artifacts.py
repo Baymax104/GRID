@@ -82,12 +82,49 @@ def test_resolve_reference_records_wandb_artifact(monkeypatch, tmp_path):
 
 
 def test_resolve_short_uri_requires_entity_and_project(monkeypatch):
-    monkeypatch.delenv("WANDB_ENTITY", raising=False)
-    monkeypatch.delenv("WANDB_PROJECT", raising=False)
-    monkeypatch.setattr(artifacts, "active_wandb_attr", lambda _: None)
+    monkeypatch.setenv("WANDB_ENTITY", "ignored-entity")
+    monkeypatch.setenv("WANDB_PROJECT", "ignored-project")
 
-    with pytest.raises(ValueError, match="short W&B URI"):
+    def fail_if_called(**kwargs):
+        raise AssertionError("W&B resolver should not run without explicit identity defaults.")
+
+    monkeypatch.setattr(artifacts, "resolve_wandb_artifact", fail_if_called)
+
+    with pytest.raises(ValueError, match="experiment user/project defaults"):
         resolve_reference("wandb://abc123", field_name="semantic_id_path")
+
+
+def test_resolve_cross_project_uri_ignores_environment_defaults(monkeypatch, tmp_path):
+    resolved_file = tmp_path / "merged_predictions_tensor.pt"
+    resolved_file.write_bytes(b"data")
+    captured = {}
+    monkeypatch.setenv("WANDB_ENTITY", "ignored-entity")
+    monkeypatch.setenv("WANDB_PROJECT", "ignored-project")
+
+    def fake_resolve(**kwargs):
+        captured.update(kwargs)
+        return ResolvedArtifactReference(
+            field_name=kwargs["field_name"],
+            original_uri=kwargs["uri"].original_uri,
+            resolved_path=str(resolved_file),
+            producer_run_id=kwargs["uri"].run_id,
+            entity=kwargs["entity"],
+            project=kwargs["project"],
+            artifact_name="semantic-id:v0",
+            artifact_version="v0",
+            artifact_type="semantic_id",
+            artifact_path="baymaxam/GRID/semantic-id:v0",
+            role=kwargs["role"],
+            file=kwargs["target_file"],
+        )
+
+    monkeypatch.setattr(artifacts, "resolve_wandb_artifact", fake_resolve)
+
+    resolved = resolve_reference("wandb://baymaxam/GRID/abc123", field_name="semantic_id_path")
+
+    assert resolved == str(resolved_file)
+    assert captured["entity"] == "baymaxam"
+    assert captured["project"] == "GRID"
 
 
 def test_select_output_artifact_rejects_ambiguous_matches():

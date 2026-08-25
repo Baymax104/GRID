@@ -15,6 +15,7 @@ devices: ???
 run_mode: train
 task_name: rvq_train
 project: GRID
+user: baymaxam
 group: rvq
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 run_test_after_training: false

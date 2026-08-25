@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 NPROC_PER_NODE="${NPROC_PER_NODE:-1}"

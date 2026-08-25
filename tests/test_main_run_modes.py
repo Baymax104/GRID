@@ -55,7 +55,7 @@ def test_run_analysis_uses_lightning_test(monkeypatch):
 
 def test_run_inference_resolves_checkpoint_path(monkeypatch):
     calls = []
-    cfg = OmegaConf.create({"run_mode": "inference", "ckpt_path": "wandb://abc123", "project": "GRID"})
+    cfg = OmegaConf.create({"run_mode": "inference", "ckpt_path": "wandb://abc123", "user": "baymaxam", "project": "GRID"})
 
     class _Trainer:
         def predict(self, model, datamodule, ckpt_path, return_predictions):
@@ -86,8 +86,58 @@ def test_run_inference_resolves_checkpoint_path(monkeypatch):
     main_module.run_inference(cfg)
 
     assert calls == [
-        ("resolve_checkpoint_path", "wandb://abc123", {"default_project": "GRID"}),
+        ("resolve_checkpoint_path", "wandb://abc123", {"default_entity": "baymaxam", "default_project": "GRID"}),
         ("enter", "resolved.ckpt"),
         ("predict", "resolved.ckpt", False),
+        ("exit", None),
+    ]
+
+
+def test_run_training_resolves_checkpoint_path_with_user(monkeypatch):
+    calls = []
+    cfg = OmegaConf.create(
+        {
+            "run_mode": "train",
+            "ckpt_path": "wandb://abc123",
+            "user": "baymaxam",
+            "project": "GRID",
+            "run_test_after_training": False,
+        }
+    )
+
+    class _Trainer:
+        callback_metrics = {"loss": 1.0}
+
+        def fit(self, model, datamodule, ckpt_path):
+            calls.append(("fit", ckpt_path))
+
+    class _PipelineModules:
+        def __init__(self, received_cfg):
+            self.cfg = received_cfg
+            self.model = "model"
+            self.datamodule = "datamodule"
+            self.trainer = _Trainer()
+
+    class _PipelineLauncher:
+        def __enter__(self):
+            calls.append(("enter", cfg.ckpt_path))
+            return _PipelineModules(cfg)
+
+        def __exit__(self, exc_type, exc, tb):
+            calls.append(("exit", exc_type))
+
+    def resolve_checkpoint_path(path, **kwargs):
+        calls.append(("resolve_checkpoint_path", path, kwargs))
+        return "resolved.ckpt"
+
+    monkeypatch.setattr(main_module, "resolve_checkpoint_path", resolve_checkpoint_path)
+    monkeypatch.setattr(main_module, "pipeline_launcher", lambda received: _PipelineLauncher())
+
+    main_module.run_training(cfg)
+
+    assert calls == [
+        ("resolve_checkpoint_path", "wandb://abc123", {"default_entity": "baymaxam", "default_project": "GRID"}),
+        ("enter", "resolved.ckpt"),
+        ("fit", "resolved.ckpt"),
         ("exit", None),
     ]
