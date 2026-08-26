@@ -20,6 +20,9 @@ test_dataloader:
   semantic_id_path: ${semantic_id_path}
   raw_num_hierarchies: ${raw_num_hierarchies}
   embedding_path: ${embedding_path}
+  recommendation_output_path: ${recommendation_output_path}
+  wandb_entity: ${user}
+  wandb_project: ${project}
   batch_size_per_device: 1
   num_workers: 0
   pin_memory: false

@@ -50,11 +50,22 @@ class SIDViews:
 
 
 @dataclass
+class RecommendationOutcomeInput:
+    """Key-aligned testing labels and generated SID candidates for diagnosis."""
+
+    user_ids: torch.Tensor
+    label_item_ids: torch.Tensor
+    generated_sids: torch.Tensor
+
+
+@dataclass
 class DiagnosisBatch:
     sid_views: SIDViews
     frequencies: dict[int, int]
     groups_by_item: dict[int, str]
     embeddings: torch.Tensor | None
+    recommendation: RecommendationOutcomeInput | None = None
+    input_metadata: dict[str, str | None] = field(default_factory=dict)
 
 
 class ModelOutput:

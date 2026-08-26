@@ -24,6 +24,7 @@ DEFAULT_ROLE_BY_FIELD = {
     "ckpt_path": "checkpoint",
     "embedding_path": "semantic_embedding",
     "model_output_path": "recommendation_output",
+    "recommendation_output_path": "recommendation_output",
     "semantic_id_path": "semantic_id",
 }
 

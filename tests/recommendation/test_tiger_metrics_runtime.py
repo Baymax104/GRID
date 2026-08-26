@@ -7,6 +7,7 @@ from omegaconf import OmegaConf
 from transformers import T5Config, T5EncoderModel
 from transformers.models.t5.modeling_t5 import T5Stack
 
+from src.data.components.collate import collate_fn_sequence
 from src.recommendation.tiger.tiger import Tiger
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -66,6 +67,41 @@ def test_tiger_does_not_create_metric_attributes():
     assert not hasattr(model, "log_metrics")
     assert "on_validation_epoch_end" not in Tiger.__dict__
     assert "on_test_epoch_end" not in Tiger.__dict__
+
+
+def test_tiger_predict_step_accepts_inference_collate_tuple(monkeypatch):
+    model = create_tiger()
+    rows = [
+        {
+            "sequence_data": torch.tensor([1, 2, 3, 4]),
+            "attention_mask": torch.tensor([1, 1, 1, 1]),
+            "user_id": torch.tensor(17),
+        },
+        {
+            "sequence_data": torch.tensor([4, 3, 2, 1]),
+            "attention_mask": torch.tensor([1, 1, 1, 1]),
+            "user_id": torch.tensor(23),
+        },
+    ]
+    batch = collate_fn_sequence(
+        rows,
+        input_field_name="sequence_data",
+        attention_mask_field_name="attention_mask",
+        target_field_name=None,
+        output_key_field_name="user_id",
+    )
+    generated_sids = torch.tensor(
+        [
+            [[1, 1], [2, 2]],
+            [[3, 3], [4, 4]],
+        ]
+    )
+    monkeypatch.setattr(model, "generate", lambda **kwargs: (generated_sids, None))
+
+    output = model.predict_step(batch)
+
+    assert torch.equal(output.keys, torch.tensor([17, 23]))
+    assert torch.equal(output.predictions, generated_sids)
 
 
 def test_tiger_config_declares_retrieval_metrics_as_concrete_instances():

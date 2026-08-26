@@ -65,7 +65,7 @@ fi
 
 ARGS=(
   experiment=rvq_inference
-  embedding_path=wandb://01mw1fez
+  embedding_path=wandb://vb8es5ow
   ckpt_path="$CKPT_PATH"
   devices="$DEVICES"
   data_dir=data/beauty

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SEMANTIC_ID_PATH=""
+RECOMMENDATION_OUTPUT_PATH=""
 NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
@@ -43,6 +44,18 @@ while [[ $# -gt 0 ]]; do
       SEMANTIC_ID_PATH="$2"
       shift 2
       ;;
+    --recommendation-output-path=*)
+      RECOMMENDATION_OUTPUT_PATH="${1#--recommendation-output-path=}"
+      shift
+      ;;
+    --recommendation-output-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --recommendation-output-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      RECOMMENDATION_OUTPUT_PATH="$2"
+      shift 2
+      ;;
     *)
       EXTRA_ARGS+=("$1")
       shift
@@ -65,10 +78,14 @@ ARGS=(
   data_dir=data/beauty
   raw_num_hierarchies=3
   semantic_id_path="$SEMANTIC_ID_PATH"
-  embedding_path=wandb://w3p3iops
+  embedding_path=wandb://01mw1fez
 )
 
 ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
+
+if [[ -n "$RECOMMENDATION_OUTPUT_PATH" ]]; then
+  ARGS+=("recommendation_output_path=$RECOMMENDATION_OUTPUT_PATH")
+fi
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

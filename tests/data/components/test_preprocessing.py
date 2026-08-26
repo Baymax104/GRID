@@ -1,6 +1,27 @@
 import torch
 
-from src.data.components.preprocessing import normalize_sequence
+from src.data.components.preprocessing import generate_next_k_labels, normalize_sequence
+
+
+def test_generate_next_k_labels_hides_last_item_and_preserves_output_key():
+    user_id = torch.tensor(17)
+    row = {
+        "sequence_data": torch.arange(1, 13),
+        "user_id": user_id,
+    }
+
+    labeled = generate_next_k_labels(
+        row,
+        sequence_field_name="sequence_data",
+        next_k=4,
+        masking_token=0,
+        padding_token=-1,
+    )
+
+    assert labeled["input_ids"].tolist() == [1, 2, 3, 4, 5, 6, 7, 8, 0, -1, -1, -1]
+    assert labeled["target_ids"].tolist() == [9, 10, 11, 12]
+    assert labeled["user_id"] is user_id
+    assert "sequence_data" not in labeled
 
 
 def test_normalize_sequence_trims_sid_input_on_item_boundary():

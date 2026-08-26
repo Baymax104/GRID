@@ -10,7 +10,7 @@ defaults:
 data_dir: ???
 devices: ???
 
-embedding_model: ${paths.pretrained_models_dir}/flan-t5-base
+embedding_model: ${paths.pretrained_models_dir}/flan-t5-large
 run_mode: inference
 task_name: sem_embeds_inference
 project: GRID

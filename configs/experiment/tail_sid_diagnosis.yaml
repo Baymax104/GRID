@@ -10,10 +10,31 @@ defaults:
 data_dir: ???
 semantic_id_path: ???
 embedding_path: null
+recommendation_output_path: null
 raw_num_hierarchies: ???
 head_ratio: 0.2
 tail_ratio: 0.2
 max_neighbors_per_bucket: 512
+priority_multipliers:
+  Head: 1.0
+  Mid: 1.1
+  Tail: 1.25
+  Tail-Cold: 1.35
+semantic_reference_quantile: 0.75
+semantic_bucket_quantile: 0.25
+semantic_reference_pairs: 100000
+semantic_seed: ${seed}
+bootstrap_samples: 1000
+bootstrap_confidence: 0.95
+frequency_bin_count: 5
+min_frequency_bin_support: 20
+hit_ks: [5, 10]
+max_harmful_pairs: 100000
+max_harmful_pairs_per_item: 20
+tail_ratio_sensitivity: [0.1, 0.2, 0.3]
+semantic_quantile_sensitivity: [0.5, 0.75, 0.9]
+damage_component_sensitivity: [all, structural_only, semantic_only]
+diagnosis_evidence_output_dir: ${paths.output_dir}/diagnosis_evidence
 
 run_mode: analysis
 task_name: tail_sid_diagnosis
@@ -36,4 +57,4 @@ paths:
 extras:
   ignore_warnings: false
   print_config_warnings: true
-  print_config: true
+  print_config: false

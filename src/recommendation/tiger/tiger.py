@@ -143,14 +143,26 @@ class Tiger(LightningModule):
         )
         return decoder_logits
 
-    def predict_step(self, batch: TigerModelInput):
+    def predict_step(
+        self,
+        batch: TigerModelInput | tuple[TigerModelInput, TigerLabelData | None],
+    ):
+        if isinstance(batch, TigerModelInput):
+            model_input = batch
+        elif isinstance(batch, tuple) and len(batch) == 2 and isinstance(batch[0], TigerModelInput):
+            model_input = batch[0]
+        else:
+            raise TypeError(
+                "Tiger predict_step expects TigerModelInput or "
+                "(TigerModelInput, TigerLabelData | None)."
+            )
         generated_sids, _ = self.generate(
-            attention_mask=batch.attention_mask,
-            input_ids=batch.input_ids,
+            attention_mask=model_input.attention_mask,
+            input_ids=model_input.input_ids,
         )
-        if batch.output_keys is None:
+        if model_input.output_keys is None:
             raise ValueError("TigerModelInput.output_keys is required for prediction output.")
-        return ModelOutput(keys=batch.output_keys, predictions=generated_sids)
+        return ModelOutput(keys=model_input.output_keys, predictions=generated_sids)
 
     def _compute_loss(
         self,

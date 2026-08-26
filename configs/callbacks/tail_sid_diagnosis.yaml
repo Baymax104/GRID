@@ -4,3 +4,16 @@ wandb_artifact_lineage:
   _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
   fail_on_missing_run: false
   clear_after_recording: true
+
+structured_analysis_writer:
+  _target_: src.common.writers.StructuredAnalysisWriter
+  output_dir: ${diagnosis_evidence_output_dir}
+  output_key: structured_analysis
+  publish_wandb: true
+  artifact_name: tail-sid-diagnosis-evidence
+  artifact_type: diagnosis_evidence
+  aliases: [latest]
+  metadata:
+    schema_version: tail_sid_diagnosis_evidence_v1
+    task_name: ${task_name}
+    dataset_dir: ${data_dir}

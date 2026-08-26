@@ -57,9 +57,17 @@ class SemanticMismatchValues:
 
 @dataclass(frozen=True)
 class DamageScoreValues:
-    damage: list[float]
-    tail_damage: list[float]
+    raw_damage: list[float]
+    priority_score: list[float]
     component_metadata: list[dict[str, float | int | str]]
+
+    @property
+    def damage(self) -> list[float]:
+        return self.raw_damage
+
+    @property
+    def tail_damage(self) -> list[float]:
+        return self.priority_score
 
 
 def _mean(values: list[float]) -> float:
@@ -301,6 +309,25 @@ class PrefixRiskMetric(Metric):
         }
 
 
+class EvidenceSectionMetric(Metric):
+    """Expose one scalar section from a precomputed diagnosis evidence object."""
+
+    full_state_update = False
+
+    def __init__(self, section: str):
+        super().__init__()
+        self.section = section
+        self.add_state("evidence", default=[], dist_reduce_fx=None)
+
+    def update(self, evidence) -> None:
+        self.evidence.append(evidence)
+
+    def compute(self) -> dict[str, float]:
+        if len(self.evidence) != 1:
+            raise ValueError(f"{self.__class__.__name__} expects exactly one evidence object.")
+        return dict(self.evidence[0].scalar_sections[self.section])
+
+
 def stable_robust_risk_scores(
     component_name: str,
     values: list[float],
@@ -480,6 +507,7 @@ def _compute_damage_scores(
     groups_by_index: list[str],
     structural: StructuralMetricValues,
     semantic: SemanticMismatchValues,
+    priority_multipliers: dict[str, float] | None = None,
 ) -> DamageScoreValues:
     z_inputs = [
         ("full_collision", [1.0 if size > 1 else 0.0 for size in structural.full_collision_size]),
@@ -495,10 +523,14 @@ def _compute_damage_scores(
         scores, metadata = stable_robust_risk_scores(component_name, values)
         z_components.append(scores)
         component_metadata.append(metadata)
-    damage = [sum(component[idx] for component in z_components) for idx in range(len(groups_by_index))]
-    gate = {"Head": 1.0, "Mid": 1.1, "Tail": 1.25, "Tail-Cold": 1.35}
-    tail_damage = [damage[idx] * gate[groups_by_index[idx]] for idx in range(len(groups_by_index))]
-    return DamageScoreValues(damage=damage, tail_damage=tail_damage, component_metadata=component_metadata)
+    raw_damage = [sum(component[idx] for component in z_components) for idx in range(len(groups_by_index))]
+    multipliers = priority_multipliers or {"Head": 1.0, "Mid": 1.1, "Tail": 1.25, "Tail-Cold": 1.35}
+    priority_score = [raw_damage[idx] * multipliers[groups_by_index[idx]] for idx in range(len(groups_by_index))]
+    return DamageScoreValues(
+        raw_damage=raw_damage,
+        priority_score=priority_score,
+        component_metadata=component_metadata,
+    )
 
 
 def _compute_prefix_rows(
@@ -519,7 +551,8 @@ def _compute_prefix_rows(
             if depth < raw_sid.size(1):
                 suffixes = {tuple(int(value) for value in raw_sid[idx, depth:].tolist()) for idx in indexes}
                 suffix_uniqueness = len(suffixes) / len(indexes)
-            avg_tail_damage = _mean([damage_scores.tail_damage[idx] for idx in indexes])
+            avg_raw_damage = _mean([damage_scores.raw_damage[idx] for idx in indexes])
+            avg_priority_score = _mean([damage_scores.priority_score[idx] for idx in indexes])
             mismatch_rate = _mean([1.0 if semantic.semantic_mismatch[idx] > 0 else 0.0 for idx in indexes])
             tail_ratio = tail_count / len(indexes)
             rows.append(
@@ -532,10 +565,20 @@ def _compute_prefix_rows(
                     "tail_count": group_counts["Tail"],
                     "tail_cold_count": group_counts["Tail-Cold"],
                     "tail_ratio": tail_ratio,
-                    "avg_tail_damage": avg_tail_damage,
+                    "avg_raw_damage": avg_raw_damage,
+                    "avg_priority_score": avg_priority_score,
+                    "avg_tail_damage": avg_priority_score,
                     "mismatch_rate": mismatch_rate,
                     "suffix_uniqueness": suffix_uniqueness,
-                    "prefix_risk": avg_tail_damage
+                    "raw_prefix_risk": avg_raw_damage
+                    * math.log1p(len(indexes))
+                    * (1.0 + tail_ratio)
+                    * (1.0 + mismatch_rate),
+                    "priority_prefix_risk": avg_priority_score
+                    * math.log1p(len(indexes))
+                    * (1.0 + tail_ratio)
+                    * (1.0 + mismatch_rate),
+                    "prefix_risk": avg_priority_score
                     * math.log1p(len(indexes))
                     * (1.0 + tail_ratio)
                     * (1.0 + mismatch_rate),
@@ -543,4 +586,3 @@ def _compute_prefix_rows(
             )
     rows.sort(key=lambda row: float(row["prefix_risk"]), reverse=True)
     return rows
-

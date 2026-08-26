@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from src.common.configs.data import DatasetConfig
 from src.data.components.artifacts import load_model_output
-from src.data.components.data_models import DiagnosisBatch, SIDViews
+from src.data.components.data_models import DiagnosisBatch, RecommendationOutcomeInput, SIDViews
 from src.data.components.readers import TFRecordReader
 from src.data.utils import gather_predictions_by_keys
 from src.utils.pylogger import RankedLogger
@@ -127,12 +127,14 @@ class DiagnosisDataset(Dataset):
         semantic_id_path: str,
         raw_num_hierarchies: int,
         embedding_path: str | None = None,
+        recommendation_output_path: str | None = None,
     ):
         self.dataset_config = dataset_config
         self.data_folder = data_folder
         self.semantic_id_path = semantic_id_path
         self.raw_num_hierarchies = raw_num_hierarchies
         self.embedding_path = embedding_path
+        self.recommendation_output_path = recommendation_output_path
         self._batch: DiagnosisBatch | None = None
 
     def __len__(self) -> int:
@@ -152,6 +154,13 @@ class DiagnosisDataset(Dataset):
             frequencies=self._compute_train_frequencies(sid_views.item_ids),
             groups_by_item={},
             embeddings=self._load_embeddings_for_items(sid_views.item_ids),
+            recommendation=self._load_recommendation_input(),
+            input_metadata={
+                "semantic_id_path": self.semantic_id_path,
+                "embedding_path": self.embedding_path,
+                "recommendation_output_path": self.recommendation_output_path,
+                "testing_data_dir": str(Path(self.data_folder) / "testing"),
+            },
         )
         for preprocessing_function in getattr(self.dataset_config, "preprocessing_functions", []):
             batch = preprocessing_function(batch)
@@ -196,6 +205,53 @@ class DiagnosisDataset(Dataset):
         if not files:
             raise FileNotFoundError(f"No training TFRecord files found under {training_dir}.")
         yield from TFRecordReader(list_of_file_paths=files, shuffle_rows=False).iterrows()
+
+    def _iter_testing_rows(self):
+        testing_dir = Path(self.data_folder) / "testing"
+        files = sorted(str(path) for path in testing_dir.rglob("*.tfrecord.gz"))
+        if not files:
+            raise FileNotFoundError(f"No testing TFRecord files found under {testing_dir}.")
+        yield from TFRecordReader(list_of_file_paths=files, shuffle_rows=False).iterrows()
+
+    def _load_recommendation_input(self):
+        if self.recommendation_output_path is None:
+            return None
+        labels_by_user: dict[int, int] = {}
+        for row in self._iter_testing_rows():
+            if "user_id" not in row:
+                raise KeyError("Testing row does not contain 'user_id'.")
+            user_value = row["user_id"]
+            user_id = int(torch.as_tensor(user_value).reshape(-1)[0].item())
+            if user_id in labels_by_user:
+                raise ValueError(f"Duplicate user key in testing labels: {user_id}.")
+            sequence = self._sequence_values(row)
+            if not sequence:
+                raise ValueError(f"Testing sequence is empty for user {user_id}.")
+            labels_by_user[user_id] = sequence[-1]
+
+        bundle = load_model_output(self.recommendation_output_path)
+        generated_sids = bundle.predictions.long()
+        if generated_sids.ndim != 3:
+            raise ValueError(
+                "Recommendation predictions must be 3-D with shape "
+                f"(num_users, num_candidates, sid_length), got {tuple(generated_sids.shape)}."
+            )
+        predicted_users = {int(value) for value in bundle.keys.tolist()}
+        label_users = set(labels_by_user)
+        missing = sorted(label_users - predicted_users)
+        unknown = sorted(predicted_users - label_users)
+        if missing or unknown:
+            raise ValueError(
+                "Recommendation/testing user keys must match exactly: "
+                f"missing_predictions={missing[:5]} (total={len(missing)}), "
+                f"unknown_predictions={unknown[:5]} (total={len(unknown)})."
+            )
+        user_ids = bundle.keys.long()
+        return RecommendationOutcomeInput(
+            user_ids=user_ids,
+            label_item_ids=torch.tensor([labels_by_user[int(user)] for user in user_ids.tolist()]),
+            generated_sids=generated_sids,
+        )
 
     def _sequence_values(self, row: dict[str, Any]) -> list[int]:
         if "sequence_data" not in row:

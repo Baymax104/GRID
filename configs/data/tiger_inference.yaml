@@ -33,16 +33,25 @@ preprocessing_functions:
   features_to_apply:
   - sequence_data
   num_hierarchies: ${model.root.num_hierarchies}
+- _target_: src.data.components.preprocessing.generate_next_k_labels
+  _partial_: true
+  sequence_field_name: sequence_data
+  input_field_name: input_ids
+  target_field_name: target_ids
+  next_k: ${model.root.num_hierarchies}
+  masking_token: 0
+  padding_token: -1
 - _target_: src.data.components.preprocessing.normalize_sequence
   _partial_: true
-  input_field_name: sequence_data
+  input_field_name: input_ids
   attention_mask_field_name: attention_mask
   sequence_length: ${sequence_length}
+  sid_hierarchy: ${model.root.num_hierarchies}
   padding_token: -1
 collate:
   _target_: src.data.components.collate.collate_fn_sequence
   _partial_: true
-  input_field_name: sequence_data
+  input_field_name: input_ids
   attention_mask_field_name: attention_mask
   target_field_name: null
   output_key_field_name: user_id

@@ -72,7 +72,7 @@ fi
 
 ARGS=(
   experiment=rvq_train
-  embedding_path=wandb://01mw1fez
+  embedding_path=wandb://vb8es5ow
   data_dir=data/beauty
   devices="$DEVICES"
 )

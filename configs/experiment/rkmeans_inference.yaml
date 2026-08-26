@@ -11,7 +11,7 @@ data_dir: ???
 embedding_path: ???
 codebook_size: 256
 num_hierarchies: 3
-embedding_dim: 768
+embedding_dim: 1024
 ckpt_path: ???
 devices: ???
 

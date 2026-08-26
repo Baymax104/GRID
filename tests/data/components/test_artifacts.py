@@ -43,6 +43,42 @@ def test_resolve_reference_bypasses_local_path(monkeypatch):
     assert resolve_reference("local/file.pt", field_name="semantic_id_path") == "local/file.pt"
 
 
+@pytest.mark.parametrize(
+    "reference",
+    ["wandb://recommendation-run", "wandb://other-user/other-project/recommendation-run"],
+)
+def test_recommendation_output_reference_infers_role_for_short_and_full_uri(monkeypatch, reference):
+    captured = {}
+
+    def fake_resolve(**kwargs):
+        captured.update(kwargs)
+        return ResolvedArtifactReference(
+            field_name=kwargs["field_name"],
+            original_uri=kwargs["uri"].original_uri,
+            resolved_path="recommendations.pt",
+            producer_run_id=kwargs["uri"].run_id,
+            entity=kwargs["entity"],
+            project=kwargs["project"],
+            artifact_name="recommendations:v0",
+            artifact_version="v0",
+            artifact_type=kwargs["role"],
+            artifact_path=f"{kwargs['entity']}/{kwargs['project']}/recommendations:v0",
+            role=kwargs["role"],
+            file=kwargs["target_file"],
+        )
+
+    monkeypatch.setattr(artifacts, "resolve_wandb_artifact", fake_resolve)
+    resolve_reference(
+        reference,
+        field_name="recommendation_output_path",
+        default_entity="baymaxam",
+        default_project="GRID",
+    )
+
+    assert captured["role"] == "recommendation_output"
+    assert captured["target_file"] == "merged_predictions_tensor.pt"
+
+
 def test_resolve_reference_records_wandb_artifact(monkeypatch, tmp_path):
     resolved_file = tmp_path / "merged_predictions_tensor.pt"
     resolved_file.write_bytes(b"data")

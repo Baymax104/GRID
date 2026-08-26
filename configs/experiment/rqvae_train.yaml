@@ -8,7 +8,7 @@ defaults:
 - /trainer@trainer: rqvae_train
 data_dir: ???
 embedding_path: ???
-embedding_dim: 768
+embedding_dim: 1024
 num_hierarchies: 3
 codebook_size: 256
 devices: ???

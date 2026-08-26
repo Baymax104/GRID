@@ -12,6 +12,7 @@ semantic_id_path: ???
 ckpt_path: ???
 num_hierarchies: 4
 codebook_size: 256
+devices: ???
 
 run_mode: inference
 task_name: tiger_inference

@@ -3,6 +3,23 @@
 root:
   _target_: src.quantization.tail_sid_diagnosis.module.TailSIDDiagnosisModule
   max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+  priority_multipliers: ${priority_multipliers}
+  semantic_reference_quantile: ${semantic_reference_quantile}
+  semantic_bucket_quantile: ${semantic_bucket_quantile}
+  semantic_reference_pairs: ${semantic_reference_pairs}
+  semantic_seed: ${semantic_seed}
+  max_harmful_pairs: ${max_harmful_pairs}
+  max_harmful_pairs_per_item: ${max_harmful_pairs_per_item}
+  hit_ks: ${hit_ks}
+  bootstrap_samples: ${bootstrap_samples}
+  bootstrap_confidence: ${bootstrap_confidence}
+  frequency_bin_count: ${frequency_bin_count}
+  min_frequency_bin_support: ${min_frequency_bin_support}
+  tail_ratio_sensitivity: ${tail_ratio_sensitivity}
+  semantic_quantile_sensitivity: ${semantic_quantile_sensitivity}
+  damage_component_sensitivity: ${damage_component_sensitivity}
+  head_ratio: ${head_ratio}
+  tail_ratio: ${tail_ratio}
 
 metric_callback:
   logging_modes:
@@ -14,76 +31,33 @@ metrics:
     test:
       structural:
         metric:
-          _target_: src.quantization.tail_sid_diagnosis.metrics.StructuralSIDMetric
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: structural
         spec:
           kwargs:
-            sid_views:
-              key: sid_views
-            item_ids:
-              key: item_ids
-            groups_by_index:
-              key: groups_by_index
-            buckets:
-              key: buckets
-            strict_depth:
-              key: strict_depth
-            sid_length:
-              key: sid_length
+            evidence:
+              key: evidence
       semantic:
         metric:
-          _target_: src.quantization.tail_sid_diagnosis.metrics.SemanticMismatchMetric
-          max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: semantic
         spec:
           kwargs:
-            sid_views:
-              key: sid_views
-            groups_by_index:
-              key: groups_by_index
-            buckets:
-              key: buckets
-            strict_depth:
-              key: strict_depth
-            embeddings:
-              key: embeddings
+            evidence:
+              key: evidence
       damage:
         metric:
-          _target_: src.quantization.tail_sid_diagnosis.metrics.DamageScoreMetric
-          max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: damage
         spec:
           kwargs:
-            sid_views:
-              key: sid_views
-            groups_by_index:
-              key: groups_by_index
-            buckets:
-              key: buckets
-            strict_depth:
-              key: strict_depth
-            sid_length:
-              key: sid_length
-            embeddings:
-              key: embeddings
+            evidence:
+              key: evidence
       prefix_risk:
         metric:
-          _target_: src.quantization.tail_sid_diagnosis.metrics.PrefixRiskMetric
-          max_neighbors_per_bucket: ${max_neighbors_per_bucket}
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: prefix_risk
         spec:
           kwargs:
-            sid_views:
-              key: sid_views
-            frequencies:
-              key: frequencies
-            groups_by_item:
-              key: groups_by_item
-            embeddings:
-              key: embeddings
-            item_ids:
-              key: item_ids
-            groups_by_index:
-              key: groups_by_index
-            buckets:
-              key: buckets
-            strict_depth:
-              key: strict_depth
-            sid_length:
-              key: sid_length
+            evidence:
+              key: evidence
