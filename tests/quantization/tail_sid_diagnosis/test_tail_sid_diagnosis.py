@@ -823,6 +823,7 @@ def test_tail_sid_diagnosis_hydra_config_composes():
             config_name="main",
             overrides=[
                 "experiment=tail_sid_diagnosis",
+                "group=rkmeans",
                 "data_dir=data/beauty",
                 "semantic_id_path=semantic.pt",
                 "raw_num_hierarchies=3",
@@ -849,7 +850,7 @@ def test_tail_sid_diagnosis_hydra_config_composes():
     assert cfg.callbacks.wandb_artifact_lineage.fail_on_missing_run is False
     assert cfg.trainer.root._target_ == "lightning.pytorch.trainer.Trainer"
     assert cfg.logger.wandb._target_ == "lightning.pytorch.loggers.wandb.WandbLogger"
-    assert cfg.logger.wandb.group == "tail_sid_diagnosis"
+    assert cfg.logger.wandb.group == "rkmeans"
 
 
 @pytest.mark.parametrize(
@@ -869,6 +870,7 @@ def test_tail_sid_diagnosis_optional_input_combinations_compose(
             config_name="main",
             overrides=[
                 "experiment=tail_sid_diagnosis",
+                "group=rkmeans",
                 "data_dir=data/beauty",
                 "semantic_id_path=semantic.pt",
                 "raw_num_hierarchies=3",

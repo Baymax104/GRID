@@ -7,6 +7,7 @@ DEVICES="${DEVICES:-[0]}"
 
 CKPT_PATH=""
 SEMANTIC_ID_PATH=""
+GROUP=""
 DRY_RUN=false
 EXTRA_ARGS=()
 
@@ -38,6 +39,18 @@ while [[ $# -gt 0 ]]; do
         exit 2
       fi
       DEVICES="$2"
+      shift 2
+      ;;
+    --group=*)
+      GROUP="${1#--group=}"
+      shift
+      ;;
+    --group)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --group requires one of: rkmeans, rvq, rqvae." >&2
+        exit 2
+      fi
+      GROUP="$2"
       shift 2
       ;;
     --ckpt-path=*)
@@ -81,8 +94,22 @@ if [[ -z "$SEMANTIC_ID_PATH" ]]; then
   exit 2
 fi
 
+case "$GROUP" in
+  rkmeans|rvq|rqvae)
+    ;;
+  "")
+    echo "Error: --group requires one of: rkmeans, rvq, rqvae." >&2
+    exit 2
+    ;;
+  *)
+    echo "Error: unsupported --group '$GROUP'; expected one of: rkmeans, rvq, rqvae." >&2
+    exit 2
+    ;;
+esac
+
 ARGS=(
   experiment=tiger_inference
+  group="$GROUP"
   ckpt_path="$CKPT_PATH"
   semantic_id_path="$SEMANTIC_ID_PATH"
   devices="$DEVICES"

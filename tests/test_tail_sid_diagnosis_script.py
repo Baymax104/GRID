@@ -37,6 +37,8 @@ def test_tail_sid_diagnosis_script_declares_required_passthrough_contract():
 
     assert "--dry-run" in source
     assert "--notes=*" in source and "--notes)" in source
+    assert "--group=*" in source and "--group)" in source
+    assert 'group="$GROUP"' in source
     assert "--recommendation-output-path=*" in source
     assert "--recommendation-output-path)" in source
     assert 'ARGS+=("recommendation_output_path=$RECOMMENDATION_OUTPUT_PATH")' in source
@@ -67,6 +69,8 @@ def test_tail_sid_diagnosis_script_preserves_quoted_options_and_trailing_overrid
             "--dry-run",
             "--notes",
             "diagnosis evidence run",
+            "--group",
+            "rqvae",
             "--semantic-id-path=wandb://entity/project/sid-run",
             "--recommendation-output-path",
             "wandb://rec-run",
@@ -81,6 +85,7 @@ def test_tail_sid_diagnosis_script_preserves_quoted_options_and_trailing_overrid
     arguments = result.stdout.splitlines()
     assert "semantic_id_path=wandb://entity/project/sid-run" in arguments
     assert "recommendation_output_path=wandb://rec-run" in arguments
+    assert "group=rqvae" in arguments
     assert 'logger.wandb.notes="diagnosis evidence run"' in arguments
     assert "--dry-run" in arguments
     assert arguments[-1] == "tail_ratio=0.3"

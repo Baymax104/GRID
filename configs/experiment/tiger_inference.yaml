@@ -18,7 +18,7 @@ run_mode: inference
 task_name: tiger_inference
 project: GRID
 user: baymaxam
-group: tiger
+group: ???
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
 seed: 42
 sequence_length: 180

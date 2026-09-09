@@ -48,7 +48,7 @@ done
 ARGS=(
   experiment=sem_embeds_inference
   devices="$DEVICES"
-  data_dir=data/beauty
+  data_dir=data/sports
 )
 
 if [[ "$DRY_RUN" == true ]]; then

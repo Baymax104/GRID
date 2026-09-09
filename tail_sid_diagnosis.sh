@@ -3,6 +3,7 @@ set -euo pipefail
 
 SEMANTIC_ID_PATH=""
 RECOMMENDATION_OUTPUT_PATH=""
+GROUP=""
 NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
@@ -30,6 +31,18 @@ while [[ $# -gt 0 ]]; do
         exit 2
       fi
       NOTES="$2"
+      shift 2
+      ;;
+    --group=*)
+      GROUP="${1#--group=}"
+      shift
+      ;;
+    --group)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --group requires one of: rkmeans, rvq, rqvae." >&2
+        exit 2
+      fi
+      GROUP="$2"
       shift 2
       ;;
     --semantic-id-path=*)
@@ -73,8 +86,22 @@ if [[ -z "$SEMANTIC_ID_PATH" ]]; then
   exit 2
 fi
 
+case "$GROUP" in
+  rkmeans|rvq|rqvae)
+    ;;
+  "")
+    echo "Error: --group requires one of: rkmeans, rvq, rqvae." >&2
+    exit 2
+    ;;
+  *)
+    echo "Error: unsupported --group '$GROUP'; expected one of: rkmeans, rvq, rqvae." >&2
+    exit 2
+    ;;
+esac
+
 ARGS=(
   experiment=tail_sid_diagnosis
+  group="$GROUP"
   data_dir=data/beauty
   raw_num_hierarchies=3
   semantic_id_path="$SEMANTIC_ID_PATH"

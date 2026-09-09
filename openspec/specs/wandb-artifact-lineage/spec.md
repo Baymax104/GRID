@@ -4,13 +4,23 @@
 TBD - created by archiving change add-wandb-artifact-lineage. Update Purpose after archive.
 ## Requirements
 ### Requirement: W&B reference resolver SHALL support run-based artifact references
-系统 SHALL 提供独立的 W&B reference resolver，使现有阶段间文件字段能够通过 `wandb://` URI 引用 producer run 的 output Artifact。resolver MUST 只在输入值使用 `wandb://` 协议时触发 W&B API。
+系统 SHALL 提供独立的 W&B reference resolver，使现有阶段间文件字段能够通过 `wandb://` URI 引用 producer run 的 output Artifact。resolver MUST 只在输入值使用 `wandb://` 协议时触发 W&B API。Short URI defaults MUST come only from explicit resolver arguments supplied by experiment config; resolver MUST NOT infer entity or project from environment variables, active W&B runs, or W&B API account defaults.
 
 #### Scenario: Resolve short run URI
 - **WHEN** `semantic_id_path` 的值为 `wandb://1mzveep4`
-- **THEN** resolver MUST 在默认 W&B entity/project 中查找 run `1mzveep4`
+- **AND** 调用方传入 `default_entity` 和 `default_project`
+- **THEN** resolver MUST 在传入的 W&B entity/project 中查找 run `1mzveep4`
 - **THEN** resolver MUST 使用字段名推断 Artifact role 为 `semantic_id`
 - **THEN** resolver MUST 下载唯一匹配 Artifact 中的目标文件并返回本地文件路径
+
+#### Scenario: Short run URI without explicit identity fails
+- **WHEN** `embedding_path`、`semantic_id_path` 或 `ckpt_path` 的值为 `wandb://<run-id>`
+- **AND** URI 未包含 entity/project
+- **AND** 调用方未传入 `default_entity` 或未传入 `default_project`
+- **THEN** resolver MUST raise 并说明 short W&B URI requires experiment `user/project` defaults or a fully-qualified URI
+- **THEN** resolver MUST NOT read `WANDB_ENTITY` or `WANDB_PROJECT`
+- **THEN** resolver MUST NOT read an active `wandb.run`
+- **THEN** resolver MUST NOT call `wandb.Api().default_entity`
 
 #### Scenario: Resolve cross-project run URI
 - **WHEN** 输入引用为 `wandb://baymaxam/GRID/1mzveep4?role=semantic_id`
@@ -42,7 +52,7 @@ resolver SHALL 根据字段名、URI 参数、Artifact metadata 和 alias 选择
 - **THEN** resolver MUST NOT 使用字段默认 role 覆盖 URI 参数
 
 ### Requirement: Consumer runs SHALL record upstream artifact lineage through an explicit callback
-当当前运行存在活动 W&B run、resolver 成功解析 W&B Artifact，且 `WandbArtifactLineageCallback` 被显式配置时，系统 SHALL 通过 W&B `use_artifact` 记录 consumer run 对 upstream Artifact 的使用关系。
+当当前运行存在活动 W&B run、resolver 成功解析 W&B Artifact，且 `WandbArtifactLineageCallback` 被显式配置时，系统 SHALL 通过 W&B `use_artifact` 记录 consumer run 对 upstream Artifact 的使用关系。Official consumers that resolve inputs during Lightning execution MUST make resolved references available before the lineage callback's applicable setup/start hook.
 
 #### Scenario: Active W&B run records lineage
 - **WHEN** 当前 `tiger_train` run 使用 `semantic_id_path=wandb://1mzveep4`
@@ -50,6 +60,13 @@ resolver SHALL 根据字段名、URI 参数、Artifact metadata 和 alias 选择
 - **AND** 当前实验显式启用了 `WandbArtifactLineageCallback`
 - **THEN** 系统 MUST 对解析出的 semantic ID Artifact 调用 `use_artifact`
 - **THEN** W&B lineage MUST 能表示 producer run -> Artifact -> current run
+
+#### Scenario: Diagnosis inputs are registered before callback setup
+- **WHEN** Tail-SID diagnosis 使用 W&B-backed Semantic ID 或 embedding 输入
+- **AND** Lightning 调用 diagnosis DataModule setup
+- **THEN** DataModule MUST 在构造 Dataset 前解析这些输入并注册 resolved references
+- **AND** `WandbArtifactLineageCallback.setup` MUST 能读取这些 references
+- **AND** 当前 logger-owned W&B run MUST 对每个尚未记录的 upstream Artifact 调用 `use_artifact`
 
 #### Scenario: No active W&B run still resolves file
 - **WHEN** 输入值为 `wandb://1mzveep4`

@@ -6,6 +6,7 @@ MASTER_PORT="${MASTER_PORT:-29500}"
 DEVICES="${DEVICES:-[0,1]}"
 
 SEMANTIC_ID_PATH=""
+GROUP=""
 NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
@@ -59,6 +60,18 @@ while [[ $# -gt 0 ]]; do
       NOTES="$2"
       shift 2
       ;;
+    --group=*)
+      GROUP="${1#--group=}"
+      shift
+      ;;
+    --group)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --group requires one of: rkmeans, rvq, rqvae." >&2
+        exit 2
+      fi
+      GROUP="$2"
+      shift 2
+      ;;
     --semantic-id-path=*)
       SEMANTIC_ID_PATH="${1#--semantic-id-path=}"
       shift
@@ -88,11 +101,25 @@ if [[ -z "$SEMANTIC_ID_PATH" ]]; then
   exit 2
 fi
 
+case "$GROUP" in
+  rkmeans|rvq|rqvae)
+    ;;
+  "")
+    echo "Error: --group requires one of: rkmeans, rvq, rqvae." >&2
+    exit 2
+    ;;
+  *)
+    echo "Error: unsupported --group '$GROUP'; expected one of: rkmeans, rvq, rqvae." >&2
+    exit 2
+    ;;
+esac
+
 ARGS=(
   experiment=tiger_train
+  group="$GROUP"
   devices="$DEVICES"
   semantic_id_path="$SEMANTIC_ID_PATH"
-  data_dir=data/beauty
+  data_dir=data/sports
 )
 
 ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")

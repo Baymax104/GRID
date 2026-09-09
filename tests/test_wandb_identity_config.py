@@ -1,9 +1,16 @@
+import re
+
+import pytest
 from hydra import compose, initialize
+from omegaconf import MissingMandatoryValue, OmegaConf
 
 import src.utils.hydra_resolvers  # noqa: F401
 
+DYNAMIC_GROUP_EXPERIMENTS = {"tail_sid_diagnosis", "tiger_train", "tiger_inference"}
+
 
 def _compose_experiment(experiment: str, extra_overrides: list[str] | None = None):
+    group_overrides = ["group=rkmeans"] if experiment in DYNAMIC_GROUP_EXPERIMENTS else []
     with initialize(version_base=None, config_path="../configs"):
         return compose(
             config_name="main",
@@ -14,6 +21,7 @@ def _compose_experiment(experiment: str, extra_overrides: list[str] | None = Non
                 "++semantic_id_path=wandb://02sid",
                 "ckpt_path=null",
                 "++devices=[0,1]",
+                *group_overrides,
                 *(extra_overrides or []),
             ],
         )
@@ -54,6 +62,77 @@ def test_wandb_loggers_use_experiment_user():
         assert cfg.user == "baymaxam"
         assert cfg.logger.wandb.entity == cfg.user
         assert cfg.logger.wandb.project == cfg.project
+
+
+@pytest.mark.parametrize(
+    ("experiment", "expected_group"),
+    [
+        ("sem_embeds_inference", "sem_embeds"),
+        ("rkmeans_train", "rkmeans"),
+        ("rkmeans_inference", "rkmeans"),
+        ("rvq_train", "rvq"),
+        ("rvq_inference", "rvq"),
+        ("rqvae_train", "rqvae"),
+        ("rqvae_inference", "rqvae"),
+    ],
+)
+def test_fixed_pipeline_experiments_use_expected_wandb_group(experiment, expected_group):
+    cfg = _compose_experiment(experiment)
+
+    assert cfg.group == expected_group
+    assert cfg.logger.wandb.group == expected_group
+
+
+@pytest.mark.parametrize("experiment", sorted(DYNAMIC_GROUP_EXPERIMENTS))
+@pytest.mark.parametrize("group", ["rkmeans", "rvq", "rqvae"])
+def test_downstream_experiments_use_explicit_quantization_group(experiment, group):
+    cfg = _compose_experiment(experiment, [f"group={group}"])
+
+    assert cfg.group == group
+    assert cfg.logger.wandb.group == group
+
+
+@pytest.mark.parametrize("experiment", sorted(DYNAMIC_GROUP_EXPERIMENTS))
+def test_downstream_experiments_require_group(experiment):
+    with initialize(version_base=None, config_path="../configs"):
+        cfg = compose(
+            config_name="main",
+            overrides=[
+                f"experiment={experiment}",
+                "data_dir=data/beauty",
+                "++embedding_path=embedding.pt",
+                "++semantic_id_path=semantic.pt",
+                "ckpt_path=null",
+                "++devices=[0]",
+                "++raw_num_hierarchies=3",
+            ],
+        )
+
+    assert OmegaConf.is_missing(cfg, "group")
+    with pytest.raises(MissingMandatoryValue):
+        _ = cfg.group
+
+
+@pytest.mark.parametrize(
+    "experiment",
+    [
+        "rkmeans_train",
+        "rkmeans_inference",
+        "rqvae_train",
+        "rqvae_inference",
+        "rvq_train",
+        "rvq_inference",
+        "sem_embeds_inference",
+        "tail_sid_diagnosis",
+        "tiger_train",
+        "tiger_inference",
+    ],
+)
+def test_wandb_run_name_contains_task_name_and_timestamp(experiment):
+    cfg = _compose_experiment(experiment)
+
+    expected_name = rf"{re.escape(cfg.task_name)}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}"
+    assert re.fullmatch(expected_name, cfg.logger.wandb.name)
 
 
 def test_embedding_loader_configs_use_experiment_user():

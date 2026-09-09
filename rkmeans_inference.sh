@@ -5,6 +5,7 @@ NPROC_PER_NODE="${NPROC_PER_NODE:-1}"
 MASTER_PORT="${MASTER_PORT:-29500}"
 DEVICES="${DEVICES:-[0]}"
 CKPT_PATH=""
+EMBEDDING_PATH=""
 
 DRY_RUN=false
 EXTRA_ARGS=()
@@ -39,6 +40,18 @@ while [[ $# -gt 0 ]]; do
       DEVICES="$2"
       shift 2
       ;;
+    --embedding-path=*)
+      EMBEDDING_PATH="${1#--embedding-path=}"
+      shift
+      ;;
+    --embedding-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --embedding-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      EMBEDDING_PATH="$2"
+      shift 2
+      ;;
     --ckpt-path=*)
       CKPT_PATH="${1#--ckpt-path=}"
       shift
@@ -58,6 +71,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$EMBEDDING_PATH" ]]; then
+  echo "Error: --embedding-path requires a local path or wandb://<run-id> value." >&2
+  exit 2
+fi
+
 if [[ -z "$CKPT_PATH" ]]; then
   echo "Error: --ckpt-path requires a local path or wandb://<run-id> value." >&2
   exit 2
@@ -65,9 +83,9 @@ fi
 
 ARGS=(
   experiment=rkmeans_inference
-  embedding_path=wandb://vb8es5ow
+  embedding_path="$EMBEDDING_PATH"
   devices="$DEVICES"
-  data_dir=data/beauty
+  data_dir=data/sports
 )
 
 ARGS+=(ckpt_path="$CKPT_PATH")

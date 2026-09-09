@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Official experiments SHALL own W&B user, project, and group identity
+### Requirement: Official experiments SHALL own W&B project and group identity
 
 Official experiment configs SHALL declare top-level `user`, `project`, and `group` fields for W&B logging, artifact publishing, and artifact lookup defaults. Component configs SHALL reference these top-level fields instead of hardcoding user/project/group values or declaring top-level `wandb_project`.
 

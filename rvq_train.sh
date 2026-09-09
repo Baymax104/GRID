@@ -6,6 +6,7 @@ MASTER_PORT="${MASTER_PORT:-29500}"
 DEVICES="${DEVICES:-[0,1]}"
 
 NOTES=""
+EMBEDDING_PATH=""
 DRY_RUN=false
 EXTRA_ARGS=()
 
@@ -46,6 +47,18 @@ while [[ $# -gt 0 ]]; do
       DEVICES="$2"
       shift 2
       ;;
+    --embedding-path=*)
+      EMBEDDING_PATH="${1#--embedding-path=}"
+      shift
+      ;;
+    --embedding-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --embedding-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      EMBEDDING_PATH="$2"
+      shift 2
+      ;;
     --notes=*)
       NOTES="${1#--notes=}"
       shift
@@ -65,6 +78,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$EMBEDDING_PATH" ]]; then
+  echo "Error: --embedding-path requires a local path or wandb://<run-id> value." >&2
+  exit 2
+fi
+
 if [[ -z "$NOTES" ]]; then
   echo "Error: --notes requires a value." >&2
   exit 2
@@ -72,8 +90,8 @@ fi
 
 ARGS=(
   experiment=rvq_train
-  embedding_path=wandb://vb8es5ow
-  data_dir=data/beauty
+  embedding_path="$EMBEDDING_PATH"
+  data_dir=data/sports
   devices="$DEVICES"
 )
 
