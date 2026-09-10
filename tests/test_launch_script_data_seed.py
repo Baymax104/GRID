@@ -5,31 +5,64 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_NAMES = ["tiger_train.sh", "tiger_inference.sh", "tail_sid_diagnosis.sh"]
-BASE_ARGUMENTS = {
-    "tiger_train.sh": [
-        "--data-dir",
-        "data/test dataset",
-        "--notes",
-        "grouped tiger train",
-        "--semantic-id-path",
-        "semantic.pt",
-    ],
-    "tiger_inference.sh": [
-        "--data-dir",
-        "data/test dataset",
+SCRIPT_NAMES = [
+    "sem_embeds_inference.sh",
+    "rkmeans_train.sh",
+    "rkmeans_inference.sh",
+    "rvq_train.sh",
+    "rvq_inference.sh",
+    "rqvae_train.sh",
+    "rqvae_inference.sh",
+    "tiger_train.sh",
+    "tiger_inference.sh",
+    "tail_sid_diagnosis.sh",
+]
+REQUIRED_ARGUMENTS = {
+    "sem_embeds_inference.sh": [],
+    "rkmeans_train.sh": ["--embedding-path", "embeddings.pt", "--notes", "train"],
+    "rkmeans_inference.sh": [
+        "--embedding-path",
+        "embeddings.pt",
         "--ckpt-path",
         "model.ckpt",
+    ],
+    "rvq_train.sh": ["--embedding-path", "embeddings.pt", "--notes", "train"],
+    "rvq_inference.sh": [
+        "--embedding-path",
+        "embeddings.pt",
+        "--ckpt-path",
+        "model.ckpt",
+    ],
+    "rqvae_train.sh": ["--embedding-path", "embeddings.pt", "--notes", "train"],
+    "rqvae_inference.sh": [
+        "--embedding-path",
+        "embeddings.pt",
+        "--ckpt-path",
+        "model.ckpt",
+    ],
+    "tiger_train.sh": [
         "--semantic-id-path",
         "semantic.pt",
+        "--notes",
+        "train",
+        "--group",
+        "rvq",
+    ],
+    "tiger_inference.sh": [
+        "--semantic-id-path",
+        "semantic.pt",
+        "--ckpt-path",
+        "model.ckpt",
+        "--group",
+        "rvq",
     ],
     "tail_sid_diagnosis.sh": [
-        "--data-dir",
-        "data/test dataset",
-        "--notes",
-        "grouped diagnosis",
         "--semantic-id-path",
         "semantic.pt",
+        "--notes",
+        "diagnosis",
+        "--group",
+        "rvq",
     ],
 }
 
@@ -73,38 +106,42 @@ def _instrument_script(script_name: str, tmp_path: Path) -> Path:
 
 @pytest.mark.skipif(BASH is None, reason="bash is not available")
 @pytest.mark.parametrize("script_name", SCRIPT_NAMES)
-def test_grouped_scripts_have_valid_shell_syntax(script_name):
+def test_launch_scripts_require_data_dir(script_name, tmp_path):
+    script = _instrument_script(script_name, tmp_path)
     result = subprocess.run(
-        [BASH, "-n", (PROJECT_ROOT / script_name).as_posix()],
+        [BASH, script.as_posix(), *REQUIRED_ARGUMENTS[script_name]],
         capture_output=True,
         text=True,
         check=False,
     )
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 2
+    assert "--data-dir requires a value" in result.stderr
 
 
 @pytest.mark.skipif(BASH is None, reason="bash is not available")
 @pytest.mark.parametrize("script_name", SCRIPT_NAMES)
 @pytest.mark.parametrize(
-    ("group_arguments", "expected_group"),
+    ("data_arguments", "seed_arguments", "expected_seed"),
     [
-        (["--group=rkmeans"], "rkmeans"),
-        (["--group", "rvq"], "rvq"),
-        (["--group", "rqvae"], "rqvae"),
+        (["--data-dir=data/test dataset"], [], "42"),
+        (["--data-dir", "data/test dataset"], ["--seed=17"], "17"),
+        (["--data-dir", "data/test dataset"], ["--seed", "23"], "23"),
     ],
 )
-def test_grouped_scripts_forward_group_and_trailing_overrides(
-    script_name, group_arguments, expected_group, tmp_path
+def test_launch_scripts_forward_data_dir_and_seed(
+    script_name, data_arguments, seed_arguments, expected_seed, tmp_path
 ):
     script = _instrument_script(script_name, tmp_path)
+    trailing_override = "seed=99"
     result = subprocess.run(
         [
             BASH,
             script.as_posix(),
-            *BASE_ARGUMENTS[script_name],
-            *group_arguments,
-            "trainer.root.limit_predict_batches=2",
+            *REQUIRED_ARGUMENTS[script_name],
+            *data_arguments,
+            *seed_arguments,
+            trailing_override,
         ],
         capture_output=True,
         text=True,
@@ -113,35 +150,24 @@ def test_grouped_scripts_forward_group_and_trailing_overrides(
 
     assert result.returncode == 0, result.stderr
     arguments = result.stdout.splitlines()
-    assert f"group={expected_group}" in arguments
-    assert arguments[-1] == "trainer.root.limit_predict_batches=2"
+    assert "data_dir=data/test dataset" in arguments
+    assert f"seed={expected_seed}" in arguments
+    assert arguments[-1] == trailing_override
 
 
 @pytest.mark.skipif(BASH is None, reason="bash is not available")
 @pytest.mark.parametrize("script_name", SCRIPT_NAMES)
-def test_grouped_scripts_reject_missing_group(script_name, tmp_path):
+@pytest.mark.parametrize("option", ["--data-dir=", "--seed="])
+def test_launch_scripts_reject_empty_data_dir_or_seed(script_name, option, tmp_path):
     script = _instrument_script(script_name, tmp_path)
+    arguments = [*REQUIRED_ARGUMENTS[script_name], "--data-dir=data/test", option]
     result = subprocess.run(
-        [BASH, script.as_posix(), *BASE_ARGUMENTS[script_name]],
+        [BASH, script.as_posix(), *arguments],
         capture_output=True,
         text=True,
         check=False,
     )
 
     assert result.returncode == 2
-    assert "--group requires one of: rkmeans, rvq, rqvae" in result.stderr
-
-
-@pytest.mark.skipif(BASH is None, reason="bash is not available")
-@pytest.mark.parametrize("script_name", SCRIPT_NAMES)
-def test_grouped_scripts_reject_unsupported_group(script_name, tmp_path):
-    script = _instrument_script(script_name, tmp_path)
-    result = subprocess.run(
-        [BASH, script.as_posix(), *BASE_ARGUMENTS[script_name], "--group", "tiger"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    assert result.returncode == 2
-    assert "unsupported --group 'tiger'" in result.stderr
+    expected_option = option.removesuffix("=")
+    assert f"{expected_option} requires a value" in result.stderr

@@ -5,6 +5,8 @@ SEMANTIC_ID_PATH=""
 RECOMMENDATION_OUTPUT_PATH=""
 GROUP=""
 NOTES=""
+DATA_DIR=""
+SEED="42"
 DRY_RUN=false
 EXTRA_ARGS=()
 
@@ -20,6 +22,30 @@ while [[ $# -gt 0 ]]; do
     --dry-run)
       DRY_RUN=true
       shift
+      ;;
+    --data-dir=*)
+      DATA_DIR="${1#--data-dir=}"
+      shift
+      ;;
+    --data-dir)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --data-dir requires a value." >&2
+        exit 2
+      fi
+      DATA_DIR="$2"
+      shift 2
+      ;;
+    --seed=*)
+      SEED="${1#--seed=}"
+      shift
+      ;;
+    --seed)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --seed requires a value." >&2
+        exit 2
+      fi
+      SEED="$2"
+      shift 2
       ;;
     --notes=*)
       NOTES="${1#--notes=}"
@@ -76,6 +102,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$DATA_DIR" ]]; then
+  echo "Error: --data-dir requires a value." >&2
+  exit 2
+fi
+
+if [[ -z "$SEED" ]]; then
+  echo "Error: --seed requires a value." >&2
+  exit 2
+fi
+
 if [[ -z "$NOTES" ]]; then
   echo "Error: --notes requires a value." >&2
   exit 2
@@ -102,7 +138,8 @@ esac
 ARGS=(
   experiment=tail_sid_diagnosis
   group="$GROUP"
-  data_dir=data/beauty
+  data_dir="$DATA_DIR"
+  seed="$SEED"
   raw_num_hierarchies=3
   semantic_id_path="$SEMANTIC_ID_PATH"
   embedding_path=wandb://01mw1fez

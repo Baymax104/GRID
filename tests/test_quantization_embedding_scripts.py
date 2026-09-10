@@ -40,8 +40,8 @@ BASH = _usable_bash()
 
 def _base_arguments(script_name: str) -> list[str]:
     if script_name in TRAIN_SCRIPTS:
-        return ["--notes", "explicit embedding source"]
-    return ["--ckpt-path", "wandb://checkpoint123"]
+        return ["--data-dir", "data/test dataset", "--notes", "explicit embedding source"]
+    return ["--data-dir", "data/test dataset", "--ckpt-path", "wandb://checkpoint123"]
 
 
 def _instrument_script(script_name: str, tmp_path: Path) -> Path:

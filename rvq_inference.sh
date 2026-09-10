@@ -4,6 +4,8 @@ set -euo pipefail
 NPROC_PER_NODE="${NPROC_PER_NODE:-1}"
 MASTER_PORT="${MASTER_PORT:-29500}"
 DEVICES="${DEVICES:-[0]}"
+DATA_DIR=""
+SEED="42"
 
 CKPT_PATH=""
 EMBEDDING_PATH=""
@@ -15,6 +17,30 @@ while [[ $# -gt 0 ]]; do
     --dry-run)
       DRY_RUN=true
       shift
+      ;;
+    --data-dir=*)
+      DATA_DIR="${1#--data-dir=}"
+      shift
+      ;;
+    --data-dir)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --data-dir requires a value." >&2
+        exit 2
+      fi
+      DATA_DIR="$2"
+      shift 2
+      ;;
+    --seed=*)
+      SEED="${1#--seed=}"
+      shift
+      ;;
+    --seed)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --seed requires a value." >&2
+        exit 2
+      fi
+      SEED="$2"
+      shift 2
       ;;
     --master-port=*)
       MASTER_PORT="${1#--master-port=}"
@@ -71,6 +97,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$DATA_DIR" ]]; then
+  echo "Error: --data-dir requires a value." >&2
+  exit 2
+fi
+
+if [[ -z "$SEED" ]]; then
+  echo "Error: --seed requires a value." >&2
+  exit 2
+fi
+
 if [[ -z "$EMBEDDING_PATH" ]]; then
   echo "Error: --embedding-path requires a local path or wandb://<run-id> value." >&2
   exit 2
@@ -86,7 +122,8 @@ ARGS=(
   embedding_path="$EMBEDDING_PATH"
   ckpt_path="$CKPT_PATH"
   devices="$DEVICES"
-  data_dir=data/sports
+  data_dir="$DATA_DIR"
+  seed="$SEED"
 )
 
 if [[ "$DRY_RUN" == true ]]; then

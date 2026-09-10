@@ -66,6 +66,8 @@ def test_tail_sid_diagnosis_script_preserves_quoted_options_and_trailing_overrid
         [
             BASH,
             instrumented.as_posix(),
+            "--data-dir",
+            "data/test dataset",
             "--dry-run",
             "--notes",
             "diagnosis evidence run",
@@ -94,7 +96,13 @@ def test_tail_sid_diagnosis_script_preserves_quoted_options_and_trailing_overrid
 @pytest.mark.skipif(BASH is None, reason="bash is not available")
 def test_tail_sid_diagnosis_script_rejects_empty_notes_value():
     result = subprocess.run(
-        [BASH, SCRIPT.as_posix(), "--notes", "--semantic-id-path=semantic.pt"],
+        [
+            BASH,
+            SCRIPT.as_posix(),
+            "--data-dir=data/test",
+            "--notes",
+            "--semantic-id-path=semantic.pt",
+        ],
         capture_output=True,
         text=True,
         check=False,
