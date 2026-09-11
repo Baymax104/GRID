@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+
+model_checkpoint:
+  save_last: true
+  every_n_train_steps: ${trainer.root.max_steps}
+  save_on_train_epoch_end: false
+  monitor: null
+  save_top_k: 0
+
+wandb_checkpoint_writer:
+  selection: last
+  missing_checkpoint: error
+  metadata:
+    initialization_reference: ${initialization_checkpoint_path}
+    semantic_id_reference: ${semantic_id_path}
+    probe_arm: ${probe_arm}
+    extra_steps: ${trainer.root.max_steps}
