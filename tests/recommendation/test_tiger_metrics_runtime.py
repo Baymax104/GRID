@@ -75,12 +75,12 @@ def test_tiger_predict_step_accepts_inference_collate_tuple(monkeypatch):
         {
             "sequence_data": torch.tensor([1, 2, 3, 4]),
             "attention_mask": torch.tensor([1, 1, 1, 1]),
-            "user_id": torch.tensor(17),
+            "user_id": torch.tensor([17]),
         },
         {
             "sequence_data": torch.tensor([4, 3, 2, 1]),
             "attention_mask": torch.tensor([1, 1, 1, 1]),
-            "user_id": torch.tensor(23),
+            "user_id": torch.tensor([23]),
         },
     ]
     batch = collate_fn_sequence(

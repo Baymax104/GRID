@@ -21,6 +21,17 @@ test_dataloader:
   raw_num_hierarchies: ${raw_num_hierarchies}
   embedding_path: ${embedding_path}
   recommendation_output_path: ${recommendation_output_path}
+  widened_recommendation_output_path: ${widened_recommendation_output_path}
+  fixed_prefix_trace_path: ${fixed_prefix_trace_path}
+  widened_prefix_trace_path: ${widened_prefix_trace_path}
+  calibration_statistics_ready: ${calibration_statistics_ready}
+  search_ranking_enabled: ${search_ranking.enabled}
+  risk_standardization_enabled: ${risk_standardization.enabled}
+  candidate_allocation_probe_enabled: ${candidate_allocation_probe.enabled}
+  baseline_recommendation_output_path: ${baseline_recommendation_output_path}
+  intervention_recommendation_output_path: ${intervention_recommendation_output_path}
+  baseline_prefix_trace_path: ${baseline_prefix_trace_path}
+  intervention_prefix_trace_path: ${intervention_prefix_trace_path}
   wandb_entity: ${user}
   wandb_project: ${project}
   batch_size_per_device: 1

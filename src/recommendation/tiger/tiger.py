@@ -11,8 +11,13 @@ from src.data.components.data_models import (
     TigerLabelData,
     TigerModelInput,
 )
+from src.data.components.prefix_trace import (
+    PREFIX_TRACE_PAYLOAD_NAME,
+    PREFIX_TRACE_SCHEMA_VERSION,
+)
 from src.recommendation.tiger.decoder import TigerDecoder
 from src.recommendation.tiger.encoder import TigerEncoder
+from src.recommendation.tiger.prefix_allocation import PrefixAllocationConfig
 from src.utils.pylogger import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
@@ -37,6 +42,10 @@ class Tiger(LightningModule):
         top_k_for_generation: int = 10,
         should_check_prefix: bool = False,
         should_add_sep_token: bool = True,
+        trace_prefix_survival: bool = False,
+        prefix_trace_metadata: dict[str, Any] | None = None,
+        prefix_allocation: PrefixAllocationConfig | None = None,
+        item_frequencies: torch.Tensor | None = None,
         training_model_config: TrainingModelConfig | None = None,
     ):
         super().__init__()
@@ -53,6 +62,8 @@ class Tiger(LightningModule):
         self.num_hierarchies = num_hierarchies
         self.should_check_prefix = should_check_prefix
         self.top_k_for_generation = top_k_for_generation
+        self.trace_prefix_survival = trace_prefix_survival
+        self.prefix_trace_metadata = prefix_trace_metadata or {}
         if semantic_ids.ndim != 2:
             raise ValueError(
                 f"semantic_ids must have shape (num_items, num_hierarchies), got {tuple(semantic_ids.shape)}."
@@ -85,12 +96,16 @@ class Tiger(LightningModule):
             top_k_for_generation=self.top_k_for_generation,
             semantic_ids=self.semantic_ids,
             should_check_prefix=self.should_check_prefix,
+            prefix_allocation=prefix_allocation,
+            item_frequencies=item_frequencies,
         )
 
     def generate(
         self,
         attention_mask: torch.Tensor,
         input_ids: torch.Tensor,
+        target_ids: torch.Tensor | None = None,
+        trace_enabled: bool = False,
     ):
         """
         Generate the semantic id given the current model in the sequence using beam search.
@@ -111,6 +126,8 @@ class Tiger(LightningModule):
             encoder_output=encoder_output,
             encoder_attention_mask=encoder_attention_mask,
             batch_size=input_ids.size(0),
+            target_ids=target_ids,
+            trace_enabled=trace_enabled,
         )
 
     def forward(
@@ -149,20 +166,65 @@ class Tiger(LightningModule):
     ):
         if isinstance(batch, TigerModelInput):
             model_input = batch
+            label_data = None
         elif isinstance(batch, tuple) and len(batch) == 2 and isinstance(batch[0], TigerModelInput):
             model_input = batch[0]
+            label_data = batch[1]
         else:
             raise TypeError(
                 "Tiger predict_step expects TigerModelInput or "
                 "(TigerModelInput, TigerLabelData | None)."
             )
-        generated_sids, _ = self.generate(
-            attention_mask=model_input.attention_mask,
-            input_ids=model_input.input_ids,
-        )
         if model_input.output_keys is None:
             raise ValueError("TigerModelInput.output_keys is required for prediction output.")
-        return ModelOutput(keys=model_input.output_keys, predictions=generated_sids)
+        if not self.trace_prefix_survival:
+            generated_sids, _ = self.generate(
+                attention_mask=model_input.attention_mask,
+                input_ids=model_input.input_ids,
+            )
+            return ModelOutput(keys=model_input.output_keys, predictions=generated_sids)
+
+        if label_data is None:
+            raise ValueError("TigerLabelData target labels are required for prefix survival tracing.")
+        target_ids = label_data.target_ids.long()
+        logits = self.forward(
+            attention_mask_encoder=model_input.attention_mask,
+            input_ids=model_input.input_ids,
+            future_ids=target_ids,
+        )
+        teacher_trace = self.decoder.teacher_forcing_trace(logits, target_ids)
+        generated_sids, _, beam_trace = self.generate(
+            attention_mask=model_input.attention_mask,
+            input_ids=model_input.input_ids,
+            target_ids=target_ids,
+            trace_enabled=True,
+        )
+        trace = {**teacher_trace, **beam_trace}
+        payload = {
+            "schema_version": PREFIX_TRACE_SCHEMA_VERSION,
+            "labels": target_ids,
+            "trace": trace,
+            "metadata": {
+                **self.prefix_trace_metadata,
+                "prefix_allocation": {
+                    "enabled": self.decoder.prefix_allocation.enabled,
+                    "reserved_slots": self.decoder.prefix_allocation.reserved_slots,
+                    "pool_multiplier": self.decoder.prefix_allocation.pool_multiplier,
+                    "source_split": self.decoder.prefix_allocation.source_split,
+                    "strategy": self.decoder.prefix_allocation.strategy,
+                },
+                "training_frequency_summary": (
+                    dict(self.decoder.prefix_mass_lookup.summary)
+                    if self.decoder.prefix_mass_lookup is not None
+                    else None
+                ),
+            },
+        }
+        return ModelOutput(
+            keys=model_input.output_keys,
+            predictions=generated_sids,
+            auxiliary={PREFIX_TRACE_PAYLOAD_NAME: payload},
+        )
 
     def _compute_loss(
         self,

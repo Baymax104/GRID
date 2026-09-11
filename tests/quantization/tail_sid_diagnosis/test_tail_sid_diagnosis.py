@@ -18,6 +18,7 @@ from src.data.components.artifacts import (
 from src.data.components.data_models import (
     DiagnosisBatch,
     ModelOutput,
+    PrefixTraceBundle,
     RecommendationOutcomeInput,
     SIDViews,
 )
@@ -775,12 +776,16 @@ def test_diagnosis_batch_can_be_moved_by_lightning_transfer():
         frequencies={1: 2, 2: 1},
         groups_by_item={1: "Head", 2: "Tail"},
         embeddings=None,
+        fixed_prefix_trace=_prefix_trace_bundle(beam_width=10),
+        widened_prefix_trace=_prefix_trace_bundle(beam_width=50),
     )
 
     moved = move_data_to_device(batch, torch.device("cpu"))
 
     assert torch.equal(moved.sid_views.item_ids, batch.sid_views.item_ids)
     assert moved.frequencies == batch.frequencies
+    assert moved.fixed_prefix_trace is not None
+    assert moved.widened_prefix_trace is not None
 
 
 def test_tail_sid_standard_metric_callback_logs_diagnosis_summary():
@@ -838,7 +843,14 @@ def test_tail_sid_diagnosis_hydra_config_composes():
     assert cfg.model.root._target_ == "src.quantization.tail_sid_diagnosis.module.TailSIDDiagnosisModule"
     assert cfg.model.metrics._target_ == "src.common.metrics.MetricEngine"
     assert cfg.model.metric_callback.logging_modes.test == "summary"
-    for section in ["structural", "semantic", "damage", "prefix_risk"]:
+    for section in [
+        "structural",
+        "semantic",
+        "damage",
+        "prefix_risk",
+        "prefix_mechanism",
+        "search_ranking",
+    ]:
         assert cfg.model.metrics.stages.test[section].metric._target_ == (
             "src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric"
         )
@@ -851,6 +863,33 @@ def test_tail_sid_diagnosis_hydra_config_composes():
     assert cfg.trainer.root._target_ == "lightning.pytorch.trainer.Trainer"
     assert cfg.logger.wandb._target_ == "lightning.pytorch.loggers.wandb.WandbLogger"
     assert cfg.logger.wandb.group == "rkmeans"
+    assert cfg.search_ranking.enabled is False
+    assert cfg.risk_standardization.enabled is False
+    assert cfg.risk_standardization.bin_count_sensitivity == [3, 5, 10]
+
+
+@pytest.mark.parametrize(
+    ("search_enabled", "risk_enabled"),
+    [(False, False), (True, False), (False, True), (True, True)],
+)
+def test_tail_sid_diagnosis_analysis_switches_compose_independently(search_enabled, risk_enabled):
+    with initialize_config_dir(config_dir=str(PROJECT_ROOT / "configs"), version_base="1.3"):
+        cfg = compose(
+            config_name="main",
+            overrides=[
+                "experiment=tail_sid_diagnosis",
+                "group=rkmeans",
+                "data_dir=data/beauty",
+                "semantic_id_path=wandb://sid",
+                "raw_num_hierarchies=3",
+                f"search_ranking.enabled={str(search_enabled).lower()}",
+                f"risk_standardization.enabled={str(risk_enabled).lower()}",
+            ],
+        )
+    assert cfg.data.test_dataloader.search_ranking_enabled is search_enabled
+    assert cfg.data.test_dataloader.risk_standardization_enabled is risk_enabled
+    assert cfg.model.root.search_ranking_enabled is search_enabled
+    assert cfg.model.root.risk_standardization_enabled is risk_enabled
 
 
 @pytest.mark.parametrize(
@@ -897,6 +936,90 @@ def load_views_from_model_output(bundle: ModelOutput, raw_num_hierarchies: int):
         model_sid=predictions,
         dedup_digit=dedup_digit.long(),
     )
+
+
+def _prefix_trace_bundle(*, beam_width: int = 10, final_survival: bool = False) -> PrefixTraceBundle:
+    labels = torch.tensor([[1, 1, 0], [1, 1, 1], [1, 2, 0], [9, 9, 0]])
+    survived = torch.tensor(
+        [[True, True, final_survival], [True, True, True], [True, False, False], [False, False, False]]
+    )
+    shape = labels.shape
+    beam_rank = torch.where(survived, torch.ones(shape, dtype=torch.long), -torch.ones(shape, dtype=torch.long))
+    return PrefixTraceBundle(
+        schema_version="tiger_prefix_trace_v1",
+        keys=torch.tensor([100, 200, 300, 400]),
+        labels=labels,
+        trace={
+            "teacher_target_probability": torch.full(shape, 0.5),
+            "teacher_legal_rank": torch.ones(shape, dtype=torch.long),
+            "teacher_target_vs_best_legal_margin": torch.zeros(shape),
+            "target_prefix_survived": survived,
+            "target_beam_rank": beam_rank,
+            "target_parent_beam_rank": beam_rank.clone(),
+            "target_path_score": torch.full(shape, 0.2),
+            "beam_cutoff_score": torch.full(shape, 0.1),
+            "cutoff_margin": torch.full(shape, 0.1),
+            "legal_candidate_count": torch.tensor([[2, 2, 2], [2, 3, 3], [3, 4, 4], [4, 5, 5]]),
+            "first_failure_depth": torch.tensor([3 if not final_survival else -1, -1, 2, 1]),
+        },
+        metadata={
+            "data_split": "evaluation",
+            "beam_width": beam_width,
+            "num_hierarchies": 3,
+            "codebook_size": 256,
+            "trace_mode": "teacher_forcing_and_constrained_beam",
+            "checkpoint_reference": "wandb://checkpoint",
+            "semantic_id_reference": "wandb://sid",
+        },
+    )
+
+
+def test_prefix_trace_evidence_emits_layer_failure_competition_and_recovery_tables():
+    batch = _evidence_batch()
+    batch.fixed_prefix_trace = _prefix_trace_bundle()
+    batch.widened_prefix_trace = _prefix_trace_bundle(beam_width=50, final_survival=True)
+    batch.input_metadata["semantic_id_reference"] = "wandb://sid"
+
+    evidence = build_diagnosis_evidence(batch, bootstrap_samples=20)
+    structured = evidence.to_structured_output()
+
+    assert evidence.summary["prefix_mechanism"]["available"] is True
+    assert evidence.summary["prefix_mechanism"]["recovery_available"] is True
+    assert evidence.summary["verdict"]["prefix_survival_mechanism"] in {"supported", "not_supported"}
+    assert "prefix_survival_by_layer.csv" in structured.tables
+    assert "prefix_first_failure.csv" in structured.tables
+    assert "prefix_competition_association.csv" in structured.tables
+    assert "prefix_cluster_bootstrap.csv" in structured.tables
+    assert "prefix_widened_recovery.csv" in structured.tables
+
+
+def test_prefix_trace_pair_rejects_checkpoint_mismatch():
+    batch = _evidence_batch()
+    batch.fixed_prefix_trace = _prefix_trace_bundle()
+    widened = _prefix_trace_bundle(beam_width=50)
+    widened.metadata["checkpoint_reference"] = "wandb://other-checkpoint"
+    batch.widened_prefix_trace = widened
+    batch.input_metadata["semantic_id_reference"] = "wandb://sid"
+
+    with pytest.raises(ValueError, match="checkpoint_reference"):
+        build_diagnosis_evidence(batch, bootstrap_samples=10)
+
+
+def test_calibration_ready_dataset_rejects_testing_trace(monkeypatch):
+    trace = _prefix_trace_bundle()
+    trace.metadata["data_split"] = "testing"
+    dataset = DiagnosisDataset(
+        dataset_config=SimpleNamespace(preprocessing_functions=[]),
+        data_folder="data/beauty",
+        semantic_id_path="semantic.pt",
+        raw_num_hierarchies=2,
+        fixed_prefix_trace=trace,
+        calibration_statistics_ready=True,
+    )
+    monkeypatch.setattr(dataset, "_load_sid_views", lambda: _evidence_batch().sid_views)
+
+    with pytest.raises(ValueError, match="Data leakage"):
+        dataset._build_batch()
 
 
 def diagnosis_payload(sid_views, frequencies, groups_by_item, embeddings):

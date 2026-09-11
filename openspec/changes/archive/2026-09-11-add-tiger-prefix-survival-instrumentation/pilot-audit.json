@@ -1,0 +1,578 @@
+[
+  {
+    "setting": "Beauty RKMeans",
+    "diagnosis": "dqkuahdl",
+    "audit": [
+      {
+        "id": "m4h0geda",
+        "users": 22363,
+        "runtime_s": 392,
+        "trace_bytes": 5729755,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 223630,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v2",
+          "rkmeans_inference-semantic-id:v2"
+        ]
+      },
+      {
+        "id": "56rrarps",
+        "users": 22363,
+        "runtime_s": 497,
+        "trace_bytes": 5729755,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 1118150,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v2",
+          "rkmeans_inference-semantic-id:v2"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "group": "Head",
+        "n": 11149,
+        "fixed_final_hits": 1351,
+        "wide_final_hits": 3385,
+        "recovered": 2034,
+        "lost": 0,
+        "recovery_rate": 0.2075933814048767,
+        "fixed_survival": [
+          0.4136693775653839,
+          0.18342451751232147,
+          0.14064042270183563,
+          0.12117678672075272
+        ],
+        "wide_survival": [
+          0.7252668142318726,
+          0.38828593492507935,
+          0.32397523522377014,
+          0.30361467599868774
+        ],
+        "failure_counts": [
+          6537,
+          2567,
+          477,
+          217
+        ]
+      },
+      {
+        "group": "Tail",
+        "n": 3086,
+        "fixed_final_hits": 29,
+        "wide_final_hits": 64,
+        "recovered": 35,
+        "lost": 0,
+        "recovery_rate": 0.011449133045971394,
+        "fixed_survival": [
+          0.31432273983955383,
+          0.06383667886257172,
+          0.017822423949837685,
+          0.009397277608513832
+        ],
+        "wide_survival": [
+          0.6121192574501038,
+          0.12281270325183868,
+          0.039533376693725586,
+          0.020738819614052773
+        ],
+        "failure_counts": [
+          2116,
+          773,
+          142,
+          26
+        ]
+      },
+      {
+        "group": "Tail-Cold",
+        "n": 51,
+        "fixed_final_hits": 0,
+        "wide_final_hits": 0,
+        "recovered": 0,
+        "lost": 0,
+        "recovery_rate": 0.0,
+        "fixed_survival": [
+          0.4117647111415863,
+          0.11764705926179886,
+          0.03921568766236305,
+          0.0
+        ],
+        "wide_survival": [
+          0.6274510025978088,
+          0.1568627506494522,
+          0.03921568766236305,
+          0.0
+        ],
+        "failure_counts": [
+          30,
+          15,
+          4,
+          2
+        ]
+      }
+    ],
+    "mechanism": {
+      "available": true,
+      "competition_association": {
+        "available": true,
+        "controls": "log1p_frequency,raw_damage",
+        "partial_correlation_with_survival": 0.10530112827801207,
+        "support": 22363
+      },
+      "data_split": "evaluation",
+      "fixed_beam_width": 10,
+      "num_users": 22363,
+      "prefix_cluster_bootstrap": {
+        "available": true,
+        "bootstrap_samples": 1000,
+        "ci_lower": -0.13827492821558215,
+        "ci_upper": -0.0838147676214593,
+        "num_clusters": 5401
+      },
+      "recovery": {
+        "available": true,
+        "tail_recovery_rate": 0.01144913313706248
+      },
+      "recovery_available": true,
+      "risk_matched_survival": {
+        "available": true,
+        "support": 3137,
+        "tail_minus_head_survival": 0.05052598023589416
+      },
+      "schema_version": "tiger_prefix_trace_v1",
+      "widened_beam_width": 50
+    }
+  },
+  {
+    "setting": "Beauty RVQ",
+    "diagnosis": "a50lmism",
+    "audit": [
+      {
+        "id": "r94ut5sv",
+        "users": 22363,
+        "runtime_s": 439,
+        "trace_bytes": 5729755,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 223630,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v3",
+          "rvq_inference-semantic-id:v2"
+        ]
+      },
+      {
+        "id": "k7mr3xlk",
+        "users": 22363,
+        "runtime_s": 505,
+        "trace_bytes": 5729755,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 1118150,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v3",
+          "rvq_inference-semantic-id:v2"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "group": "Head",
+        "n": 11149,
+        "fixed_final_hits": 1364,
+        "wide_final_hits": 3397,
+        "recovered": 2033,
+        "lost": 0,
+        "recovery_rate": 0.20776699483394623,
+        "fixed_survival": [
+          0.4192304313182831,
+          0.1794779747724533,
+          0.13507938385009766,
+          0.12234281003475189
+        ],
+        "wide_survival": [
+          0.7347744107246399,
+          0.39268097281455994,
+          0.32451340556144714,
+          0.30469101667404175
+        ],
+        "failure_counts": [
+          6475,
+          2673,
+          495,
+          142
+        ]
+      },
+      {
+        "group": "Tail",
+        "n": 3086,
+        "fixed_final_hits": 38,
+        "wide_final_hits": 73,
+        "recovered": 35,
+        "lost": 0,
+        "recovery_rate": 0.011482940055429935,
+        "fixed_survival": [
+          0.32436811923980713,
+          0.07485418021678925,
+          0.028515879064798355,
+          0.012313674204051495
+        ],
+        "wide_survival": [
+          0.6186001300811768,
+          0.13188593089580536,
+          0.04957874119281769,
+          0.02365521714091301
+        ],
+        "failure_counts": [
+          2085,
+          770,
+          143,
+          50
+        ]
+      },
+      {
+        "group": "Tail-Cold",
+        "n": 51,
+        "fixed_final_hits": 0,
+        "wide_final_hits": 0,
+        "recovered": 0,
+        "lost": 0,
+        "recovery_rate": 0.0,
+        "fixed_survival": [
+          0.3921568691730499,
+          0.09803921729326248,
+          0.0,
+          0.0
+        ],
+        "wide_survival": [
+          0.6078431606292725,
+          0.13725490868091583,
+          0.0,
+          0.0
+        ],
+        "failure_counts": [
+          31,
+          15,
+          5,
+          0
+        ]
+      }
+    ],
+    "mechanism": {
+      "available": true,
+      "competition_association": {
+        "available": true,
+        "controls": "log1p_frequency,raw_damage",
+        "partial_correlation_with_survival": 0.08632225907437065,
+        "support": 22363
+      },
+      "data_split": "evaluation",
+      "fixed_beam_width": 10,
+      "num_users": 22363,
+      "prefix_cluster_bootstrap": {
+        "available": true,
+        "bootstrap_samples": 1000,
+        "ci_lower": -0.1284758325503706,
+        "ci_upper": -0.0776781572971681,
+        "num_clusters": 5224
+      },
+      "recovery": {
+        "available": true,
+        "tail_recovery_rate": 0.011482939632545932
+      },
+      "recovery_available": true,
+      "risk_matched_survival": {
+        "available": true,
+        "support": 3137,
+        "tail_minus_head_survival": -0.014185527574115397
+      },
+      "schema_version": "tiger_prefix_trace_v1",
+      "widened_beam_width": 50
+    }
+  },
+  {
+    "setting": "Sports RKMeans",
+    "diagnosis": "kkh97wtp",
+    "audit": [
+      {
+        "id": "5024wy48",
+        "users": 35598,
+        "runtime_s": 304,
+        "trace_bytes": 9118107,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 355980,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v4",
+          "rkmeans_inference-semantic-id:v3"
+        ]
+      },
+      {
+        "id": "4x3steyq",
+        "users": 35598,
+        "runtime_s": 1139,
+        "trace_bytes": 9118107,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 1779900,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v4",
+          "rkmeans_inference-semantic-id:v3"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "group": "Head",
+        "n": 18117,
+        "fixed_final_hits": 1094,
+        "wide_final_hits": 3166,
+        "recovered": 2072,
+        "lost": 0,
+        "recovery_rate": 0.1217176765203476,
+        "fixed_survival": [
+          0.377325177192688,
+          0.10989677906036377,
+          0.07170061022043228,
+          0.06038527190685272
+        ],
+        "wide_survival": [
+          0.7584037184715271,
+          0.2721201181411743,
+          0.19329911470413208,
+          0.17475299537181854
+        ],
+        "failure_counts": [
+          11281,
+          4845,
+          692,
+          205
+        ]
+      },
+      {
+        "group": "Tail",
+        "n": 4660,
+        "fixed_final_hits": 1,
+        "wide_final_hits": 5,
+        "recovered": 4,
+        "lost": 0,
+        "recovery_rate": 0.0008585533360019326,
+        "fixed_survival": [
+          0.34055793285369873,
+          0.033047210425138474,
+          0.005579398944973946,
+          0.00021459227718878537
+        ],
+        "wide_survival": [
+          0.6738197207450867,
+          0.09356223046779633,
+          0.018240343779325485,
+          0.0010729613713920116
+        ],
+        "failure_counts": [
+          3073,
+          1433,
+          128,
+          25
+        ]
+      },
+      {
+        "group": "Tail-Cold",
+        "n": 118,
+        "fixed_final_hits": 0,
+        "wide_final_hits": 0,
+        "recovered": 0,
+        "lost": 0,
+        "recovery_rate": 0.0,
+        "fixed_survival": [
+          0.23728813230991364,
+          0.04237288236618042,
+          0.0,
+          0.0
+        ],
+        "wide_survival": [
+          0.6864407062530518,
+          0.05932203307747841,
+          0.0,
+          0.0
+        ],
+        "failure_counts": [
+          90,
+          23,
+          5,
+          0
+        ]
+      }
+    ],
+    "mechanism": {
+      "available": true,
+      "competition_association": {
+        "available": true,
+        "controls": "log1p_frequency,raw_damage",
+        "partial_correlation_with_survival": 0.23794803916037785,
+        "support": 35598
+      },
+      "data_split": "evaluation",
+      "fixed_beam_width": 10,
+      "num_users": 35598,
+      "prefix_cluster_bootstrap": {
+        "available": true,
+        "bootstrap_samples": 1000,
+        "ci_lower": -0.07628927455706222,
+        "ci_upper": -0.04609171942566409,
+        "num_clusters": 7184
+      },
+      "recovery": {
+        "available": true,
+        "tail_recovery_rate": 0.0008585533376261
+      },
+      "recovery_available": true,
+      "risk_matched_survival": {
+        "available": true,
+        "support": 4778,
+        "tail_minus_head_survival": 0.016900376726663877
+      },
+      "schema_version": "tiger_prefix_trace_v1",
+      "widened_beam_width": 50
+    }
+  },
+  {
+    "setting": "Sports RVQ",
+    "diagnosis": "xzfxnzyb",
+    "audit": [
+      {
+        "id": "lzttakbs",
+        "users": 35598,
+        "runtime_s": 298,
+        "trace_bytes": 9118107,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 355980,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v5",
+          "rvq_inference-semantic-id:v3"
+        ]
+      },
+      {
+        "id": "n6svfy9g",
+        "users": 35598,
+        "runtime_s": 1156,
+        "trace_bytes": 9118107,
+        "invalid_generated_sid": 0,
+        "generated_candidates": 1779900,
+        "used_artifacts": [
+          "tiger_train-checkpoint:v5",
+          "rvq_inference-semantic-id:v3"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "group": "Head",
+        "n": 18117,
+        "fixed_final_hits": 1112,
+        "wide_final_hits": 3326,
+        "recovered": 2214,
+        "lost": 0,
+        "recovery_rate": 0.13019700348377228,
+        "fixed_survival": [
+          0.3821272850036621,
+          0.11348456889390945,
+          0.0765027329325676,
+          0.06137881428003311
+        ],
+        "wide_survival": [
+          0.7647513151168823,
+          0.28790637850761414,
+          0.21212121844291687,
+          0.18358448147773743
+        ],
+        "failure_counts": [
+          11194,
+          4867,
+          670,
+          274
+        ]
+      },
+      {
+        "group": "Tail",
+        "n": 4660,
+        "fixed_final_hits": 2,
+        "wide_final_hits": 16,
+        "recovered": 14,
+        "lost": 0,
+        "recovery_rate": 0.00300558190792799,
+        "fixed_survival": [
+          0.33326178789138794,
+          0.03562231734395027,
+          0.00579399149864912,
+          0.00042918455437757075
+        ],
+        "wide_survival": [
+          0.6836909651756287,
+          0.09420600533485413,
+          0.019957082346081734,
+          0.003433476435020566
+        ],
+        "failure_counts": [
+          3107,
+          1387,
+          139,
+          25
+        ]
+      },
+      {
+        "group": "Tail-Cold",
+        "n": 118,
+        "fixed_final_hits": 0,
+        "wide_final_hits": 0,
+        "recovered": 0,
+        "lost": 0,
+        "recovery_rate": 0.0,
+        "fixed_survival": [
+          0.27966102957725525,
+          0.050847455859184265,
+          0.0,
+          0.0
+        ],
+        "wide_survival": [
+          0.7033898234367371,
+          0.11016949266195297,
+          0.008474576286971569,
+          0.0
+        ],
+        "failure_counts": [
+          85,
+          27,
+          6,
+          0
+        ]
+      }
+    ],
+    "mechanism": {
+      "available": true,
+      "competition_association": {
+        "available": true,
+        "controls": "log1p_frequency,raw_damage",
+        "partial_correlation_with_survival": 0.16770403182450203,
+        "support": 35598
+      },
+      "data_split": "evaluation",
+      "fixed_beam_width": 10,
+      "num_users": 35598,
+      "prefix_cluster_bootstrap": {
+        "available": true,
+        "bootstrap_samples": 1000,
+        "ci_lower": -0.07843161501163431,
+        "ci_upper": -0.050721974309303086,
+        "num_clusters": 6954
+      },
+      "recovery": {
+        "available": true,
+        "tail_recovery_rate": 0.0030055817947617003
+      },
+      "recovery_available": true,
+      "risk_matched_survival": {
+        "available": true,
+        "support": 4778,
+        "tail_minus_head_survival": 0.02317915445793219
+      },
+      "schema_version": "tiger_prefix_trace_v1",
+      "widened_beam_width": 50
+    }
+  }
+]

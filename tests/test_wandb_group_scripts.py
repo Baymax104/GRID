@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_NAMES = ["tiger_train.sh", "tiger_inference.sh", "tail_sid_diagnosis.sh"]
+SCRIPT_NAMES = ["tiger_train.sh", "tiger_inference.sh", "tiger_prefix_trace.sh", "tail_sid_diagnosis.sh"]
 BASE_ARGUMENTS = {
     "tiger_train.sh": [
         "--data-dir",
@@ -18,6 +18,22 @@ BASE_ARGUMENTS = {
     "tiger_inference.sh": [
         "--data-dir",
         "data/test dataset",
+        "--ckpt-path",
+        "model.ckpt",
+        "--semantic-id-path",
+        "semantic.pt",
+    ],
+    "tiger_prefix_trace.sh": [
+        "--data-dir",
+        "data/test dataset",
+        "--data-split",
+        "evaluation",
+        "--beam-width",
+        "10",
+        "--devices",
+        "[0]",
+        "--notes",
+        "grouped trace",
         "--ckpt-path",
         "model.ckpt",
         "--semantic-id-path",

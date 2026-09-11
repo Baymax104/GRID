@@ -6,11 +6,17 @@ from omegaconf import MissingMandatoryValue, OmegaConf
 
 import src.utils.hydra_resolvers  # noqa: F401
 
-DYNAMIC_GROUP_EXPERIMENTS = {"tail_sid_diagnosis", "tiger_train", "tiger_inference"}
+DYNAMIC_GROUP_EXPERIMENTS = {
+    "tail_sid_diagnosis",
+    "tiger_train",
+    "tiger_inference",
+    "tiger_prefix_trace",
+}
 
 
 def _compose_experiment(experiment: str, extra_overrides: list[str] | None = None):
     group_overrides = ["group=rkmeans"] if experiment in DYNAMIC_GROUP_EXPERIMENTS else []
+    trace_overrides = ["data_split=evaluation", "beam_width=10"] if experiment == "tiger_prefix_trace" else []
     with initialize(version_base=None, config_path="../configs"):
         return compose(
             config_name="main",
@@ -22,6 +28,7 @@ def _compose_experiment(experiment: str, extra_overrides: list[str] | None = Non
                 "ckpt_path=null",
                 "++devices=[0,1]",
                 *group_overrides,
+                *trace_overrides,
                 *(extra_overrides or []),
             ],
         )
@@ -56,6 +63,7 @@ def test_wandb_loggers_use_experiment_user():
         "tail_sid_diagnosis",
         "tiger_train",
         "tiger_inference",
+        "tiger_prefix_trace",
     ]:
         cfg = _compose_experiment(experiment)
 
@@ -126,6 +134,7 @@ def test_downstream_experiments_require_group(experiment):
         "tail_sid_diagnosis",
         "tiger_train",
         "tiger_inference",
+        "tiger_prefix_trace",
     ],
 )
 def test_wandb_run_name_contains_task_name_and_timestamp(experiment):
@@ -152,7 +161,7 @@ def test_embedding_loader_configs_use_experiment_user():
 
 
 def test_tiger_semantic_id_loader_configs_use_experiment_user():
-    for experiment in ["tiger_train", "tiger_inference"]:
+    for experiment in ["tiger_train", "tiger_inference", "tiger_prefix_trace"]:
         cfg = _compose_experiment(experiment)
 
         assert cfg.model.root.semantic_ids.wandb_entity == cfg.user

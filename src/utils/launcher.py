@@ -28,6 +28,9 @@ DRY_RUN_DISABLED_CALLBACK_TARGETS = {
     "src.common.writers.local_pickle_writer.LocalPickleWriter",
     "src.common.writers.wandb_artifact_writer.WandbArtifactWriter",
     "src.common.writers.wandb_checkpoint_writer.WandbCheckpointWriter",
+    "src.common.writers.auxiliary_tensor_writer.AuxiliaryTensorWriter",
+    "src.common.writers.AuxiliaryTensorWriter",
+    "src.common.writers.WandbArtifactWriter",
 }
 
 DRY_RUN_DISABLED_LOGGER_TARGETS = {

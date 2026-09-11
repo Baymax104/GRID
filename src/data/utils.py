@@ -3,14 +3,88 @@
 import heapq
 import random
 from collections import defaultdict
+from pathlib import Path
+from typing import Any
 
 import torch
 
 from src.data.components.artifacts import load_model_output, load_semantic_id_tensor
 from src.data.components.data_models import ModelOutput
+from src.data.components.readers import TFRecordReader
 from src.utils.file import get_file_size
 
-__all__ = ["gather_predictions_by_keys", "load_model_output", "load_semantic_id_tensor"]
+__all__ = [
+    "gather_predictions_by_keys",
+    "load_model_output",
+    "load_semantic_id_tensor",
+    "load_training_item_frequency_tensor",
+]
+
+
+def _sequence_item_ids(row: dict[str, Any]) -> list[int]:
+    if "sequence_data" not in row:
+        raise KeyError("Training row does not contain 'sequence_data'.")
+    sequence = row["sequence_data"]
+    if isinstance(sequence, torch.Tensor):
+        values = sequence.reshape(-1).tolist()
+    elif hasattr(sequence, "reshape") and hasattr(sequence, "tolist"):
+        values = sequence.reshape(-1).tolist()
+    else:
+        values = list(sequence)
+    item_ids = [int(value) for value in values]
+    if any(item_id < 0 for item_id in item_ids):
+        raise ValueError("Training sequence contains a negative item id.")
+    return item_ids
+
+
+def load_training_item_frequency_tensor(
+    semantic_id_path: str,
+    training_data_dir: str,
+    *,
+    source_split: str = "training",
+    wandb_entity: str | None = None,
+    wandb_project: str | None = None,
+    wandb_cache_dir: str | None = None,
+) -> torch.Tensor:
+    """Return training item counts aligned to a keyed semantic-ID bundle."""
+    if source_split != "training":
+        raise ValueError(
+            "Prefix allocation frequencies must use source_split='training'; "
+            f"got {source_split!r}."
+        )
+
+    bundle = load_model_output(
+        semantic_id_path,
+        field_name="semantic_id_path",
+        wandb_entity=wandb_entity,
+        wandb_project=wandb_project,
+        wandb_cache_dir=wandb_cache_dir,
+    )
+    keys = bundle.keys.long().reshape(-1)
+    if keys.numel() == 0:
+        raise ValueError("Semantic ID bundle must contain at least one item key.")
+    if keys.unique().numel() != keys.numel():
+        raise ValueError("Duplicate keys detected in semantic ID bundle.")
+    if torch.any(keys < 0):
+        raise ValueError("Semantic ID bundle contains a negative item key.")
+
+    training_dir = Path(training_data_dir)
+    files = sorted(str(path) for path in training_dir.rglob("*.tfrecord.gz"))
+    if not files:
+        raise FileNotFoundError(f"No training TFRecord files found under {training_dir}.")
+
+    key_to_index = {int(item_id): index for index, item_id in enumerate(keys.tolist())}
+    frequencies = torch.zeros(keys.numel(), dtype=torch.long)
+    row_count = 0
+    for row in TFRecordReader(list_of_file_paths=files, shuffle_rows=False).iterrows():
+        row_count += 1
+        for item_id in _sequence_item_ids(row):
+            index = key_to_index.get(item_id)
+            if index is not None:
+                frequencies[index] += 1
+    if row_count == 0:
+        raise ValueError("No training sequence records were read.")
+    return frequencies
 
 
 def assign_files_to_workers(

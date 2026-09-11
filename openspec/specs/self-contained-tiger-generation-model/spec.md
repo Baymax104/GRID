@@ -172,3 +172,34 @@ TIGER generation SHALL compute decoder outputs without maintaining or reordering
 - **THEN** it MUST reorder generated semantic ID prefixes and marginal probabilities only
 - **AND** it MUST NOT reorder decoder cache state
 
+### Requirement: TIGER decoder SHALL own optional generation tracing
+`TigerDecoder` SHALL own derivation of beam parent, target-prefix survival, rank, score, and cutoff observations from its constrained beam-search state. TIGER model orchestration MAY request those observations but MUST NOT reimplement beam state reconstruction outside the decoder.
+
+#### Scenario: Decoder tracing is requested
+- **WHEN** TIGER invokes decoder generation with labeled target IDs and tracing enabled
+- **THEN** `TigerDecoder` MUST derive trace observations from the same tensors used for constrained beam selection
+- **AND** TIGER MUST associate the returned trace with the batch output keys
+
+#### Scenario: Decoder tracing is not requested
+- **WHEN** ordinary validation, testing, or prediction runs without tracing
+- **THEN** the decoder MUST preserve its existing generation behavior and output compatibility
+
+### Requirement: Teacher-forcing trace statistics SHALL consume raw decoder logits
+TIGER SHALL derive target token diagnostic statistics from the raw global logits returned by the existing teacher-forcing path. The diagnostic path MUST NOT modify loss inputs or introduce an additional trainable projection.
+
+#### Scenario: Teacher-forcing trace is computed
+- **WHEN** a labeled trace batch is evaluated
+- **THEN** the model MUST use the active hierarchy slice of the existing global logits
+- **AND** training/evaluation loss MUST continue to consume the original logits unchanged
+
+### Requirement: TIGER decoder SHALL own optional candidate allocation
+`TigerDecoder` SHALL own candidate shortlist construction, prefix-priority lookup, reserved-slot selection, original-score backfill, and final beam ordering for prefix-balanced generation. TIGER model orchestration MAY provide configuration and aligned frequency inputs but MUST NOT reimplement decoder selection.
+
+#### Scenario: Candidate allocation is enabled
+- **WHEN** TIGER invokes generation with a valid prefix allocation configuration
+- **THEN** `TigerDecoder` MUST apply allocation after legal-prefix filtering and cumulative path scoring
+- **AND** TIGER MUST continue to coordinate encoder execution and decoder invocation through its existing generation path
+
+#### Scenario: Candidate allocation is disabled
+- **WHEN** ordinary training, validation, testing, or prediction does not enable the probe
+- **THEN** decoder-owned beam selection MUST preserve the existing generation contract

@@ -3,6 +3,14 @@ set -euo pipefail
 
 SEMANTIC_ID_PATH=""
 RECOMMENDATION_OUTPUT_PATH=""
+WIDENED_RECOMMENDATION_OUTPUT_PATH=""
+FIXED_PREFIX_TRACE_PATH=""
+WIDENED_PREFIX_TRACE_PATH=""
+BASELINE_RECOMMENDATION_OUTPUT_PATH=""
+INTERVENTION_RECOMMENDATION_OUTPUT_PATH=""
+BASELINE_PREFIX_TRACE_PATH=""
+INTERVENTION_PREFIX_TRACE_PATH=""
+CANDIDATE_ALLOCATION_PROBE=false
 GROUP=""
 NOTES=""
 DATA_DIR=""
@@ -95,6 +103,98 @@ while [[ $# -gt 0 ]]; do
       RECOMMENDATION_OUTPUT_PATH="$2"
       shift 2
       ;;
+    --candidate-allocation-probe)
+      CANDIDATE_ALLOCATION_PROBE=true
+      shift
+      ;;
+    --widened-recommendation-output-path=*)
+      WIDENED_RECOMMENDATION_OUTPUT_PATH="${1#--widened-recommendation-output-path=}"
+      if [[ -z "$WIDENED_RECOMMENDATION_OUTPUT_PATH" ]]; then
+        echo "Error: --widened-recommendation-output-path requires a non-empty value." >&2
+        exit 2
+      fi
+      shift
+      ;;
+    --widened-recommendation-output-path)
+      if [[ $# -lt 2 || "$2" == --* || -z "$2" ]]; then
+        echo "Error: --widened-recommendation-output-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      WIDENED_RECOMMENDATION_OUTPUT_PATH="$2"
+      shift 2
+      ;;
+    --fixed-prefix-trace-path=*)
+      FIXED_PREFIX_TRACE_PATH="${1#--fixed-prefix-trace-path=}"
+      shift
+      ;;
+    --fixed-prefix-trace-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --fixed-prefix-trace-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      FIXED_PREFIX_TRACE_PATH="$2"
+      shift 2
+      ;;
+    --widened-prefix-trace-path=*)
+      WIDENED_PREFIX_TRACE_PATH="${1#--widened-prefix-trace-path=}"
+      shift
+      ;;
+    --widened-prefix-trace-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --widened-prefix-trace-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      WIDENED_PREFIX_TRACE_PATH="$2"
+      shift 2
+      ;;
+    --baseline-recommendation-output-path=*)
+      BASELINE_RECOMMENDATION_OUTPUT_PATH="${1#--baseline-recommendation-output-path=}"
+      shift
+      ;;
+    --baseline-recommendation-output-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --baseline-recommendation-output-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      BASELINE_RECOMMENDATION_OUTPUT_PATH="$2"
+      shift 2
+      ;;
+    --intervention-recommendation-output-path=*)
+      INTERVENTION_RECOMMENDATION_OUTPUT_PATH="${1#--intervention-recommendation-output-path=}"
+      shift
+      ;;
+    --intervention-recommendation-output-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --intervention-recommendation-output-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      INTERVENTION_RECOMMENDATION_OUTPUT_PATH="$2"
+      shift 2
+      ;;
+    --baseline-prefix-trace-path=*)
+      BASELINE_PREFIX_TRACE_PATH="${1#--baseline-prefix-trace-path=}"
+      shift
+      ;;
+    --baseline-prefix-trace-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --baseline-prefix-trace-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      BASELINE_PREFIX_TRACE_PATH="$2"
+      shift 2
+      ;;
+    --intervention-prefix-trace-path=*)
+      INTERVENTION_PREFIX_TRACE_PATH="${1#--intervention-prefix-trace-path=}"
+      shift
+      ;;
+    --intervention-prefix-trace-path)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --intervention-prefix-trace-path requires a local path or wandb://<run-id> value." >&2
+        exit 2
+      fi
+      INTERVENTION_PREFIX_TRACE_PATH="$2"
+      shift 2
+      ;;
     *)
       EXTRA_ARGS+=("$1")
       shift
@@ -135,6 +235,19 @@ case "$GROUP" in
     ;;
 esac
 
+if [[ "$CANDIDATE_ALLOCATION_PROBE" == true ]]; then
+  for required_pair in \
+    "$BASELINE_RECOMMENDATION_OUTPUT_PATH" \
+    "$INTERVENTION_RECOMMENDATION_OUTPUT_PATH" \
+    "$BASELINE_PREFIX_TRACE_PATH" \
+    "$INTERVENTION_PREFIX_TRACE_PATH"; do
+    if [[ -z "$required_pair" ]]; then
+      echo "Error: --candidate-allocation-probe requires all four baseline/intervention paths." >&2
+      exit 2
+    fi
+  done
+fi
+
 ARGS=(
   experiment=tail_sid_diagnosis
   group="$GROUP"
@@ -149,6 +262,28 @@ ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
 
 if [[ -n "$RECOMMENDATION_OUTPUT_PATH" ]]; then
   ARGS+=("recommendation_output_path=$RECOMMENDATION_OUTPUT_PATH")
+fi
+
+if [[ -n "$WIDENED_RECOMMENDATION_OUTPUT_PATH" ]]; then
+  ARGS+=("widened_recommendation_output_path=$WIDENED_RECOMMENDATION_OUTPUT_PATH")
+fi
+
+if [[ -n "$FIXED_PREFIX_TRACE_PATH" ]]; then
+  ARGS+=("fixed_prefix_trace_path=$FIXED_PREFIX_TRACE_PATH")
+fi
+
+if [[ -n "$WIDENED_PREFIX_TRACE_PATH" ]]; then
+  ARGS+=("widened_prefix_trace_path=$WIDENED_PREFIX_TRACE_PATH")
+fi
+
+if [[ "$CANDIDATE_ALLOCATION_PROBE" == true ]]; then
+  ARGS+=(
+    candidate_allocation_probe.enabled=true
+    "baseline_recommendation_output_path=$BASELINE_RECOMMENDATION_OUTPUT_PATH"
+    "intervention_recommendation_output_path=$INTERVENTION_RECOMMENDATION_OUTPUT_PATH"
+    "baseline_prefix_trace_path=$BASELINE_PREFIX_TRACE_PATH"
+    "intervention_prefix_trace_path=$INTERVENTION_PREFIX_TRACE_PATH"
+  )
 fi
 
 if [[ "$DRY_RUN" == true ]]; then

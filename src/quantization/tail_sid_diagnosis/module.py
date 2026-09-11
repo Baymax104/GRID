@@ -35,6 +35,17 @@ class TailSIDDiagnosisModule(LightningModule):
         ),
         head_ratio: float = 0.2,
         tail_ratio: float = 0.2,
+        search_ranking_enabled: bool = False,
+        risk_standardization_enabled: bool = False,
+        risk_standardization_bin_count: int = 5,
+        risk_standardization_bin_count_sensitivity: list[int] | tuple[int, ...] = (3, 5, 10),
+        risk_standardization_min_items_per_group_per_bin: int = 20,
+        risk_standardization_min_item_retention: float = 0.5,
+        risk_standardization_max_abs_raw_damage_smd: float = 0.1,
+        risk_standardization_min_bootstrap_valid_fraction: float = 0.9,
+        candidate_allocation_probe_enabled: bool = False,
+        candidate_allocation_overall_hit10_loss_guardrail: float = 0.002,
+        candidate_allocation_head_hit10_loss_guardrail: float = 0.005,
     ):
         super().__init__()
         self.max_neighbors_per_bucket = max_neighbors_per_bucket
@@ -55,6 +66,25 @@ class TailSIDDiagnosisModule(LightningModule):
         self.damage_component_sensitivity = damage_component_sensitivity
         self.head_ratio = head_ratio
         self.tail_ratio = tail_ratio
+        self.search_ranking_enabled = search_ranking_enabled
+        self.risk_standardization_enabled = risk_standardization_enabled
+        self.risk_standardization_bin_count = risk_standardization_bin_count
+        self.risk_standardization_bin_count_sensitivity = risk_standardization_bin_count_sensitivity
+        self.risk_standardization_min_items_per_group_per_bin = (
+            risk_standardization_min_items_per_group_per_bin
+        )
+        self.risk_standardization_min_item_retention = risk_standardization_min_item_retention
+        self.risk_standardization_max_abs_raw_damage_smd = risk_standardization_max_abs_raw_damage_smd
+        self.risk_standardization_min_bootstrap_valid_fraction = (
+            risk_standardization_min_bootstrap_valid_fraction
+        )
+        self.candidate_allocation_probe_enabled = candidate_allocation_probe_enabled
+        self.candidate_allocation_overall_hit10_loss_guardrail = (
+            candidate_allocation_overall_hit10_loss_guardrail
+        )
+        self.candidate_allocation_head_hit10_loss_guardrail = (
+            candidate_allocation_head_hit10_loss_guardrail
+        )
 
     def test_step(self, batch: DiagnosisBatch, batch_idx: int) -> dict[str, Any]:
         evidence = build_diagnosis_evidence(
@@ -77,6 +107,25 @@ class TailSIDDiagnosisModule(LightningModule):
             damage_component_sensitivity=self.damage_component_sensitivity,
             head_ratio=self.head_ratio,
             tail_ratio=self.tail_ratio,
+            search_ranking_enabled=self.search_ranking_enabled,
+            risk_standardization_enabled=self.risk_standardization_enabled,
+            risk_standardization_bin_count=self.risk_standardization_bin_count,
+            risk_standardization_bin_count_sensitivity=self.risk_standardization_bin_count_sensitivity,
+            risk_standardization_min_items_per_group_per_bin=(
+                self.risk_standardization_min_items_per_group_per_bin
+            ),
+            risk_standardization_min_item_retention=self.risk_standardization_min_item_retention,
+            risk_standardization_max_abs_raw_damage_smd=self.risk_standardization_max_abs_raw_damage_smd,
+            risk_standardization_min_bootstrap_valid_fraction=(
+                self.risk_standardization_min_bootstrap_valid_fraction
+            ),
+            candidate_allocation_probe_enabled=self.candidate_allocation_probe_enabled,
+            candidate_allocation_overall_hit10_loss_guardrail=(
+                self.candidate_allocation_overall_hit10_loss_guardrail
+            ),
+            candidate_allocation_head_hit10_loss_guardrail=(
+                self.candidate_allocation_head_hit10_loss_guardrail
+            ),
         )
         return {
             "evidence": evidence,

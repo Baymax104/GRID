@@ -1,0 +1,30 @@
+# @package _global_
+
+recommendation_artifact_writer:
+  _target_: src.common.writers.WandbArtifactWriter
+  output_dir: ${paths.output_dir}/recommendation_artifact
+  flush_frequency: 100000
+  artifact_name: ${task_name}-recommendation-output
+  artifact_type: recommendation_output
+  role: recommendation_output
+  task_name: ${task_name}
+  aliases: [latest]
+
+prefix_trace_writer:
+  _target_: src.common.writers.AuxiliaryTensorWriter
+  output_dir: ${paths.output_dir}/prefix_trace
+  payload_name: prefix_trace
+  output_filename: prefix_trace.pt
+  flush_frequency: 100000
+  publish_wandb: true
+  artifact_name: ${task_name}-prefix-trace
+  artifact_type: prefix_trace
+  role: prefix_trace
+  aliases: [latest]
+  metadata:
+    task_name: ${task_name}
+
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false
+  clear_after_recording: true

@@ -8,7 +8,12 @@ from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from src.common.configs.data import DatasetConfig
 from src.data.components.artifacts import load_model_output
-from src.data.components.data_models import DiagnosisBatch, RecommendationOutcomeInput, SIDViews
+from src.data.components.data_models import (
+    DiagnosisBatch,
+    PrefixTraceBundle,
+    RecommendationOutcomeInput,
+    SIDViews,
+)
 from src.data.components.readers import TFRecordReader
 from src.data.utils import gather_predictions_by_keys
 from src.utils.pylogger import RankedLogger
@@ -117,6 +122,9 @@ class SequenceDataset(FileDataset, IterableDataset):
         return None
 
 
+_RECOMMENDATION_PATH_UNSET = object()
+
+
 class DiagnosisDataset(Dataset):
     """Artifact-backed dataset that yields one full diagnosis batch."""
 
@@ -128,6 +136,20 @@ class DiagnosisDataset(Dataset):
         raw_num_hierarchies: int,
         embedding_path: str | None = None,
         recommendation_output_path: str | None = None,
+        widened_recommendation_output_path: str | None = None,
+        fixed_prefix_trace: PrefixTraceBundle | None = None,
+        widened_prefix_trace: PrefixTraceBundle | None = None,
+        semantic_id_reference: str | None = None,
+        fixed_prefix_trace_reference: str | None = None,
+        widened_prefix_trace_reference: str | None = None,
+        recommendation_output_reference: str | None = None,
+        widened_recommendation_output_reference: str | None = None,
+        calibration_statistics_ready: bool = False,
+        search_ranking_enabled: bool = False,
+        risk_standardization_enabled: bool = False,
+        candidate_allocation_probe_enabled: bool = False,
+        input_metadata_aliases: dict[str, Any] | None = None,
+        resolved_artifact_identity: dict[str, dict[str, Any]] | None = None,
     ):
         self.dataset_config = dataset_config
         self.data_folder = data_folder
@@ -135,6 +157,20 @@ class DiagnosisDataset(Dataset):
         self.raw_num_hierarchies = raw_num_hierarchies
         self.embedding_path = embedding_path
         self.recommendation_output_path = recommendation_output_path
+        self.widened_recommendation_output_path = widened_recommendation_output_path
+        self.fixed_prefix_trace = fixed_prefix_trace
+        self.widened_prefix_trace = widened_prefix_trace
+        self.semantic_id_reference = semantic_id_reference or semantic_id_path
+        self.fixed_prefix_trace_reference = fixed_prefix_trace_reference
+        self.widened_prefix_trace_reference = widened_prefix_trace_reference
+        self.recommendation_output_reference = recommendation_output_reference
+        self.widened_recommendation_output_reference = widened_recommendation_output_reference
+        self.calibration_statistics_ready = calibration_statistics_ready
+        self.search_ranking_enabled = search_ranking_enabled
+        self.risk_standardization_enabled = risk_standardization_enabled
+        self.candidate_allocation_probe_enabled = candidate_allocation_probe_enabled
+        self.input_metadata_aliases = input_metadata_aliases or {}
+        self.resolved_artifact_identity = resolved_artifact_identity or {}
         self._batch: DiagnosisBatch | None = None
 
     def __len__(self) -> int:
@@ -148,18 +184,55 @@ class DiagnosisDataset(Dataset):
         return self._batch
 
     def _build_batch(self) -> DiagnosisBatch:
+        if self.search_ranking_enabled or self.candidate_allocation_probe_enabled:
+            inputs = {
+                "recommendation_output_path": self.recommendation_output_path,
+                "widened_recommendation_output_path": self.widened_recommendation_output_path,
+                "fixed_prefix_trace_path": self.fixed_prefix_trace,
+                "widened_prefix_trace_path": self.widened_prefix_trace,
+            }
+            missing = [name for name, value in inputs.items() if value is None]
+            if missing:
+                raise ValueError(
+                    "Paired analysis requires recommendation and trace inputs; "
+                    f"missing={missing}."
+                )
         sid_views = self._load_sid_views()
+        data_split = self._trace_data_split()
+        if self.calibration_statistics_ready and data_split == "testing":
+            raise ValueError(
+                "Data leakage: calibration-statistics-ready diagnosis requires evaluation Prefix Trace input."
+            )
         batch = DiagnosisBatch(
             sid_views=sid_views,
             frequencies=self._compute_train_frequencies(sid_views.item_ids),
             groups_by_item={},
             embeddings=self._load_embeddings_for_items(sid_views.item_ids),
-            recommendation=self._load_recommendation_input(),
+            recommendation=self._load_recommendation_input(
+                self.recommendation_output_path, data_split=data_split
+            ),
+            widened_recommendation=self._load_recommendation_input(
+                self.widened_recommendation_output_path, data_split=data_split
+            ),
+            fixed_prefix_trace=self.fixed_prefix_trace,
+            widened_prefix_trace=self.widened_prefix_trace,
             input_metadata={
                 "semantic_id_path": self.semantic_id_path,
                 "embedding_path": self.embedding_path,
                 "recommendation_output_path": self.recommendation_output_path,
-                "testing_data_dir": str(Path(self.data_folder) / "testing"),
+                "recommendation_output_reference": self.recommendation_output_reference,
+                "widened_recommendation_output_path": self.widened_recommendation_output_path,
+                "widened_recommendation_output_reference": self.widened_recommendation_output_reference,
+                "semantic_id_reference": self.semantic_id_reference,
+                "fixed_prefix_trace_path": self.fixed_prefix_trace_reference,
+                "widened_prefix_trace_path": self.widened_prefix_trace_reference,
+                "data_split": data_split,
+                "label_data_dir": str(Path(self.data_folder) / data_split),
+                "calibration_statistics_ready": self.calibration_statistics_ready,
+                "search_ranking_enabled": self.search_ranking_enabled,
+                "risk_standardization_enabled": self.risk_standardization_enabled,
+                "resolved_artifact_identity": self.resolved_artifact_identity,
+                **self.input_metadata_aliases,
             },
         )
         for preprocessing_function in getattr(self.dataset_config, "preprocessing_functions", []):
@@ -206,6 +279,16 @@ class DiagnosisDataset(Dataset):
             raise FileNotFoundError(f"No training TFRecord files found under {training_dir}.")
         yield from TFRecordReader(list_of_file_paths=files, shuffle_rows=False).iterrows()
 
+    def _iter_label_rows(self, data_split: str):
+        if data_split == "testing":
+            yield from self._iter_testing_rows()
+            return
+        label_dir = Path(self.data_folder) / data_split
+        files = sorted(str(path) for path in label_dir.rglob("*.tfrecord.gz"))
+        if not files:
+            raise FileNotFoundError(f"No {data_split} TFRecord files found under {label_dir}.")
+        yield from TFRecordReader(list_of_file_paths=files, shuffle_rows=False).iterrows()
+
     def _iter_testing_rows(self):
         testing_dir = Path(self.data_folder) / "testing"
         files = sorted(str(path) for path in testing_dir.rglob("*.tfrecord.gz"))
@@ -213,23 +296,29 @@ class DiagnosisDataset(Dataset):
             raise FileNotFoundError(f"No testing TFRecord files found under {testing_dir}.")
         yield from TFRecordReader(list_of_file_paths=files, shuffle_rows=False).iterrows()
 
-    def _load_recommendation_input(self):
-        if self.recommendation_output_path is None:
+    def _load_recommendation_input(
+        self,
+        recommendation_output_path: str | None | object = _RECOMMENDATION_PATH_UNSET,
+        data_split: str = "testing",
+    ):
+        if recommendation_output_path is _RECOMMENDATION_PATH_UNSET:
+            recommendation_output_path = self.recommendation_output_path
+        if recommendation_output_path is None:
             return None
         labels_by_user: dict[int, int] = {}
-        for row in self._iter_testing_rows():
+        for row in self._iter_label_rows(data_split):
             if "user_id" not in row:
                 raise KeyError("Testing row does not contain 'user_id'.")
             user_value = row["user_id"]
             user_id = int(torch.as_tensor(user_value).reshape(-1)[0].item())
             if user_id in labels_by_user:
-                raise ValueError(f"Duplicate user key in testing labels: {user_id}.")
+                raise ValueError(f"Duplicate user key in {data_split} labels: {user_id}.")
             sequence = self._sequence_values(row)
             if not sequence:
                 raise ValueError(f"Testing sequence is empty for user {user_id}.")
             labels_by_user[user_id] = sequence[-1]
 
-        bundle = load_model_output(self.recommendation_output_path)
+        bundle = load_model_output(recommendation_output_path)  # type: ignore[arg-type]
         generated_sids = bundle.predictions.long()
         if generated_sids.ndim != 3:
             raise ValueError(
@@ -242,7 +331,7 @@ class DiagnosisDataset(Dataset):
         unknown = sorted(predicted_users - label_users)
         if missing or unknown:
             raise ValueError(
-                "Recommendation/testing user keys must match exactly: "
+                f"Recommendation/{data_split} user keys must match exactly: "
                 f"missing_predictions={missing[:5]} (total={len(missing)}), "
                 f"unknown_predictions={unknown[:5]} (total={len(unknown)})."
             )
@@ -252,6 +341,15 @@ class DiagnosisDataset(Dataset):
             label_item_ids=torch.tensor([labels_by_user[int(user)] for user in user_ids.tolist()]),
             generated_sids=generated_sids,
         )
+
+    def _trace_data_split(self) -> str:
+        traces = [trace for trace in (self.fixed_prefix_trace, self.widened_prefix_trace) if trace is not None]
+        if not traces:
+            return "testing"
+        splits = {str(trace.metadata["data_split"]) for trace in traces}
+        if len(splits) != 1:
+            raise ValueError(f"Fixed and widened Prefix Trace data_split values differ: {sorted(splits)}.")
+        return next(iter(splits))
 
     def _sequence_values(self, row: dict[str, Any]) -> list[int]:
         if "sequence_data" not in row:

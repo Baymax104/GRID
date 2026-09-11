@@ -60,6 +60,8 @@ def run_training(cfg: DictConfig):
 
 def run_inference(cfg: DictConfig):
     with open_dict(cfg):
+        if "checkpoint_reference" in cfg:
+            cfg.checkpoint_reference = cfg.get("ckpt_path")
         cfg.ckpt_path = resolve_checkpoint_path(
             cfg.get("ckpt_path"),
             default_entity=cfg.get("user", None),

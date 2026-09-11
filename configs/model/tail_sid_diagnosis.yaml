@@ -20,6 +20,17 @@ root:
   damage_component_sensitivity: ${damage_component_sensitivity}
   head_ratio: ${head_ratio}
   tail_ratio: ${tail_ratio}
+  search_ranking_enabled: ${search_ranking.enabled}
+  risk_standardization_enabled: ${risk_standardization.enabled}
+  risk_standardization_bin_count: ${risk_standardization.bin_count}
+  risk_standardization_bin_count_sensitivity: ${risk_standardization.bin_count_sensitivity}
+  risk_standardization_min_items_per_group_per_bin: ${risk_standardization.min_items_per_group_per_bin}
+  risk_standardization_min_item_retention: ${risk_standardization.min_item_retention}
+  risk_standardization_max_abs_raw_damage_smd: ${risk_standardization.max_abs_raw_damage_smd}
+  risk_standardization_min_bootstrap_valid_fraction: ${risk_standardization.min_bootstrap_valid_fraction}
+  candidate_allocation_probe_enabled: ${candidate_allocation_probe.enabled}
+  candidate_allocation_overall_hit10_loss_guardrail: ${candidate_allocation_probe.overall_hit10_loss_guardrail}
+  candidate_allocation_head_hit10_loss_guardrail: ${candidate_allocation_probe.head_hit10_loss_guardrail}
 
 metric_callback:
   logging_modes:
@@ -57,6 +68,30 @@ metrics:
         metric:
           _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
           section: prefix_risk
+        spec:
+          kwargs:
+            evidence:
+              key: evidence
+      prefix_mechanism:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: prefix_mechanism
+        spec:
+          kwargs:
+            evidence:
+              key: evidence
+      search_ranking:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: search_ranking
+        spec:
+          kwargs:
+            evidence:
+              key: evidence
+      candidate_allocation:
+        metric:
+          _target_: src.quantization.tail_sid_diagnosis.metrics.EvidenceSectionMetric
+          section: candidate_allocation
         spec:
           kwargs:
             evidence:

@@ -111,11 +111,12 @@ def list_files(
 
 def sync_file(path: str):
     path = Path(path)
-    os.sync()
+    if hasattr(os, "sync"):
+        os.sync()
     if path.is_file():
-        with open(path) as f:
+        with open(path, "rb") as f:
             os.fsync(f.fileno())
-    elif path.is_dir():
+    elif path.is_dir() and hasattr(os, "O_DIRECTORY"):
         dir_fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
         try:
             os.fsync(dir_fd)

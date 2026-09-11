@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any
 
 import torch
 
@@ -59,13 +60,27 @@ class RecommendationOutcomeInput:
 
 
 @dataclass
+class PrefixTraceBundle:
+    """Key-aligned target-centric TIGER prefix trace."""
+
+    schema_version: str
+    keys: torch.Tensor
+    labels: torch.Tensor
+    trace: dict[str, torch.Tensor]
+    metadata: dict[str, Any]
+
+
+@dataclass
 class DiagnosisBatch:
     sid_views: SIDViews
     frequencies: dict[int, int]
     groups_by_item: dict[int, str]
     embeddings: torch.Tensor | None
     recommendation: RecommendationOutcomeInput | None = None
-    input_metadata: dict[str, str | None] = field(default_factory=dict)
+    widened_recommendation: RecommendationOutcomeInput | None = None
+    fixed_prefix_trace: PrefixTraceBundle | None = None
+    widened_prefix_trace: PrefixTraceBundle | None = None
+    input_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ModelOutput:
@@ -77,6 +92,12 @@ class ModelOutput:
         predictions: 模型预测值（如 embedding、cluster_ids、semantic_ids）。
     """
 
-    def __init__(self, keys: torch.Tensor, predictions: torch.Tensor):
+    def __init__(
+        self,
+        keys: torch.Tensor,
+        predictions: torch.Tensor,
+        auxiliary: dict[str, Any] | None = None,
+    ):
         self.keys = keys  # (n,)
         self.predictions = predictions  # (n, *)
+        self.auxiliary = auxiliary or {}

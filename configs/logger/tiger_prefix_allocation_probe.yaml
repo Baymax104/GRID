@@ -1,0 +1,11 @@
+# @package _global_
+
+wandb:
+  _target_: lightning.pytorch.loggers.wandb.WandbLogger
+  name: ${task_name}/${prefix_allocation.enabled}/${now_tz:%Y-%m-%d_%H-%M-%S}
+  save_dir: ${paths.output_dir}
+  entity: ${user}
+  project: ${project}
+  group: ${group}
+  job_type: inference
+  notes: null

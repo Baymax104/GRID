@@ -11,6 +11,28 @@ data_dir: ???
 semantic_id_path: ???
 embedding_path: null
 recommendation_output_path: null
+widened_recommendation_output_path: null
+fixed_prefix_trace_path: null
+widened_prefix_trace_path: null
+baseline_recommendation_output_path: null
+intervention_recommendation_output_path: null
+baseline_prefix_trace_path: null
+intervention_prefix_trace_path: null
+calibration_statistics_ready: false
+search_ranking:
+  enabled: false
+risk_standardization:
+  enabled: false
+  bin_count: 5
+  bin_count_sensitivity: [3, 5, 10]
+  min_items_per_group_per_bin: 20
+  min_item_retention: 0.5
+  max_abs_raw_damage_smd: 0.1
+  min_bootstrap_valid_fraction: 0.9
+candidate_allocation_probe:
+  enabled: false
+  overall_hit10_loss_guardrail: 0.002
+  head_hit10_loss_guardrail: 0.005
 raw_num_hierarchies: ???
 head_ratio: 0.2
 tail_ratio: 0.2

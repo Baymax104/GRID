@@ -1,0 +1,41 @@
+# @package _global_
+
+defaults:
+- /data@data: tiger_prefix_trace
+- /model@model: tiger_prefix_trace
+- /callbacks@callbacks: tiger_prefix_trace
+- /logger@logger: tiger_prefix_trace
+- /trainer@trainer: tiger_inference
+
+data_dir: ???
+data_split: ???
+semantic_id_path: ???
+ckpt_path: ???
+checkpoint_reference: null
+num_hierarchies: 4
+codebook_size: 256
+beam_width: 10
+devices: ???
+
+run_mode: inference
+task_name: tiger_prefix_trace
+project: GRID
+user: baymaxam
+group: ???
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+seed: 42
+sequence_length: 180
+
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
+  profile_dir: ${hydra:run.dir}/profile_output
+  metadata_dir: ${paths.output_dir}/metadata
+
+extras:
+  ignore_warnings: false
+  print_config_warnings: true
+  print_config: false

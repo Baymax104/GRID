@@ -48,7 +48,15 @@ def collate_fn_sequence(
 
     input_ids = batch[input_field_name]
     attention_mask = batch[attention_mask_field_name]
-    output_keys = batch[output_key_field_name] if output_key_field_name is not None else None
+    output_keys = None
+    if output_key_field_name is not None:
+        output_keys = batch[output_key_field_name]
+        if output_keys.numel() != len(rows):
+            raise ValueError(
+                f"TIGER sequence collate requires one scalar output key per row in "
+                f"'{output_key_field_name}', got shape {tuple(output_keys.shape)} for {len(rows)} rows."
+            )
+        output_keys = output_keys.reshape(len(rows))
 
     model_input = TigerModelInput(
         input_ids=input_ids,

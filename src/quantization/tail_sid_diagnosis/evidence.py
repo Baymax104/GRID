@@ -12,6 +12,9 @@ import torch.nn.functional as F
 
 from src.common.writers.structured_analysis import StructuredAnalysisOutput
 from src.data.components.data_models import DiagnosisBatch
+from src.quantization.tail_sid_diagnosis.candidate_allocation import (
+    build_candidate_allocation_evidence,
+)
 from src.quantization.tail_sid_diagnosis.metrics import (
     SCORE_CONTRIBUTION_MAX,
     SCORE_CONTRIBUTION_MIN,
@@ -25,6 +28,8 @@ from src.quantization.tail_sid_diagnosis.metrics import (
     build_diagnosis_context,
     stable_robust_risk_scores,
 )
+from src.quantization.tail_sid_diagnosis.prefix_trace import build_prefix_mechanism_evidence
+from src.quantization.tail_sid_diagnosis.search_ranking import build_search_ranking_evidence
 
 GROUPS = ("Head", "Mid", "Tail", "Tail-Cold")
 EVIDENCE_SCHEMA_VERSION = "tail_sid_diagnosis_evidence_v1"
@@ -53,6 +58,7 @@ class EvidenceVerdict(TypedDict):
     equal_risk_tail_vulnerability: str
     generation_risk_validity: str
     cross_setting_stability: str
+    prefix_survival_mechanism: str
 
 
 @dataclass(frozen=True)
@@ -65,6 +71,8 @@ class DiagnosisEvidence:
     harmful_pair_rows: list[dict[str, Any]] = field(default_factory=list)
     sensitivity_rows: list[dict[str, Any]] = field(default_factory=list)
     recommendation_rows: list[dict[str, Any]] = field(default_factory=list)
+    mechanism_tables: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    analysis_tables: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_structured_output(self) -> StructuredAnalysisOutput:
@@ -79,6 +87,8 @@ class DiagnosisEvidence:
             tables["sensitivity_metrics.csv"] = self.sensitivity_rows
         if self.recommendation_rows:
             tables["recommendation_metrics.csv"] = self.recommendation_rows
+        tables.update(self.mechanism_tables)
+        tables.update(self.analysis_tables)
         return StructuredAnalysisOutput(
             documents={"summary.json": self.summary},
             tables=tables,
@@ -111,6 +121,17 @@ def build_diagnosis_evidence(
     ),
     head_ratio: float = 0.2,
     tail_ratio: float = 0.2,
+    search_ranking_enabled: bool = False,
+    risk_standardization_enabled: bool = False,
+    risk_standardization_bin_count: int = 5,
+    risk_standardization_bin_count_sensitivity: list[int] | tuple[int, ...] = (3, 5, 10),
+    risk_standardization_min_items_per_group_per_bin: int = 20,
+    risk_standardization_min_item_retention: float = 0.5,
+    risk_standardization_max_abs_raw_damage_smd: float = 0.1,
+    risk_standardization_min_bootstrap_valid_fraction: float = 0.9,
+    candidate_allocation_probe_enabled: bool = False,
+    candidate_allocation_overall_hit10_loss_guardrail: float = 0.002,
+    candidate_allocation_head_hit10_loss_guardrail: float = 0.005,
 ) -> DiagnosisEvidence:
     """Compute one complete, internally consistent evidence result."""
     priority_multipliers = {
@@ -205,6 +226,7 @@ def build_diagnosis_evidence(
         "equal_risk_tail_vulnerability": "unavailable",
         "generation_risk_validity": "unavailable",
         "cross_setting_stability": "unavailable",
+        "prefix_survival_mechanism": "unavailable",
     }
     structural_section = {
         "num_items": float(len(context.item_ids)),
@@ -269,6 +291,37 @@ def build_diagnosis_evidence(
         bucket_quantile=semantic_bucket_quantile,
     )
     verdict.update(_build_verdict(statistics, sensitivity_rows))
+    mechanism = build_prefix_mechanism_evidence(
+        batch,
+        item_rows,
+        bootstrap_samples=bootstrap_samples,
+        confidence=bootstrap_confidence,
+        seed=semantic_seed,
+        include_widened_recovery=not candidate_allocation_probe_enabled,
+    )
+    search_ranking = build_search_ranking_evidence(
+        batch,
+        item_rows,
+        search_ranking_enabled=search_ranking_enabled,
+        risk_standardization_enabled=risk_standardization_enabled,
+        bin_count=risk_standardization_bin_count,
+        bin_count_sensitivity=risk_standardization_bin_count_sensitivity,
+        min_items_per_group_per_bin=risk_standardization_min_items_per_group_per_bin,
+        min_item_retention=risk_standardization_min_item_retention,
+        max_abs_raw_damage_smd=risk_standardization_max_abs_raw_damage_smd,
+        bootstrap_samples=bootstrap_samples,
+        bootstrap_confidence=bootstrap_confidence,
+        min_bootstrap_valid_fraction=risk_standardization_min_bootstrap_valid_fraction,
+        seed=semantic_seed,
+    )
+    candidate_allocation = build_candidate_allocation_evidence(
+        batch,
+        item_rows,
+        enabled=candidate_allocation_probe_enabled,
+        overall_hit10_loss_guardrail=candidate_allocation_overall_hit10_loss_guardrail,
+        head_hit10_loss_guardrail=candidate_allocation_head_hit10_loss_guardrail,
+    )
+    verdict["prefix_survival_mechanism"] = mechanism.verdict
     metadata = {
         "schema_version": EVIDENCE_SCHEMA_VERSION,
         "normalization_version": SCORE_NORMALIZATION_VERSION,
@@ -277,6 +330,9 @@ def build_diagnosis_evidence(
         "semantic_evidence_available": batch.embeddings is not None,
         "recommendation_evidence_available": batch.recommendation is not None,
         "recommendation": recommendation_metadata,
+        "prefix_trace": mechanism.summary,
+        "search_ranking_analysis": search_ranking.summary,
+        "candidate_allocation_probe": candidate_allocation.summary,
         "resolved_inputs": batch.input_metadata,
         "semantic": semantic_evidence.metadata,
         "statistical_settings": {
@@ -301,6 +357,9 @@ def build_diagnosis_evidence(
         "semantic": semantic_section,
         "damage": damage_section,
         "prefix_risk": prefix_section,
+        "prefix_mechanism": mechanism.summary,
+        "search_ranking": search_ranking.summary,
+        "candidate_allocation": candidate_allocation.summary,
         "statistics": statistics,
     }
     return DiagnosisEvidence(
@@ -310,6 +369,9 @@ def build_diagnosis_evidence(
             "semantic": semantic_section,
             "damage": damage_section,
             "prefix_risk": prefix_section,
+            "prefix_mechanism": mechanism.scalar_section,
+            "search_ranking": search_ranking.scalar_section,
+            "candidate_allocation": candidate_allocation.scalar_section,
         },
         group_rows=group_rows,
         item_rows=item_rows,
@@ -317,6 +379,8 @@ def build_diagnosis_evidence(
         harmful_pair_rows=semantic_evidence.pair_rows,
         sensitivity_rows=sensitivity_rows,
         recommendation_rows=recommendation_rows,
+        mechanism_tables=mechanism.tables,
+        analysis_tables={**search_ranking.tables, **candidate_allocation.tables},
         metadata=metadata,
     )
 
@@ -632,6 +696,7 @@ def _build_verdict(statistics: dict[str, Any], sensitivity_rows: list[dict[str, 
         "equal_risk_tail_vulnerability": "unavailable",
         "generation_risk_validity": "unavailable",
         "cross_setting_stability": "unavailable",
+        "prefix_survival_mechanism": "unavailable",
     }
     raw_damage = statistics["bootstrap_tail_minus_head"]["raw_damage"]
     if raw_damage["available"]:
