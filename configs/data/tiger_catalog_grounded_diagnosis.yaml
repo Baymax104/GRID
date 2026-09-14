@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+- tail_sid_diagnosis@_here_
+- _self_
+
+test_dataloader:
+  dataset_class:
+    _target_: src.data.catalog_diagnosis.CatalogDiagnosisDataset
+    _partial_: true
+    data_split: ${data_split}

@@ -1,0 +1,42 @@
+# @package _global_
+defaults:
+- /data@data: tiger_item_resolution_train
+- /model@model: tiger_item_resolution
+- /callbacks@callbacks: tiger_item_resolution
+- /logger@logger: tiger_train
+- /trainer@trainer: tiger_item_resolution
+
+data_dir: ???
+semantic_id_path: ???
+embedding_path: ???
+resolution_arm: ???
+dataset_name: ???
+devices: ???
+group: ???
+experiment_protocol: mir-v1
+search_states: 64
+search_item_scores: 4096
+num_hierarchies: 4
+codebook_size: 256
+beam_width: 10
+sequence_length: 180
+run_mode: train
+task_name: tiger_item_resolution_${resolution_arm}_${dataset_name}_seed${seed}_train
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+seed: 42
+ckpt_path: null
+run_test_after_training: false
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
+  profile_dir: ${hydra:run.dir}/profile_output
+  metadata_dir: ${paths.output_dir}/metadata
+extras:
+  ignore_warnings: false
+  print_config_warnings: true
+  print_config: false

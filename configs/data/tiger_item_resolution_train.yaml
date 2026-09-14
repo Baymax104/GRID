@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+
+train_dataloader:
+  num_workers: 8
+val_dataloader:
+  batch_size_per_device: 16
+  num_workers: 4

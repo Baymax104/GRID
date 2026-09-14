@@ -1,0 +1,19 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+
+model_checkpoint:
+  monitor: val/ndcg@10
+  save_last: true
+wandb_checkpoint_writer:
+  missing_checkpoint: fail
+wandb_last_checkpoint_writer:
+  _target_: src.common.writers.wandb_checkpoint_writer.WandbCheckpointWriter
+  artifact_name: ${task_name}-last-checkpoint
+  task_name: ${task_name}
+  artifact_type: checkpoint
+  role: checkpoint_last
+  selection: last
+  aliases: [latest]
+  missing_checkpoint: fail

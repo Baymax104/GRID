@@ -1,0 +1,12 @@
+# @package _global_
+defaults:
+- tiger_item_resolution_inference@_here_
+- _self_
+
+root:
+  _target_: src.recommendation.tiger_item_resolution.audit.TigerItemResolutionAudit
+  trace_resolution: false
+  audit_chunk_size: ${audit_chunk_size}
+  audit_state_budgets: ${audit_state_budgets}
+  audit_users: ${audit_users}
+  audit_sampling_seed: ${audit_sampling_seed}

@@ -34,6 +34,8 @@ DEFAULT_ROLE_BY_FIELD = {
     "widened_prefix_trace_path": "prefix_trace",
     "baseline_prefix_trace_path": "prefix_trace",
     "intervention_prefix_trace_path": "prefix_trace",
+    "item_resolution_calibration_path": "item_resolution_calibration",
+    "item_resolution_trace_path": "item_resolution_trace",
 }
 
 
@@ -200,9 +202,25 @@ def load_prefix_trace_artifact(
     return load_prefix_trace(resolved_path)
 
 
+def load_item_resolution_calibration(file_path, wandb_entity=None, wandb_project=None):
+    """通过共享解析器读取训练集标定，并保留 Artifact lineage。"""
+    if file_path is None:
+        return None
+    from src.data.components.item_resolution import validate_resolution_calibration
+
+    resolved = resolve_reference(file_path, "item_resolution_calibration_path", default_entity=wandb_entity,
+                                 default_project=wandb_project, default_file="item_resolution_calibration.pt")
+    bundle = torch.load(open_local_or_remote(resolved, mode="rb"), weights_only=False, map_location="cpu")
+    validate_resolution_calibration(bundle)
+    return {**bundle["metadata"], "thresholds": bundle["trace"]["entropy"].float().mean(0),
+            "calibration_reference": file_path, "sample_count": len(bundle["keys"])}
+
+
 def _default_file_for_role(role: str) -> str:
-    if role == "checkpoint":
+    if role in {"checkpoint", "checkpoint_last"}:
         return "*.ckpt"
+    if role in {"item_resolution_trace", "item_resolution_calibration"}:
+        return f"{role}.pt"
     if role == "prefix_trace":
         return PREFIX_TRACE_FILENAME
     return DEFAULT_BUNDLE_FILE

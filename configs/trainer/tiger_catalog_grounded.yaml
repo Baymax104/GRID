@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+
+root:
+  max_steps: 20000
+  val_check_interval: 500

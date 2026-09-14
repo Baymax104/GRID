@@ -38,6 +38,7 @@ class AuxiliaryTensorWriter(BaseBufferedWriter):
         role: str | None = None,
         aliases: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
+        validator=None,
     ):
         super().__init__(flush_frequency=flush_frequency)
         self.output_dir = output_dir
@@ -49,6 +50,7 @@ class AuxiliaryTensorWriter(BaseBufferedWriter):
         self.role = role
         self.aliases = aliases or ["latest"]
         self.metadata = metadata or {}
+        self.validator = validator or validate_prefix_trace_bundle
         os.makedirs(self.output_dir, exist_ok=True)
         if publish_wandb and not all((artifact_name, artifact_type, role)):
             raise ValueError("W&B auxiliary publication requires artifact_name, artifact_type, and role.")
@@ -109,7 +111,7 @@ class AuxiliaryTensorWriter(BaseBufferedWriter):
                 "trace": payload.get("trace"),
                 "metadata": payload.get("metadata"),
             }
-            validate_prefix_trace_bundle(candidate)
+            self.validator(candidate)
             if schema_version is None:
                 schema_version = candidate["schema_version"]
                 source_metadata = dict(candidate["metadata"])
@@ -128,7 +130,7 @@ class AuxiliaryTensorWriter(BaseBufferedWriter):
             "trace": {name: torch.cat(parts, dim=0).cpu() for name, parts in trace_parts.items()},
             "metadata": source_metadata,
         }
-        validate_prefix_trace_bundle(bundle)
+        self.validator(bundle)
         sort_index = bundle["keys"].argsort()
         bundle["keys"] = bundle["keys"][sort_index]
         bundle["labels"] = bundle["labels"][sort_index]

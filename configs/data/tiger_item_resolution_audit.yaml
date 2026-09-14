@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+- tiger_item_resolution_inference@_here_
+- _self_
+
+predict_dataloader:
+  batch_size_per_device: 1
+  num_workers: 0
+  timeout: 0
+datamodule:
+  _target_: src.data.datamodule.item_resolution_audit.ItemResolutionAuditDataModule
+  audit_users: ${audit_users}
+  audit_sampling_seed: ${audit_sampling_seed}

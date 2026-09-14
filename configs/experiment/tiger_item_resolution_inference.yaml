@@ -1,0 +1,45 @@
+# @package _global_
+defaults:
+- /data@data: tiger_item_resolution_inference
+- /model@model: tiger_item_resolution_inference
+- /callbacks@callbacks: tiger_item_resolution_inference
+- /logger@logger: tiger_prefix_trace
+- /trainer@trainer: tiger_item_resolution_inference
+
+data_dir: ???
+data_split: ???
+semantic_id_path: ???
+embedding_path: ???
+ckpt_path: ???
+checkpoint_reference: ${ckpt_path}
+calibration_path: null
+inference_policy: standard
+resolution_arm: ???
+dataset_name: ???
+devices: [0]
+group: ???
+experiment_protocol: mir-v1
+search_states: 64
+search_item_scores: 4096
+num_hierarchies: 4
+codebook_size: 256
+beam_width: 10
+sequence_length: 180
+run_mode: inference
+task_name: tiger_item_resolution_${resolution_arm}_${dataset_name}_${data_split}_${inference_policy}_seed${seed}_q${search_states}_s${search_item_scores}
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+seed: 42
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
+  profile_dir: ${hydra:run.dir}/profile_output
+  metadata_dir: ${paths.output_dir}/metadata
+extras:
+  ignore_warnings: false
+  print_config_warnings: true
+  print_config: false

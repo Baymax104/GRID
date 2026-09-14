@@ -1,0 +1,43 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+
+root:
+  _target_: src.recommendation.tiger_catalog_grounded.TigerCatalogGrounded
+  arm: ${catalog_arm}
+  top_k_for_generation: ${beam_width}
+  catalog:
+    _target_: src.data.components.catalog_content.load_catalog_content
+    semantic_id_path: ${semantic_id_path}
+    embedding_path: ${embedding_path}
+    wandb_entity: ${user}
+    wandb_project: ${project}
+  projection_dim: 128
+  prototypes: 4
+  cluster_iterations: 5
+  temperature: 0.1
+  auxiliary_weight: 0.1
+  alpha_initial: 0.1
+  alpha_maximum: 0.5
+  bank_seed: 42
+  hybrid_weight: 0.5
+
+metrics:
+  stages:
+    train:
+      generation_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: generation_loss
+      content_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: content_loss
+      mixture_alpha:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: mixture_alpha

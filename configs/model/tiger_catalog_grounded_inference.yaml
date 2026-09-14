@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+- tiger_catalog_grounded@_here_
+- _self_
+
+root:
+  trace_prefix_survival: ${prefix_trace}
+  prefix_trace_metadata:
+    data_split: ${data_split}
+    beam_width: ${beam_width}
+    num_hierarchies: ${num_hierarchies}
+    codebook_size: ${codebook_size}
+    trace_mode: teacher_forcing_and_constrained_beam
+    checkpoint_reference: ${checkpoint_reference}
+    semantic_id_reference: ${semantic_id_path}
+
+metrics: null

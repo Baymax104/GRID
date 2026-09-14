@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+- tiger_prefix_trace@_here_
+- _self_
+
+predict_dataloader:
+  batch_size_per_device: 16
+  num_workers: 4
+datamodule:
+  _target_: src.data.datamodule.item_resolution.ItemResolutionDataModule
+  inference_policy: ${inference_policy}

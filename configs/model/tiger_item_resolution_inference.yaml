@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+- tiger_item_resolution@_here_
+- _self_
+
+root:
+  trace_resolution: true
+  inference_policy: ${inference_policy}
+  checkpoint_reference: ${checkpoint_reference}
+  data_split: ${data_split}
+  calibration:
+    _target_: src.data.components.artifacts.load_item_resolution_calibration
+    file_path: ${calibration_path}
+    wandb_entity: ${user}
+    wandb_project: ${project}
+metrics: null
