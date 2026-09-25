@@ -46,20 +46,20 @@ try {
             Invoke-Mutagen (@("sync", "list") + $SessionNames)
         }
         "flush" {
-            Invoke-Mutagen @("project", "flush", "--no-global-configuration")
+            Invoke-Mutagen @("project", "flush")
         }
         "pause" {
-            Invoke-Mutagen @("project", "pause", "--no-global-configuration")
+            Invoke-Mutagen @("project", "pause")
         }
         "resume" {
-            Invoke-Mutagen @("project", "resume", "--no-global-configuration")
-            Invoke-Mutagen @("project", "flush", "--no-global-configuration")
+            Invoke-Mutagen @("project", "resume")
+            Invoke-Mutagen @("project", "flush")
         }
         "monitor" {
             Invoke-Mutagen (@("sync", "monitor") + $SessionNames)
         }
         "stop" {
-            Invoke-Mutagen @("project", "terminate", "--no-global-configuration")
+            Invoke-Mutagen @("project", "terminate")
         }
     }
 }

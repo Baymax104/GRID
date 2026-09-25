@@ -38,7 +38,7 @@ Mutagen 0.18.1 已安装在开发机，`node1` 已在用户 SSH config 中配置
 
 ### 使用仓库级 mutagen.yml 和 PowerShell 管理入口
 
-`mutagen.yml` 声明 session；`scripts/mutagen_sync.ps1` 固定从仓库根目录定位该文件，并映射 `start`、`status`、`flush`、`pause`、`resume`、`monitor`、`stop` 操作。所有项目命令使用 `--no-global-configuration`，避免用户全局 Mutagen 默认值改变安全契约。
+`mutagen.yml` 声明 session；`scripts/mutagen_sync.ps1` 固定从仓库根目录定位该文件，并映射 `start`、`status`、`flush`、`pause`、`resume`、`monitor`、`stop` 操作。创建项目的 `start` 使用 `--no-global-configuration`，避免用户全局 Mutagen 默认值改变安全契约；Mutagen 0.18.1 的既有项目生命周期子命令不接受该参数，后续操作直接作用于已经按仓库配置创建的 session。
 
 `start` 始终使用 `--paused`，只创建 session 和部署所需 agent；`resume` 才允许开始传输。`monitor` 仅展示这四个具名 session。
 

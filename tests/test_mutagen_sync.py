@@ -72,6 +72,8 @@ def test_management_script_preserves_the_start_gate_and_command_contract() -> No
     assert '"--no-global-configuration"' in script
     assert '[ValidateSet("start", "status", "flush", "pause", "resume", "monitor", "stop")]' in script
     assert '"grid-src", "grid-configs", "grid-scripts", "grid-root-code"' in script
+    assert '@("project", "flush")' in script
+    assert '@("project", "flush", "--no-global-configuration")' not in script
     assert script.index('"project", "resume"') < script.index('"project", "flush"', script.index('"resume" {'))
 
 
