@@ -18,4 +18,4 @@
 
 ## Impact
 
-configs/、liger_train.sh、liger_inference.sh、scripts/liger_common.sh、src/data/components/liger.py、../../../../research/docs/grid-experiments/、tests/。真实 dry run 同时修复公共 TFRecordReader 的 Windows file URI 盘符识别。保留现有用户改动，不启动完整实验。
+configs/、liger_train.sh、liger_inference.sh、liger_common.sh、src/data/components/liger.py、../../../../research/docs/grid-experiments/、tests/。真实 dry run 同时修复公共 TFRecordReader 的 Windows file URI 盘符识别。保留现有用户改动，不启动完整实验。

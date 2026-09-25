@@ -8,7 +8,7 @@
 - **THEN** 远端对应受管路径 SHALL 与本地一致，且远端变更 SHALL NOT 反向传播到本地
 
 ### Requirement: 同步范围采用显式白名单
-系统 SHALL 仅同步 `src/`、`configs/`、`scripts/`、根目录 `*.sh`、`pyproject.toml` 和 `uv.lock`。
+系统 SHALL 仅同步 `src/`、`configs/`、根目录 `*.sh`、`*.ps1`、`pyproject.toml` 和 `uv.lock`。
 
 #### Scenario: 同步根目录文件
 - **WHEN** 根目录 session 扫描 GRID 工作区
@@ -16,7 +16,8 @@
 
 #### Scenario: 同步代码目录
 - **WHEN** 目录 session 扫描 GRID 工作区
-- **THEN** `src/`、`configs/` 和 `scripts/` SHALL 通过相互独立的窄范围端点同步
+- **THEN** `src/` 和 `configs/` SHALL 通过相互独立的窄范围端点同步
+- **AND** 根目录脚本 SHALL 由根目录白名单 session 同步
 
 ### Requirement: 远端重资产不受同步影响
 系统 MUST 将远端 `.git/`、数据集、预训练模型、虚拟环境、日志、W&B 文件、实验产物和其他非白名单内容置于同步边界之外。
@@ -66,4 +67,4 @@
 
 #### Scenario: Agent 准备远端实验
 - **WHEN** agent 需要把本地改动交给远端实验使用
-- **THEN** agent SHALL 通过管理脚本完成 flush，并在四个 session 均为 Watching 且无 conflict 后才报告同步完成
+- **THEN** agent SHALL 通过管理脚本完成 flush，并在三个 session 均为 Watching 且无 conflict 后才报告同步完成

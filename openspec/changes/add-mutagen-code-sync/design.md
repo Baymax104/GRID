@@ -22,9 +22,9 @@ Mutagen 0.18.1 已安装在开发机，`node1` 已在用户 SSH config 中配置
 
 ## Decisions
 
-### 使用四个窄范围 one-way-replica session
+### 使用三个窄范围 one-way-replica session
 
-`src/`、`configs/` 和 `scripts/` 分别使用独立目录端点；根目录 session 只放行 `*.sh`、`pyproject.toml` 和 `uv.lock`。所有 session 都使用 `one-way-replica`，因此本地的修改、创建和删除是最终结果，远端对受管代码的漂移不会反向传播或阻塞同步。
+`src/` 和 `configs/` 分别使用独立目录端点；根目录 session 只放行 `*.sh`、`*.ps1`、`pyproject.toml` 和 `uv.lock`。所有 session 都使用 `one-way-replica`，因此本地的修改、创建和删除是最终结果，远端对受管代码的漂移不会反向传播或阻塞同步。
 
 不采用单个全仓库 replica，因为 ignore 配置错误可能触碰重资产；不采用 `one-way-safe`，因为远端代码明确不可信，远端漂移不应产生 conflict。
 
@@ -38,9 +38,9 @@ Mutagen 0.18.1 已安装在开发机，`node1` 已在用户 SSH config 中配置
 
 ### 使用仓库级 mutagen.yml 和 PowerShell 管理入口
 
-`mutagen.yml` 声明 session；`scripts/mutagen_sync.ps1` 固定从仓库根目录定位该文件，并映射 `start`、`status`、`flush`、`pause`、`resume`、`monitor`、`stop` 操作。创建项目的 `start` 使用 `--no-global-configuration`，避免用户全局 Mutagen 默认值改变安全契约；Mutagen 0.18.1 的既有项目生命周期子命令不接受该参数，后续操作直接作用于已经按仓库配置创建的 session。
+`mutagen.yml` 声明 session；根目录 `mutagen_sync.ps1` 固定从自身所在的仓库根目录定位该文件，并映射 `start`、`status`、`flush`、`pause`、`resume`、`monitor`、`stop` 操作。创建项目的 `start` 使用 `--no-global-configuration`，避免用户全局 Mutagen 默认值改变安全契约；Mutagen 0.18.1 的既有项目生命周期子命令不接受该参数，后续操作直接作用于已经按仓库配置创建的 session。
 
-`start` 始终使用 `--paused`，只创建 session 和部署所需 agent；`resume` 才允许开始传输。`monitor` 仅展示这四个具名 session。
+`start` 始终使用 `--paused`，只创建 session 和部署所需 agent；`resume` 才允许开始传输。`monitor` 仅展示这三个具名 session。
 
 ### 不传播 Windows 权限
 
@@ -62,10 +62,11 @@ Mutagen 0.18.1 已安装在开发机，`node1` 已在用户 SSH config 中配置
 ## Migration Plan
 
 1. 提交并验证 `mutagen.yml`、管理脚本和静态测试。
-2. 执行 `scripts/mutagen_sync.ps1 start`，以暂停状态创建四个 session。
-3. 执行 `status` 检查端点、模式和忽略规则。
-4. 执行 `resume` 完成首次代码同步，再用 `flush` 作为运行实验前的同步门禁。
-5. 如需回滚，执行 `stop` 终止项目 session；远端重资产和 Git 元数据不受影响。
+2. 若旧四 session 项目仍在运行，先执行 `./mutagen_sync.ps1 stop`，确保已移除的 `grid-scripts` 不再后台运行。
+3. 执行 `./mutagen_sync.ps1 start`，以暂停状态创建三个 session。
+4. 执行 `status` 检查端点、模式和忽略规则。
+5. 执行 `resume` 完成首次代码同步，再用 `flush` 作为运行实验前的同步门禁。
+6. 如需回滚，执行 `stop` 终止项目 session；远端重资产和 Git 元数据不受影响。
 
 ## Open Questions
 

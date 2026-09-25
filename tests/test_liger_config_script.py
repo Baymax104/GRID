@@ -91,7 +91,7 @@ def test_no_default_dry_run_and_torchrun(bash):
 
 
 def test_shell_syntax(bash):
-    for path in ["liger_train.sh", "liger_inference.sh", "scripts/liger_common.sh"]:
+    for path in ["liger_train.sh", "liger_inference.sh", "liger_common.sh"]:
         result = subprocess.run([bash], input="bash -n " + shlex.quote(path), cwd=ROOT, text=True, capture_output=True)
         assert result.returncode == 0, result.stderr
 

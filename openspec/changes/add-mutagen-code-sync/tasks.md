@@ -5,7 +5,7 @@
 
 ## 2. 命令行管理
 
-- [x] 2.1 创建 `scripts/mutagen_sync.ps1`，实现前置条件检查和仓库根目录解析
+- [x] 2.1 创建根目录 `mutagen_sync.ps1`，实现前置条件检查和仓库根目录解析
 - [x] 2.2 实现 `start`、`status`、`flush`、`pause`、`resume`、`monitor`、`stop` 操作，并确保首次启动保持暂停
 
 ## 3. 自动化验证

@@ -36,10 +36,11 @@
 
 - 本地 Git 工作区是代码的唯一可信源；远端 `node1:/data3/weizhenyu/projects/GRID` 的 Git 状态不可信，不得用它判断代码版本、同步方向或完成状态，也不得通过同步修复远端 `.git/`。
 - 远端是运行环境和重资产的可信源。`.git/`、`data/`、`pretrained_models/`、`.venv/`、`venv/`、`logs/`、`wandb/`、checkpoint 与实验产物必须留在同步边界之外。
-- Mutagen 只管理 `src/`、`configs/`、`scripts/`、根目录 `*.sh`、`pyproject.toml` 和 `uv.lock`。受管范围使用 `one-way-replica`：本地创建、修改和删除均传播到远端，远端受管目录中的额外代码和缓存可被清理，任何远端内容都不得反向传播。
-- 同步配置以 `mutagen.yml` 为准，生命周期操作统一从仓库根目录使用 `scripts/mutagen_sync.ps1`；不得用全仓库 replica、rsync 或临时 scp 替代该入口。同步依赖清单不授权自动修改远端虚拟环境。
-- 首次或终止后重建 session 时，依次执行 `./scripts/mutagen_sync.ps1 start`、`status`、`resume`。`start` 必须只创建 paused session；在 `status` 确认四个端点、`One Way Replica` 和 ignore 边界后才能 `resume`。
-- 将代码交给远端实验前必须执行 `./scripts/mutagen_sync.ps1 flush`。只有命令成功、四个 session 均为 `Watching for changes` 且无 conflict，才能报告同步完成；用 `status` 查看快照，用 `monitor` 持续观察，用 `pause`/`resume` 暂停或恢复，仅在明确需要终止同步时使用 `stop`。
+- Mutagen 只管理 `src/`、`configs/`、根目录 `*.sh`、`*.ps1`、`pyproject.toml` 和 `uv.lock`。受管范围使用 `one-way-replica`：本地创建、修改和删除均传播到远端，远端受管目录中的额外代码和缓存可被清理，任何远端内容都不得反向传播。
+- 同步配置以 `mutagen.yml` 为准，生命周期操作统一从仓库根目录使用 `./mutagen_sync.ps1`；不得用全仓库 replica、rsync 或临时 scp 替代该入口。同步依赖清单不授权自动修改远端虚拟环境。
+- 首次或终止后重建 session 时，依次执行 `./mutagen_sync.ps1 start`、`status`、`resume`。`start` 必须只创建 paused session；在 `status` 确认三个端点、`One Way Replica` 和 ignore 边界后才能 `resume`。
+- 从包含 `grid-scripts` 的旧四 session 配置迁移到当前三 session 配置时，先用旧会话仍可识别的项目入口执行 `stop`，再按 `start`、`status`、`resume` 重建；不得让已移除的 `grid-scripts` 会话继续后台运行。
+- 将代码交给远端实验前必须执行 `./mutagen_sync.ps1 flush`。只有命令成功、三个 session 均为 `Watching for changes` 且无 conflict，才能报告同步完成；用 `status` 查看快照，用 `monitor` 持续观察，用 `pause`/`resume` 暂停或恢复，仅在明确需要终止同步时使用 `stop`。
 
 ## Pipeline 契约
 

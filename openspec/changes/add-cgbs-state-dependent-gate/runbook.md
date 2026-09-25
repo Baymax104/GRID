@@ -49,7 +49,7 @@ base/fixed 仅允许推理，不能用于训练；第一版 E 只接受 `content
 
 聚焦 CPU 测试覆盖：零初始化等价及 RNG、辅助编码器梯度、非零门控梯度、极端概率/权重、单合法分支、beam/teacher 一致、标签与 batch 划分无关、checkpoint 身份、常量来源校验、非等长 batch 统计、Hydra compose/实例化及 shell 参数/语法。跨 rank 的均值与极值沿用 torchmetrics 的 sum/count/min/max 归约；没有执行真实 GPU/DDP 端到端验证。
 
-交付前按 `scripts/mutagen_sync.ps1` 执行 flush，并确认四个 session 为 `Watching for changes` 且无 conflict。同步仅覆盖项目规定的代码边界；不安装远端依赖或启动训练。
+交付前按 `./mutagen_sync.ps1` 执行 flush，并确认三个 session 为 `Watching for changes` 且无 conflict。同步仅覆盖项目规定的代码边界；不安装远端依赖或启动训练。
 
 2026-09-17 已完成：两个聚焦测试文件189项通过；随后补充实际单合法分支的 conditional backward 测试1项通过，合计190项。Ruff check/format、shell语法（含四个改动脚本）及 `openspec validate add-cgbs-state-dependent-gate --strict` 通过，`git diff --check` 无空白错误。测试出现4条依赖弃用警告，无测试失败。
 

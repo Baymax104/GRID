@@ -21,11 +21,11 @@ G0 已实现；真实 GPU 审计尚未运行。G1 完整 SID 排序训练尚未�
 远端运行前，在本地仓库根目录执行既有同步入口：
 
 ```powershell
-./scripts/mutagen_sync.ps1 flush
-./scripts/mutagen_sync.ps1 status
+./mutagen_sync.ps1 flush
+./mutagen_sync.ps1 status
 ```
 
-只有 flush 成功且四个 session 都是 `Watching for changes`、无 conflict，才在 node1 的 GRID 根目录执行下面一个命令。`data/beauty` 必须指向包含 `evaluation` 子目录的数据根；物理 GPU 按当前空闲情况选择。
+只有 flush 成功且三个 session 都是 `Watching for changes`、无 conflict，才在 node1 的 GRID 根目录执行下面一个命令。`data/beauty` 必须指向包含 `evaluation` 子目录的数据根；物理 GPU 按当前空闲情况选择。
 
 ```bash
 bash ./tiger_a_score_search_audit.sh --data-dir data/beauty --gpu 0 --notes "G0: frozen A exact catalog versus beam10, fixed 128 evaluation users"

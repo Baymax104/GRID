@@ -7,15 +7,15 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = $PSScriptRoot
 $ProjectFile = Join-Path $ProjectRoot "mutagen.yml"
-$SessionNames = @("grid-src", "grid-configs", "grid-scripts", "grid-root-code")
+$SessionNames = @("grid-src", "grid-configs", "grid-root-code")
 
 if (-not (Test-Path -LiteralPath $ProjectFile -PathType Leaf)) {
     throw "Mutagen project file not found: $ProjectFile"
 }
 
-$requiredDirectories = @("src", "configs", "scripts")
+$requiredDirectories = @("src", "configs")
 foreach ($directory in $requiredDirectories) {
     $path = Join-Path $ProjectRoot $directory
     if (-not (Test-Path -LiteralPath $path -PathType Container)) {

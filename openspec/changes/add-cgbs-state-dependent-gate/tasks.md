@@ -8,7 +8,7 @@
 
 - [x] 2.1 验证数值边界、初始等价、梯度、beam/teacher一致与checkpoint恢复
 - [x] 2.2 验证统计聚合、Hydra配置、shell语法/参数与OpenSpec strict
-- [x] 2.3 写运行说明，完成Mutagen flush/四个session核验，交付单次双卡命令
+- [x] 2.3 写运行说明，完成Mutagen flush/session核验，交付单次双卡命令
 
 ## 3. 科学验证
 

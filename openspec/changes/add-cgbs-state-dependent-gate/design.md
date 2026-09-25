@@ -28,4 +28,4 @@
 
 ## Migration Plan
 
-独立arm与model config，不迁移历史checkpoint。保留原C、D脚本；聚焦测试/compose/shell/OpenSpec验证后Mutagen flush并确认四个session。E完整训练由用户手动执行，GPU0/1。科学结果仍待运行。
+独立arm与model config，不迁移历史checkpoint。保留原C、D脚本；聚焦测试/compose/shell/OpenSpec验证后Mutagen flush并确认三个session。E完整训练由用户手动执行，GPU0/1。科学结果仍待运行。

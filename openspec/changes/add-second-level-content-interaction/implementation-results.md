@@ -25,11 +25,11 @@ uv run --no-sync pytest tests/recommendation/test_second_level_interaction.py te
 
 ## 手动训练
 
-所有命令在 GRID 仓库根目录执行。先确认数据位于 `data/beauty`，物理 GPU 0、1 可用；可用 `--gpus` 与 `--master-port` 调整。脚本固定两卡。实验前本地执行下面命令，并确认四个 session 都是 `Watching for changes` 且无 conflict；本轮未执行同步。
+所有命令在 GRID 仓库根目录执行。先确认数据位于 `data/beauty`，物理 GPU 0、1 可用；可用 `--gpus` 与 `--master-port` 调整。脚本固定两卡。实验前本地执行下面命令，并确认三个 session 都是 `Watching for changes` 且无 conflict；本轮未执行同步。
 
 ```powershell
-./scripts/mutagen_sync.ps1 flush
-./scripts/mutagen_sync.ps1 status
+./mutagen_sync.ps1 flush
+./mutagen_sync.ps1 status
 ```
 
 第一阶段只手动运行以下三个 seed42 条件，每条是独立完整训练命令；不要同时占用同一 GPU。默认不启用 dry-run，需要 smoke 时显式追加 `--dry-run`。

@@ -2,7 +2,7 @@
 
 日期：2026-09-18。用户已完成正式诊断28w08e28；技术检查通过，但效果门槛未通过，建议暂停结构推进。见[正式结果与结论边界](results-28w08e28.md)。下文保留实现和运行协议，运行前状态以本段最新结果为准。
 
-同步状态：用户恢复node1连接后，已成功执行`./scripts/mutagen_sync.ps1 flush`；status确认四个session均为Watching for changes，双方端点连接正常且无conflict。此前SSH超时阻塞已解除，可手动运行下方命令。
+同步状态：用户恢复node1连接后，已成功执行当时路径下的 Mutagen flush；status确认当时四个session均为Watching for changes，双方端点连接正常且无conflict。此前SSH超时阻塞已解除，可手动运行下方命令。当前管理入口为 `./mutagen_sync.ps1`。
 
 ## 冻结条件
 

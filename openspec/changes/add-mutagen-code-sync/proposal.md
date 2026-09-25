@@ -5,7 +5,7 @@ GRID 当前依赖人工复制本地代码到 `node1`，缺少可重复、可审�
 ## What Changes
 
 - 新增仓库级 Mutagen project 配置，以多个窄范围 session 将本地代码单向复制到 `node1:/data3/weizhenyu/projects/GRID`。
-- 对 `src/`、`configs/`、`scripts/`、根目录 `*.sh`、`pyproject.toml` 和 `uv.lock` 使用本地优先的精确副本语义。
+- 对 `src/`、`configs/`、根目录 `*.sh`、`*.ps1`、`pyproject.toml` 和 `uv.lock` 使用本地优先的精确副本语义。
 - 将远端 `.git/`、`data/`、`pretrained_models/`、虚拟环境、日志、W&B 文件和其他实验重资产置于同步边界之外。
 - 提供 PowerShell 命令行入口，用于启动、查看、强制刷新、暂停、恢复和终止项目同步；启动流程默认先创建暂停的 session，并要求显式恢复后才传输文件。
 - 受管目录采用完整 replica 语义，包括清理远端遗留的源码缓存和仅远端存在的旧代码目录。

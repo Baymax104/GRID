@@ -68,5 +68,5 @@ CPU 测试覆盖同初始参数/损失/随机状态、辅助和生成梯度分�
 - `uv run pytest tests/recommendation/test_tiger_catalog_grounded.py tests/test_tiger_catalog_grounded_config_script.py -q`：147 passed；仅依赖弃用告警。
 - 测试 hook 按 Ruff 要求绑定闭包变量后，两个梯度分解测试再次通过；模型和两个测试文件 Ruff check/format check 均通过。
 - `openspec validate isolate-cgbs-auxiliary-encoder-gradient --strict`：通过。
-- `scripts/mutagen_sync.ps1 flush` 成功；后续完整 status 核验 `grid-src`、`grid-configs`、`grid-scripts`、`grid-root-code` 均为 One Way Replica、两端已连接、Watching for changes，无 conflict。仅同步代码受管范围，文档和测试在本地。
+- 当时的 Mutagen flush 成功；后续完整 status 核验当时的 `grid-src`、`grid-configs`、`grid-scripts`、`grid-root-code` 均为 One Way Replica、两端已连接、Watching for changes，无 conflict。当前管理入口为 `./mutagen_sync.ps1`，使用三个 session；仅同步代码受管范围，文档和测试在本地。
 - 未启动完整训练、推理或诊断；D 结果及 GPU/DDP 实验验证待用户执行。

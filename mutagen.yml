@@ -12,10 +12,6 @@ sync:
     alpha: ./configs
     beta: node1:/data3/weizhenyu/projects/GRID/configs
 
-  grid-scripts:
-    alpha: ./scripts
-    beta: node1:/data3/weizhenyu/projects/GRID/scripts
-
   grid-root-code:
     alpha: .
     beta: node1:/data3/weizhenyu/projects/GRID
@@ -23,5 +19,6 @@ sync:
       paths:
         - "/*"
         - "!/*.sh"
+        - "!/*.ps1"
         - "!/pyproject.toml"
         - "!/uv.lock"
