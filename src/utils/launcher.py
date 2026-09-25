@@ -23,6 +23,9 @@ from src.utils.rich import StepBasedRichProgressBar
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 DRY_RUN_DISABLED_CALLBACK_TARGETS = {
+    "src.common.writers.liger_trace_writer.LigerTraceWriter",
+    "src.common.writers.StructuredAnalysisWriter",
+    "src.common.writers.structured_analysis_writer.StructuredAnalysisWriter",
     "lightning.pytorch.callbacks.ModelCheckpoint",
     "lightning.pytorch.callbacks.EarlyStopping",
     "src.common.writers.local_pickle_writer.LocalPickleWriter",

@@ -126,7 +126,7 @@ fi
 
 ARGS=(
   experiment=rkmeans_train
-  embedding_path="$EMBEDDING_PATH"
+  "embedding_path=$(quote_hydra_string "$EMBEDDING_PATH")"
   data_dir="$DATA_DIR"
   seed="$SEED"
   devices="$DEVICES"

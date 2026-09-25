@@ -1,0 +1,9 @@
+## ADDED Requirements
+### Requirement: 可选候选覆盖记录
+系统 SHALL 在显式启用时记录同一hybrid计算中的目标候选覆盖和排名，并保持普通预测结果不变。
+#### Scenario: 有效标签的hybrid推理
+- **WHEN** 用户启用trace并提供evaluation标签
+- **THEN** 输出带用户key的辅助产物，包含生成候选、候选数量、目标cold状态、dense与hybrid目标排名及两者TopK
+#### Scenario: 缺少标签或错误模式
+- **WHEN** trace启用但标签缺失或模式不是hybrid
+- **THEN** 系统明确报错而不输出误导证据

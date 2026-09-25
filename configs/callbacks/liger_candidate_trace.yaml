@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+- liger_inference@_here_
+- _self_
+liger_trace_writer:
+  _target_: src.common.writers.liger_trace_writer.LigerTraceWriter
+  output_dir: ${paths.output_dir}/candidate_trace
+  payload_name: liger_candidates
+  output_filename: liger_candidates.pt
+  flush_frequency: 128
+  publish_wandb: true
+  artifact_name: ${task_name}-candidate-trace
+  artifact_type: liger_candidate_trace
+  role: liger_candidate_trace
+  validator:
+    _target_: src.data.components.liger_trace.validate_liger_trace
+    _partial_: true

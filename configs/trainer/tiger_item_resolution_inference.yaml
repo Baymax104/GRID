@@ -1,8 +1,0 @@
-# @package _global_
-defaults:
-- tiger_inference@_here_
-- _self_
-
-root:
-  num_nodes: 1
-  strategy: auto

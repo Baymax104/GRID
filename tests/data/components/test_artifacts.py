@@ -14,6 +14,21 @@ from src.data.components.artifacts import (
 from src.utils.wandb import parse_wandb_uri
 
 
+@pytest.mark.parametrize("role,index", [("checkpoint", 0), ("checkpoint_last", 1)])
+def test_select_checkpoint_respects_explicit_role_over_shared_type(role, index):
+    outputs = [
+        SimpleNamespace(name="train-checkpoint:v0", type="checkpoint", metadata={"role": "checkpoint"}),
+        SimpleNamespace(name="train-last-checkpoint:v0", type="checkpoint", metadata={"role": "checkpoint_last"}),
+    ]
+    run = SimpleNamespace(logged_artifacts=lambda: outputs)
+    assert wandb_utils.select_output_artifact(run, role, None, "*.ckpt") is outputs[index]
+
+
+def test_artifact_role_falls_back_to_type_for_legacy_outputs():
+    artifact = SimpleNamespace(type="checkpoint", metadata={})
+    assert wandb_utils.artifact_matches_role(artifact, "checkpoint")
+
+
 def test_parse_short_wandb_uri():
     parsed = parse_wandb_uri("wandb://abc123?role=semantic_id&alias=v3&file=merged_predictions_tensor.pt")
 

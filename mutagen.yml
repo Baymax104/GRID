@@ -1,0 +1,27 @@
+sync:
+  defaults:
+    mode: one-way-replica
+    ignore:
+      vcs: true
+
+  grid-src:
+    alpha: ./src
+    beta: node1:/data3/weizhenyu/projects/GRID/src
+
+  grid-configs:
+    alpha: ./configs
+    beta: node1:/data3/weizhenyu/projects/GRID/configs
+
+  grid-scripts:
+    alpha: ./scripts
+    beta: node1:/data3/weizhenyu/projects/GRID/scripts
+
+  grid-root-code:
+    alpha: .
+    beta: node1:/data3/weizhenyu/projects/GRID
+    ignore:
+      paths:
+        - "/*"
+        - "!/*.sh"
+        - "!/pyproject.toml"
+        - "!/uv.lock"

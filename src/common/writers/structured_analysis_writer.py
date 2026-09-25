@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import torch
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import Callback
 
@@ -53,9 +54,7 @@ class StructuredAnalysisWriter(Callback):
             raise KeyError(f"Test output does not contain structured analysis key '{self.output_key}'.")
         payload = outputs[self.output_key]
         if not isinstance(payload, StructuredAnalysisOutput):
-            raise TypeError(
-                f"Expected StructuredAnalysisOutput at '{self.output_key}', got {type(payload).__name__}."
-            )
+            raise TypeError(f"Expected StructuredAnalysisOutput at '{self.output_key}', got {type(payload).__name__}.")
         completed_dir = self._write_atomically(payload)
         if self.publish_wandb:
             self._publish(trainer, completed_dir, payload.metadata)
@@ -66,6 +65,9 @@ class StructuredAnalysisWriter(Callback):
         self.output_dir.parent.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix=f".{self.output_dir.name}-", dir=self.output_dir.parent))
         try:
+            names = [*payload.documents, *payload.tables, *payload.bundles]
+            if len(names) != len(set(names)) or "manifest.json" in names:
+                raise ValueError("Structured output filenames must be unique and cannot replace manifest.json.")
             for name, document in sorted(payload.documents.items()):
                 path = self._safe_path(staging, name)
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,12 +84,23 @@ class StructuredAnalysisWriter(Callback):
                         writer.writeheader()
                         writer.writerows(rows)
             effective_metadata = {**self.metadata, **payload.metadata}
+            for name, bundle in sorted(payload.bundles.items()):
+                path = self._safe_path(staging, name)
+                if set(bundle) != {"keys", "predictions"}:
+                    raise ValueError("Structured bundles require exactly keys and predictions.")
+                keys, predictions = torch.as_tensor(bundle["keys"]), torch.as_tensor(bundle["predictions"])
+                if keys.ndim != 1 or predictions.ndim < 1 or len(keys) != len(predictions):
+                    raise ValueError("Structured bundle keys/predictions must have aligned rows.")
+                if keys.dtype not in (torch.int32, torch.int64) or len(keys.unique()) != len(keys):
+                    raise ValueError("Structured bundle keys must be unique integers.")
+                torch.save({"keys": keys.cpu(), "predictions": predictions.cpu()}, path)
             with (staging / "manifest.json").open("w", encoding="utf-8", newline="") as stream:
                 json.dump(
                     {
                         "complete": True,
                         "documents": sorted(payload.documents),
                         "tables": sorted(payload.tables),
+                        "bundles": sorted(payload.bundles),
                         "metadata": effective_metadata,
                     },
                     stream,

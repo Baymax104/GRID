@@ -13,3 +13,4 @@ class StructuredAnalysisOutput:
     documents: dict[str, dict[str, Any]] = field(default_factory=dict)
     tables: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    bundles: dict[str, dict[str, Any]] = field(default_factory=dict)

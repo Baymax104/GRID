@@ -12,6 +12,7 @@ INFERENCE_SCRIPTS = [
     "rqvae_inference.sh",
 ]
 SCRIPT_NAMES = TRAIN_SCRIPTS + INFERENCE_SCRIPTS
+QUOTED_EMBEDDING_SCRIPTS = {"rkmeans_train.sh", "rvq_train.sh"}
 
 
 def _usable_bash():
@@ -97,7 +98,12 @@ def test_quantization_scripts_forward_embedding_and_trailing_overrides(
 
     assert result.returncode == 0, result.stderr
     arguments = result.stdout.splitlines()
-    assert f"embedding_path={expected_embedding}" in arguments
+    embedding_argument = (
+        f'embedding_path="{expected_embedding}"'
+        if script_name in QUOTED_EMBEDDING_SCRIPTS
+        else f"embedding_path={expected_embedding}"
+    )
+    assert embedding_argument in arguments
     assert "--dry-run" in arguments
     assert arguments[-1] == trailing_override
     if script_name in TRAIN_SCRIPTS:
@@ -149,4 +155,9 @@ def test_quantization_scripts_do_not_pin_embedding_producer(script_name):
     source = (PROJECT_ROOT / script_name).read_text(encoding="utf-8")
 
     assert "embedding_path=wandb://vb8es5ow" not in source
-    assert 'embedding_path="$EMBEDDING_PATH"' in source
+    expected_assignment = (
+        '"embedding_path=$(quote_hydra_string "$EMBEDDING_PATH")"'
+        if script_name in QUOTED_EMBEDDING_SCRIPTS
+        else 'embedding_path="$EMBEDDING_PATH"'
+    )
+    assert expected_assignment in source

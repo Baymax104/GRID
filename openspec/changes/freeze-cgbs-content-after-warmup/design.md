@@ -1,0 +1,12 @@
+## Context
+冻结只限MLP时，共享Encoder及SID仍更新会改变query；用户目标按真正固定内容评分解释，并已明确说明这一范围。
+## Goals / Non-Goals
+固定预训练结束时的内容表示，观察Decoder训练能否更好利用稳定内容。不是给共享Encoder额外复制一份，也不是纯MLP冻结。
+## Decisions
+新增TigerFrozenContentWarmup子类和独立model配置。结构和训练前10000步与原attention512一致；global_step决定冻结，在恢复后同样生效。
+
+冻结期_encode和_query设相关模块eval并在no_grad中执行；每次调用均重设，防止Lightning train/eval切换重新启用dropout。保留requires_grad和优化器参数组，避免DDP注册中途改变；on_before_optimizer_step把全部冻结参数grad设为None，覆盖Decoder侧共享embedding梯度，使Adam跳过动量及weight_decay更新。Decoder和mixture状态继续训练。
+
+loss保持generation CE+0.1 content CE，但冻结期后者是常数，不提供优化梯度。沿用val/content_loss、phase日志、joint-stage checkpoint选择和推理配置。checkpoint schedule新增冻结策略身份，禁止与原非冻结训练互相恢复。
+## Risks / Trade-offs
+冻结Encoder减少Decoder适应能力，改善/退化不能只归因内容MLP。历史上一些模块加宽与分阶段失败结果保留。测试必须检查真实Adam更新后的参数、状态计数和内容输出不变，而不是只检查grad为0。新运行仍30k总step，其中Decoder专属20k；实际FLOPs和runtime另记。

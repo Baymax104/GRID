@@ -1,0 +1,2322 @@
+{
+  "scope": "read-only config; no new history or artifact download; historical remote source not independently verified",
+  "runs": [
+    {
+      "run_id": "5g3wpbg7",
+      "state": "finished",
+      "config": {
+        "seed": 42,
+        "catalog_arm": "token_content_init",
+        "dataset_name": "beauty",
+        "semantic_id_path": "wandb://4vyi4o6w",
+        "embedding_path": "wandb://3jtt9mpa",
+        "num_hierarchies": 4,
+        "codebook_size": 256,
+        "beam_width": 10,
+        "model": {
+          "root": {
+            "arm": "token_content_init",
+            "catalog": {
+              "_target_": "src.data.components.catalog_content.load_catalog_content",
+              "wandb_entity": "baymaxam",
+              "wandb_project": "GRID",
+              "embedding_path": "wandb://3jtt9mpa",
+              "semantic_id_path": "wandb://4vyi4o6w"
+            },
+            "decoder": {
+              "config": {
+                "d_ff": 1024,
+                "d_kv": 64,
+                "d_model": 128,
+                "_target_": "transformers.models.t5.configuration_t5.T5Config",
+                "num_heads": 6,
+                "is_decoder": true,
+                "num_layers": 4,
+                "vocab_size": 256,
+                "dropout_rate": 0.15,
+                "is_encoder_decoder": false
+              },
+              "_target_": "transformers.models.t5.modeling_t5.T5Stack"
+            },
+            "encoder": {
+              "config": {
+                "d_ff": 1024,
+                "d_kv": 64,
+                "d_model": 128,
+                "_target_": "transformers.T5Config",
+                "num_heads": 6,
+                "num_layers": 4,
+                "vocab_size": 256,
+                "dropout_rate": 0.15
+              },
+              "_target_": "transformers.T5EncoderModel"
+            },
+            "_target_": "src.recommendation.tiger_catalog_grounded.TigerCatalogGrounded",
+            "bank_seed": 42,
+            "prototypes": 4,
+            "temperature": 0.1,
+            "semantic_ids": {
+              "_target_": "src.data.components.artifacts.load_semantic_id_tensor",
+              "file_path": "wandb://4vyi4o6w",
+              "wandb_entity": "baymaxam",
+              "wandb_project": "GRID"
+            },
+            "alpha_initial": 0.1,
+            "alpha_maximum": 0.5,
+            "codebook_size": 256,
+            "embedding_dim": 128,
+            "hybrid_weight": 0.5,
+            "projection_dim": 128,
+            "num_hierarchies": 4,
+            "auxiliary_weight": 0.1,
+            "cluster_iterations": 5,
+            "should_check_prefix": true,
+            "top_k_for_generation": 10,
+            "training_model_config": {
+              "_target_": "src.common.configs.model.TrainingModelConfig",
+              "optimizer": {
+                "lr": 0.0005,
+                "_target_": "torch.optim.Adam",
+                "_partial_": true,
+                "weight_decay": 1e-06
+              },
+              "scheduler": null,
+              "loss_function": {
+                "_target_": "torch.nn.CrossEntropyLoss",
+                "ignore_index": -1
+              }
+            }
+          },
+          "decoder": {
+            "config": {
+              "d_ff": 1024,
+              "d_kv": 64,
+              "d_model": 128,
+              "_target_": "transformers.models.t5.configuration_t5.T5Config",
+              "num_heads": 6,
+              "is_decoder": true,
+              "num_layers": 4,
+              "vocab_size": 256,
+              "dropout_rate": 0.15,
+              "is_encoder_decoder": false
+            },
+            "_target_": "transformers.models.t5.modeling_t5.T5Stack"
+          },
+          "encoder": {
+            "config": {
+              "d_ff": 1024,
+              "d_kv": 64,
+              "d_model": 128,
+              "_target_": "transformers.T5Config",
+              "num_heads": 6,
+              "num_layers": 4,
+              "vocab_size": 256,
+              "dropout_rate": 0.15
+            },
+            "_target_": "transformers.T5EncoderModel"
+          },
+          "metrics": {
+            "stages": {
+              "val": {
+                "loss": {
+                  "spec": {
+                    "key": "loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "ndcg@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "ndcg@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                }
+              },
+              "test": {
+                "loss": {
+                  "spec": {
+                    "key": "loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "ndcg@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "ndcg@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                }
+              },
+              "train": {
+                "loss": {
+                  "spec": {
+                    "key": "loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "content_loss": {
+                  "spec": {
+                    "key": "content_loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "mixture_alpha": {
+                  "spec": {
+                    "key": "mixture_alpha"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "generation_loss": {
+                  "spec": {
+                    "key": "generation_loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                }
+              }
+            },
+            "_target_": "src.common.metrics.MetricEngine"
+          },
+          "training_model_config": {
+            "_target_": "src.common.configs.model.TrainingModelConfig",
+            "optimizer": {
+              "lr": 0.0005,
+              "_target_": "torch.optim.Adam",
+              "_partial_": true,
+              "weight_decay": 1e-06
+            },
+            "scheduler": null,
+            "loss_function": {
+              "_target_": "torch.nn.CrossEntropyLoss",
+              "ignore_index": -1
+            }
+          }
+        },
+        "trainer": {
+          "root": {
+            "devices": [
+              0,
+              1
+            ],
+            "_target_": "lightning.pytorch.trainer.Trainer",
+            "strategy": "ddp",
+            "max_steps": 20000,
+            "precision": "32-true",
+            "accelerator": "gpu",
+            "default_root_dir": "/data3/weizhenyu/projects/GRID/logs/tiger_catalog_grounded_token_content_init_beauty_train/runs/2026-09-12/22-51-00",
+            "log_every_n_steps": 50,
+            "val_check_interval": 500,
+            "num_sanity_val_steps": 0
+          }
+        },
+        "data": {
+          "collate": {
+            "_target_": "src.data.components.collate.collate_fn_sequence",
+            "_partial_": true,
+            "input_field_name": "input_ids",
+            "target_field_name": "target_ids",
+            "attention_mask_field_name": "attention_mask"
+          },
+          "datamodule": {
+            "_target_": "src.data.datamodule.FileDataModule",
+            "val_dataloader_config": {
+              "timeout": 60,
+              "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+              "drop_last": false,
+              "collate_fn": {
+                "_target_": "src.data.components.collate.collate_fn_sequence",
+                "_partial_": true,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "attention_mask_field_name": "attention_mask"
+              },
+              "pin_memory": false,
+              "data_folder": "data/beauty/evaluation",
+              "num_workers": 16,
+              "dataset_class": {
+                "_target_": "src.data.datasets.SequenceDataset",
+                "_partial_": true
+              },
+              "dataset_config": {
+                "_target_": "src.common.configs.data.DatasetConfig",
+                "data_reader": {
+                  "_target_": "src.data.components.readers.TFRecordReader",
+                  "_partial_": true,
+                  "shuffle_rows": false
+                },
+                "shuffle_files": false,
+                "preprocessing_functions": [
+                  {
+                    "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                    "_partial_": true,
+                    "features_to_consider": [
+                      "sequence_data"
+                    ]
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                    "_partial_": true
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                    "_partial_": true,
+                    "field_type_map": {
+                      "sequence_data": {
+                        "_args_": [
+                          "int32"
+                        ],
+                        "_target_": "torch.__dict__.get"
+                      }
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                    "_partial_": true,
+                    "num_hierarchies": 4,
+                    "features_to_apply": [
+                      "sequence_data"
+                    ],
+                    "semantic_id_bundle": {
+                      "_target_": "src.data.components.artifacts.load_model_output",
+                      "file_path": "wandb://4vyi4o6w",
+                      "field_name": "semantic_id_path",
+                      "wandb_entity": "baymaxam",
+                      "wandb_project": "GRID"
+                    }
+                  },
+                  {
+                    "next_k": 4,
+                    "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                    "_partial_": true,
+                    "masking_token": 0,
+                    "padding_token": -1,
+                    "input_field_name": "input_ids",
+                    "target_field_name": "target_ids",
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.normalize_sequence",
+                    "_partial_": true,
+                    "padding_token": -1,
+                    "sid_hierarchy": 4,
+                    "sequence_length": 180,
+                    "input_field_name": "input_ids",
+                    "attention_mask_field_name": "attention_mask"
+                  }
+                ]
+              },
+              "persistent_workers": false,
+              "assign_files_by_size": true,
+              "batch_size_per_device": 64
+            },
+            "test_dataloader_config": {
+              "timeout": 60,
+              "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+              "drop_last": false,
+              "collate_fn": {
+                "_target_": "src.data.components.collate.collate_fn_sequence",
+                "_partial_": true,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "attention_mask_field_name": "attention_mask"
+              },
+              "pin_memory": false,
+              "data_folder": "data/beauty/testing",
+              "num_workers": 8,
+              "dataset_class": {
+                "_target_": "src.data.datasets.SequenceDataset",
+                "_partial_": true
+              },
+              "dataset_config": {
+                "_target_": "src.common.configs.data.DatasetConfig",
+                "data_reader": {
+                  "_target_": "src.data.components.readers.TFRecordReader",
+                  "_partial_": true,
+                  "shuffle_rows": false
+                },
+                "shuffle_files": false,
+                "preprocessing_functions": [
+                  {
+                    "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                    "_partial_": true,
+                    "features_to_consider": [
+                      "sequence_data"
+                    ]
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                    "_partial_": true
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                    "_partial_": true,
+                    "field_type_map": {
+                      "sequence_data": {
+                        "_args_": [
+                          "int32"
+                        ],
+                        "_target_": "torch.__dict__.get"
+                      }
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                    "_partial_": true,
+                    "num_hierarchies": 4,
+                    "features_to_apply": [
+                      "sequence_data"
+                    ],
+                    "semantic_id_bundle": {
+                      "_target_": "src.data.components.artifacts.load_model_output",
+                      "file_path": "wandb://4vyi4o6w",
+                      "field_name": "semantic_id_path",
+                      "wandb_entity": "baymaxam",
+                      "wandb_project": "GRID"
+                    }
+                  },
+                  {
+                    "next_k": 4,
+                    "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                    "_partial_": true,
+                    "masking_token": 0,
+                    "padding_token": -1,
+                    "input_field_name": "input_ids",
+                    "target_field_name": "target_ids",
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.normalize_sequence",
+                    "_partial_": true,
+                    "padding_token": -1,
+                    "sid_hierarchy": 4,
+                    "sequence_length": 180,
+                    "input_field_name": "input_ids",
+                    "attention_mask_field_name": "attention_mask"
+                  }
+                ]
+              },
+              "persistent_workers": false,
+              "assign_files_by_size": true,
+              "batch_size_per_device": 8
+            },
+            "train_dataloader_config": {
+              "timeout": 60,
+              "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+              "drop_last": true,
+              "collate_fn": {
+                "_target_": "src.data.components.collate.collate_fn_sequence",
+                "_partial_": true,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "attention_mask_field_name": "attention_mask"
+              },
+              "pin_memory": true,
+              "data_folder": "data/beauty/training",
+              "num_workers": 32,
+              "dataset_class": {
+                "_target_": "src.data.datasets.SequenceDataset",
+                "_partial_": true
+              },
+              "dataset_config": {
+                "_target_": "src.common.configs.data.DatasetConfig",
+                "data_reader": {
+                  "_target_": "src.data.components.readers.TFRecordReader",
+                  "_partial_": true,
+                  "shuffle_rows": true
+                },
+                "shuffle_files": true,
+                "preprocessing_functions": [
+                  {
+                    "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                    "_partial_": true,
+                    "features_to_consider": [
+                      "sequence_data"
+                    ]
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                    "_partial_": true
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                    "_partial_": true,
+                    "field_type_map": {
+                      "sequence_data": {
+                        "_args_": [
+                          "int32"
+                        ],
+                        "_target_": "torch.__dict__.get"
+                      }
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                    "_partial_": true,
+                    "num_hierarchies": 4,
+                    "features_to_apply": [
+                      "sequence_data"
+                    ],
+                    "semantic_id_bundle": {
+                      "_target_": "src.data.components.artifacts.load_model_output",
+                      "file_path": "wandb://4vyi4o6w",
+                      "field_name": "semantic_id_path",
+                      "wandb_entity": "baymaxam",
+                      "wandb_project": "GRID"
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+                    "_partial_": true,
+                    "sid_hierarchy": 4,
+                    "max_num_sequences": 32,
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "next_k": 4,
+                    "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                    "_partial_": true,
+                    "masking_token": 0,
+                    "padding_token": -1,
+                    "input_field_name": "input_ids",
+                    "target_field_name": "target_ids",
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.normalize_sequence",
+                    "_partial_": true,
+                    "padding_token": -1,
+                    "sid_hierarchy": 4,
+                    "sequence_length": 180,
+                    "input_field_name": "input_ids",
+                    "attention_mask_field_name": "attention_mask"
+                  }
+                ]
+              },
+              "persistent_workers": true,
+              "assign_files_by_size": false,
+              "batch_size_per_device": 128
+            }
+          },
+          "dataset_class": {
+            "_target_": "src.data.datasets.SequenceDataset",
+            "_partial_": true
+          },
+          "val_dataloader": {
+            "timeout": 60,
+            "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+            "drop_last": false,
+            "collate_fn": {
+              "_target_": "src.data.components.collate.collate_fn_sequence",
+              "_partial_": true,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "attention_mask_field_name": "attention_mask"
+            },
+            "pin_memory": false,
+            "data_folder": "data/beauty/evaluation",
+            "num_workers": 16,
+            "dataset_class": {
+              "_target_": "src.data.datasets.SequenceDataset",
+              "_partial_": true
+            },
+            "dataset_config": {
+              "_target_": "src.common.configs.data.DatasetConfig",
+              "data_reader": {
+                "_target_": "src.data.components.readers.TFRecordReader",
+                "_partial_": true,
+                "shuffle_rows": false
+              },
+              "shuffle_files": false,
+              "preprocessing_functions": [
+                {
+                  "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                  "_partial_": true,
+                  "features_to_consider": [
+                    "sequence_data"
+                  ]
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                  "_partial_": true
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                  "_partial_": true,
+                  "field_type_map": {
+                    "sequence_data": {
+                      "_args_": [
+                        "int32"
+                      ],
+                      "_target_": "torch.__dict__.get"
+                    }
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                  "_partial_": true,
+                  "num_hierarchies": 4,
+                  "features_to_apply": [
+                    "sequence_data"
+                  ],
+                  "semantic_id_bundle": {
+                    "_target_": "src.data.components.artifacts.load_model_output",
+                    "file_path": "wandb://4vyi4o6w",
+                    "field_name": "semantic_id_path",
+                    "wandb_entity": "baymaxam",
+                    "wandb_project": "GRID"
+                  }
+                },
+                {
+                  "next_k": 4,
+                  "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                  "_partial_": true,
+                  "masking_token": 0,
+                  "padding_token": -1,
+                  "input_field_name": "input_ids",
+                  "target_field_name": "target_ids",
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.normalize_sequence",
+                  "_partial_": true,
+                  "padding_token": -1,
+                  "sid_hierarchy": 4,
+                  "sequence_length": 180,
+                  "input_field_name": "input_ids",
+                  "attention_mask_field_name": "attention_mask"
+                }
+              ]
+            },
+            "persistent_workers": false,
+            "assign_files_by_size": true,
+            "batch_size_per_device": 64
+          },
+          "test_dataloader": {
+            "timeout": 60,
+            "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+            "drop_last": false,
+            "collate_fn": {
+              "_target_": "src.data.components.collate.collate_fn_sequence",
+              "_partial_": true,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "attention_mask_field_name": "attention_mask"
+            },
+            "pin_memory": false,
+            "data_folder": "data/beauty/testing",
+            "num_workers": 8,
+            "dataset_class": {
+              "_target_": "src.data.datasets.SequenceDataset",
+              "_partial_": true
+            },
+            "dataset_config": {
+              "_target_": "src.common.configs.data.DatasetConfig",
+              "data_reader": {
+                "_target_": "src.data.components.readers.TFRecordReader",
+                "_partial_": true,
+                "shuffle_rows": false
+              },
+              "shuffle_files": false,
+              "preprocessing_functions": [
+                {
+                  "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                  "_partial_": true,
+                  "features_to_consider": [
+                    "sequence_data"
+                  ]
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                  "_partial_": true
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                  "_partial_": true,
+                  "field_type_map": {
+                    "sequence_data": {
+                      "_args_": [
+                        "int32"
+                      ],
+                      "_target_": "torch.__dict__.get"
+                    }
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                  "_partial_": true,
+                  "num_hierarchies": 4,
+                  "features_to_apply": [
+                    "sequence_data"
+                  ],
+                  "semantic_id_bundle": {
+                    "_target_": "src.data.components.artifacts.load_model_output",
+                    "file_path": "wandb://4vyi4o6w",
+                    "field_name": "semantic_id_path",
+                    "wandb_entity": "baymaxam",
+                    "wandb_project": "GRID"
+                  }
+                },
+                {
+                  "next_k": 4,
+                  "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                  "_partial_": true,
+                  "masking_token": 0,
+                  "padding_token": -1,
+                  "input_field_name": "input_ids",
+                  "target_field_name": "target_ids",
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.normalize_sequence",
+                  "_partial_": true,
+                  "padding_token": -1,
+                  "sid_hierarchy": 4,
+                  "sequence_length": 180,
+                  "input_field_name": "input_ids",
+                  "attention_mask_field_name": "attention_mask"
+                }
+              ]
+            },
+            "persistent_workers": false,
+            "assign_files_by_size": true,
+            "batch_size_per_device": 8
+          },
+          "train_dataloader": {
+            "timeout": 60,
+            "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+            "drop_last": true,
+            "collate_fn": {
+              "_target_": "src.data.components.collate.collate_fn_sequence",
+              "_partial_": true,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "attention_mask_field_name": "attention_mask"
+            },
+            "pin_memory": true,
+            "data_folder": "data/beauty/training",
+            "num_workers": 32,
+            "dataset_class": {
+              "_target_": "src.data.datasets.SequenceDataset",
+              "_partial_": true
+            },
+            "dataset_config": {
+              "_target_": "src.common.configs.data.DatasetConfig",
+              "data_reader": {
+                "_target_": "src.data.components.readers.TFRecordReader",
+                "_partial_": true,
+                "shuffle_rows": true
+              },
+              "shuffle_files": true,
+              "preprocessing_functions": [
+                {
+                  "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                  "_partial_": true,
+                  "features_to_consider": [
+                    "sequence_data"
+                  ]
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                  "_partial_": true
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                  "_partial_": true,
+                  "field_type_map": {
+                    "sequence_data": {
+                      "_args_": [
+                        "int32"
+                      ],
+                      "_target_": "torch.__dict__.get"
+                    }
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                  "_partial_": true,
+                  "num_hierarchies": 4,
+                  "features_to_apply": [
+                    "sequence_data"
+                  ],
+                  "semantic_id_bundle": {
+                    "_target_": "src.data.components.artifacts.load_model_output",
+                    "file_path": "wandb://4vyi4o6w",
+                    "field_name": "semantic_id_path",
+                    "wandb_entity": "baymaxam",
+                    "wandb_project": "GRID"
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+                  "_partial_": true,
+                  "sid_hierarchy": 4,
+                  "max_num_sequences": 32,
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "next_k": 4,
+                  "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                  "_partial_": true,
+                  "masking_token": 0,
+                  "padding_token": -1,
+                  "input_field_name": "input_ids",
+                  "target_field_name": "target_ids",
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.normalize_sequence",
+                  "_partial_": true,
+                  "padding_token": -1,
+                  "sid_hierarchy": 4,
+                  "sequence_length": 180,
+                  "input_field_name": "input_ids",
+                  "attention_mask_field_name": "attention_mask"
+                }
+              ]
+            },
+            "persistent_workers": true,
+            "assign_files_by_size": false,
+            "batch_size_per_device": 128
+          },
+          "eval_dataset_config": {
+            "_target_": "src.common.configs.data.DatasetConfig",
+            "data_reader": {
+              "_target_": "src.data.components.readers.TFRecordReader",
+              "_partial_": true,
+              "shuffle_rows": false
+            },
+            "shuffle_files": false,
+            "preprocessing_functions": [
+              {
+                "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                "_partial_": true,
+                "features_to_consider": [
+                  "sequence_data"
+                ]
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                "_partial_": true
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                "_partial_": true,
+                "field_type_map": {
+                  "sequence_data": {
+                    "_args_": [
+                      "int32"
+                    ],
+                    "_target_": "torch.__dict__.get"
+                  }
+                }
+              },
+              {
+                "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                "_partial_": true,
+                "num_hierarchies": 4,
+                "features_to_apply": [
+                  "sequence_data"
+                ],
+                "semantic_id_bundle": {
+                  "_target_": "src.data.components.artifacts.load_model_output",
+                  "file_path": "wandb://4vyi4o6w",
+                  "field_name": "semantic_id_path",
+                  "wandb_entity": "baymaxam",
+                  "wandb_project": "GRID"
+                }
+              },
+              {
+                "next_k": 4,
+                "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                "_partial_": true,
+                "masking_token": 0,
+                "padding_token": -1,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "sequence_field_name": "sequence_data"
+              },
+              {
+                "_target_": "src.data.components.preprocessing.normalize_sequence",
+                "_partial_": true,
+                "padding_token": -1,
+                "sid_hierarchy": 4,
+                "sequence_length": 180,
+                "input_field_name": "input_ids",
+                "attention_mask_field_name": "attention_mask"
+              }
+            ]
+          },
+          "train_dataset_config": {
+            "_target_": "src.common.configs.data.DatasetConfig",
+            "data_reader": {
+              "_target_": "src.data.components.readers.TFRecordReader",
+              "_partial_": true,
+              "shuffle_rows": true
+            },
+            "shuffle_files": true,
+            "preprocessing_functions": [
+              {
+                "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                "_partial_": true,
+                "features_to_consider": [
+                  "sequence_data"
+                ]
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                "_partial_": true
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                "_partial_": true,
+                "field_type_map": {
+                  "sequence_data": {
+                    "_args_": [
+                      "int32"
+                    ],
+                    "_target_": "torch.__dict__.get"
+                  }
+                }
+              },
+              {
+                "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                "_partial_": true,
+                "num_hierarchies": 4,
+                "features_to_apply": [
+                  "sequence_data"
+                ],
+                "semantic_id_bundle": {
+                  "_target_": "src.data.components.artifacts.load_model_output",
+                  "file_path": "wandb://4vyi4o6w",
+                  "field_name": "semantic_id_path",
+                  "wandb_entity": "baymaxam",
+                  "wandb_project": "GRID"
+                }
+              },
+              {
+                "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+                "_partial_": true,
+                "sid_hierarchy": 4,
+                "max_num_sequences": 32,
+                "sequence_field_name": "sequence_data"
+              },
+              {
+                "next_k": 4,
+                "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                "_partial_": true,
+                "masking_token": 0,
+                "padding_token": -1,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "sequence_field_name": "sequence_data"
+              },
+              {
+                "_target_": "src.data.components.preprocessing.normalize_sequence",
+                "_partial_": true,
+                "padding_token": -1,
+                "sid_hierarchy": 4,
+                "sequence_length": 180,
+                "input_field_name": "input_ids",
+                "attention_mask_field_name": "attention_mask"
+              }
+            ]
+          },
+          "eval_preprocessing_functions": [
+            {
+              "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+              "_partial_": true,
+              "features_to_consider": [
+                "sequence_data"
+              ]
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+              "_partial_": true
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+              "_partial_": true,
+              "field_type_map": {
+                "sequence_data": {
+                  "_args_": [
+                    "int32"
+                  ],
+                  "_target_": "torch.__dict__.get"
+                }
+              }
+            },
+            {
+              "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+              "_partial_": true,
+              "num_hierarchies": 4,
+              "features_to_apply": [
+                "sequence_data"
+              ],
+              "semantic_id_bundle": {
+                "_target_": "src.data.components.artifacts.load_model_output",
+                "file_path": "wandb://4vyi4o6w",
+                "field_name": "semantic_id_path",
+                "wandb_entity": "baymaxam",
+                "wandb_project": "GRID"
+              }
+            },
+            {
+              "next_k": 4,
+              "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+              "_partial_": true,
+              "masking_token": 0,
+              "padding_token": -1,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "sequence_field_name": "sequence_data"
+            },
+            {
+              "_target_": "src.data.components.preprocessing.normalize_sequence",
+              "_partial_": true,
+              "padding_token": -1,
+              "sid_hierarchy": 4,
+              "sequence_length": 180,
+              "input_field_name": "input_ids",
+              "attention_mask_field_name": "attention_mask"
+            }
+          ],
+          "train_preprocessing_functions": [
+            {
+              "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+              "_partial_": true,
+              "features_to_consider": [
+                "sequence_data"
+              ]
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+              "_partial_": true
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+              "_partial_": true,
+              "field_type_map": {
+                "sequence_data": {
+                  "_args_": [
+                    "int32"
+                  ],
+                  "_target_": "torch.__dict__.get"
+                }
+              }
+            },
+            {
+              "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+              "_partial_": true,
+              "num_hierarchies": 4,
+              "features_to_apply": [
+                "sequence_data"
+              ],
+              "semantic_id_bundle": {
+                "_target_": "src.data.components.artifacts.load_model_output",
+                "file_path": "wandb://4vyi4o6w",
+                "field_name": "semantic_id_path",
+                "wandb_entity": "baymaxam",
+                "wandb_project": "GRID"
+              }
+            },
+            {
+              "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+              "_partial_": true,
+              "sid_hierarchy": 4,
+              "max_num_sequences": 32,
+              "sequence_field_name": "sequence_data"
+            },
+            {
+              "next_k": 4,
+              "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+              "_partial_": true,
+              "masking_token": 0,
+              "padding_token": -1,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "sequence_field_name": "sequence_data"
+            },
+            {
+              "_target_": "src.data.components.preprocessing.normalize_sequence",
+              "_partial_": true,
+              "padding_token": -1,
+              "sid_hierarchy": 4,
+              "sequence_length": 180,
+              "input_field_name": "input_ids",
+              "attention_mask_field_name": "attention_mask"
+            }
+          ]
+        },
+        "run_test_after_training": false
+      }
+    },
+    {
+      "run_id": "0fuiq3vx",
+      "state": "finished",
+      "config": {
+        "seed": 43,
+        "catalog_arm": "token_content_init",
+        "dataset_name": "beauty",
+        "semantic_id_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+        "embedding_path": "wandb://baymaxam/GRID/3jtt9mpa?role=semantic_embedding&file=merged_predictions_tensor.pt",
+        "num_hierarchies": 4,
+        "codebook_size": 256,
+        "beam_width": 10,
+        "model": {
+          "root": {
+            "arm": "token_content_init",
+            "catalog": {
+              "_target_": "src.data.components.catalog_content.load_catalog_content",
+              "wandb_entity": "baymaxam",
+              "wandb_project": "GRID",
+              "embedding_path": "wandb://baymaxam/GRID/3jtt9mpa?role=semantic_embedding&file=merged_predictions_tensor.pt",
+              "semantic_id_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt"
+            },
+            "decoder": {
+              "config": {
+                "d_ff": 1024,
+                "d_kv": 64,
+                "d_model": 128,
+                "_target_": "transformers.models.t5.configuration_t5.T5Config",
+                "num_heads": 6,
+                "is_decoder": true,
+                "num_layers": 4,
+                "vocab_size": 256,
+                "dropout_rate": 0.15,
+                "is_encoder_decoder": false
+              },
+              "_target_": "transformers.models.t5.modeling_t5.T5Stack"
+            },
+            "encoder": {
+              "config": {
+                "d_ff": 1024,
+                "d_kv": 64,
+                "d_model": 128,
+                "_target_": "transformers.T5Config",
+                "num_heads": 6,
+                "num_layers": 4,
+                "vocab_size": 256,
+                "dropout_rate": 0.15
+              },
+              "_target_": "transformers.T5EncoderModel"
+            },
+            "_target_": "src.recommendation.tiger_catalog_grounded.TigerCatalogGrounded",
+            "bank_seed": 42,
+            "prototypes": 4,
+            "temperature": 0.1,
+            "semantic_ids": {
+              "_target_": "src.data.components.artifacts.load_semantic_id_tensor",
+              "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+              "wandb_entity": "baymaxam",
+              "wandb_project": "GRID"
+            },
+            "alpha_initial": 0.1,
+            "alpha_maximum": 0.5,
+            "codebook_size": 256,
+            "embedding_dim": 128,
+            "hybrid_weight": 0.5,
+            "projection_dim": 128,
+            "num_hierarchies": 4,
+            "auxiliary_weight": 0.1,
+            "cluster_iterations": 5,
+            "should_check_prefix": true,
+            "token_initialization": "full_content",
+            "top_k_for_generation": 10,
+            "training_model_config": {
+              "_target_": "src.common.configs.model.TrainingModelConfig",
+              "optimizer": {
+                "lr": 0.0005,
+                "_target_": "torch.optim.Adam",
+                "_partial_": true,
+                "weight_decay": 1e-06
+              },
+              "scheduler": null,
+              "loss_function": {
+                "_target_": "torch.nn.CrossEntropyLoss",
+                "ignore_index": -1
+              }
+            }
+          },
+          "decoder": {
+            "config": {
+              "d_ff": 1024,
+              "d_kv": 64,
+              "d_model": 128,
+              "_target_": "transformers.models.t5.configuration_t5.T5Config",
+              "num_heads": 6,
+              "is_decoder": true,
+              "num_layers": 4,
+              "vocab_size": 256,
+              "dropout_rate": 0.15,
+              "is_encoder_decoder": false
+            },
+            "_target_": "transformers.models.t5.modeling_t5.T5Stack"
+          },
+          "encoder": {
+            "config": {
+              "d_ff": 1024,
+              "d_kv": 64,
+              "d_model": 128,
+              "_target_": "transformers.T5Config",
+              "num_heads": 6,
+              "num_layers": 4,
+              "vocab_size": 256,
+              "dropout_rate": 0.15
+            },
+            "_target_": "transformers.T5EncoderModel"
+          },
+          "metrics": {
+            "stages": {
+              "val": {
+                "loss": {
+                  "spec": {
+                    "key": "loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "ndcg@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "ndcg@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                }
+              },
+              "test": {
+                "loss": {
+                  "spec": {
+                    "key": "loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "ndcg@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "ndcg@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.NDCG",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@5": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 5,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                },
+                "recall@10": {
+                  "spec": {
+                    "adapter": {
+                      "_target_": "src.recommendation.tiger.metrics.sid_retrieval_inputs",
+                      "_partial_": true
+                    }
+                  },
+                  "metric": {
+                    "top_k": 10,
+                    "_target_": "src.recommendation.tiger.metrics.Recall",
+                    "sync_on_compute": false,
+                    "compute_with_cache": false
+                  }
+                }
+              },
+              "train": {
+                "loss": {
+                  "spec": {
+                    "key": "loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "content_loss": {
+                  "spec": {
+                    "key": "content_loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "mixture_alpha": {
+                  "spec": {
+                    "key": "mixture_alpha"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                },
+                "generation_loss": {
+                  "spec": {
+                    "key": "generation_loss"
+                  },
+                  "metric": {
+                    "_target_": "torchmetrics.MeanMetric"
+                  }
+                }
+              }
+            },
+            "_target_": "src.common.metrics.MetricEngine"
+          },
+          "training_model_config": {
+            "_target_": "src.common.configs.model.TrainingModelConfig",
+            "optimizer": {
+              "lr": 0.0005,
+              "_target_": "torch.optim.Adam",
+              "_partial_": true,
+              "weight_decay": 1e-06
+            },
+            "scheduler": null,
+            "loss_function": {
+              "_target_": "torch.nn.CrossEntropyLoss",
+              "ignore_index": -1
+            }
+          }
+        },
+        "trainer": {
+          "root": {
+            "devices": [
+              0,
+              1
+            ],
+            "_target_": "lightning.pytorch.trainer.Trainer",
+            "strategy": "ddp",
+            "max_steps": 20000,
+            "precision": "32-true",
+            "accelerator": "gpu",
+            "default_root_dir": "/data3/weizhenyu/projects/GRID/logs/tiger_content_initialization_full_content_beauty_train/runs/2026-09-17/04-00-49",
+            "log_every_n_steps": 50,
+            "val_check_interval": 500,
+            "num_sanity_val_steps": 0
+          }
+        },
+        "data": {
+          "collate": {
+            "_target_": "src.data.components.collate.collate_fn_sequence",
+            "_partial_": true,
+            "input_field_name": "input_ids",
+            "target_field_name": "target_ids",
+            "attention_mask_field_name": "attention_mask"
+          },
+          "datamodule": {
+            "_target_": "src.data.datamodule.FileDataModule",
+            "val_dataloader_config": {
+              "timeout": 60,
+              "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+              "drop_last": false,
+              "collate_fn": {
+                "_target_": "src.data.components.collate.collate_fn_sequence",
+                "_partial_": true,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "attention_mask_field_name": "attention_mask"
+              },
+              "pin_memory": false,
+              "data_folder": "data/beauty/evaluation",
+              "num_workers": 16,
+              "dataset_class": {
+                "_target_": "src.data.datasets.SequenceDataset",
+                "_partial_": true
+              },
+              "dataset_config": {
+                "_target_": "src.common.configs.data.DatasetConfig",
+                "data_reader": {
+                  "_target_": "src.data.components.readers.TFRecordReader",
+                  "_partial_": true,
+                  "shuffle_rows": false
+                },
+                "shuffle_files": false,
+                "preprocessing_functions": [
+                  {
+                    "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                    "_partial_": true,
+                    "features_to_consider": [
+                      "sequence_data"
+                    ]
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                    "_partial_": true
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                    "_partial_": true,
+                    "field_type_map": {
+                      "sequence_data": {
+                        "_args_": [
+                          "int32"
+                        ],
+                        "_target_": "torch.__dict__.get"
+                      }
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                    "_partial_": true,
+                    "num_hierarchies": 4,
+                    "features_to_apply": [
+                      "sequence_data"
+                    ],
+                    "semantic_id_bundle": {
+                      "_target_": "src.data.components.artifacts.load_model_output",
+                      "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                      "field_name": "semantic_id_path",
+                      "wandb_entity": "baymaxam",
+                      "wandb_project": "GRID"
+                    }
+                  },
+                  {
+                    "next_k": 4,
+                    "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                    "_partial_": true,
+                    "masking_token": 0,
+                    "padding_token": -1,
+                    "input_field_name": "input_ids",
+                    "target_field_name": "target_ids",
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.normalize_sequence",
+                    "_partial_": true,
+                    "padding_token": -1,
+                    "sid_hierarchy": 4,
+                    "sequence_length": 180,
+                    "input_field_name": "input_ids",
+                    "attention_mask_field_name": "attention_mask"
+                  }
+                ]
+              },
+              "persistent_workers": false,
+              "assign_files_by_size": true,
+              "batch_size_per_device": 64
+            },
+            "test_dataloader_config": {
+              "timeout": 60,
+              "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+              "drop_last": false,
+              "collate_fn": {
+                "_target_": "src.data.components.collate.collate_fn_sequence",
+                "_partial_": true,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "attention_mask_field_name": "attention_mask"
+              },
+              "pin_memory": false,
+              "data_folder": "data/beauty/testing",
+              "num_workers": 8,
+              "dataset_class": {
+                "_target_": "src.data.datasets.SequenceDataset",
+                "_partial_": true
+              },
+              "dataset_config": {
+                "_target_": "src.common.configs.data.DatasetConfig",
+                "data_reader": {
+                  "_target_": "src.data.components.readers.TFRecordReader",
+                  "_partial_": true,
+                  "shuffle_rows": false
+                },
+                "shuffle_files": false,
+                "preprocessing_functions": [
+                  {
+                    "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                    "_partial_": true,
+                    "features_to_consider": [
+                      "sequence_data"
+                    ]
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                    "_partial_": true
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                    "_partial_": true,
+                    "field_type_map": {
+                      "sequence_data": {
+                        "_args_": [
+                          "int32"
+                        ],
+                        "_target_": "torch.__dict__.get"
+                      }
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                    "_partial_": true,
+                    "num_hierarchies": 4,
+                    "features_to_apply": [
+                      "sequence_data"
+                    ],
+                    "semantic_id_bundle": {
+                      "_target_": "src.data.components.artifacts.load_model_output",
+                      "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                      "field_name": "semantic_id_path",
+                      "wandb_entity": "baymaxam",
+                      "wandb_project": "GRID"
+                    }
+                  },
+                  {
+                    "next_k": 4,
+                    "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                    "_partial_": true,
+                    "masking_token": 0,
+                    "padding_token": -1,
+                    "input_field_name": "input_ids",
+                    "target_field_name": "target_ids",
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.normalize_sequence",
+                    "_partial_": true,
+                    "padding_token": -1,
+                    "sid_hierarchy": 4,
+                    "sequence_length": 180,
+                    "input_field_name": "input_ids",
+                    "attention_mask_field_name": "attention_mask"
+                  }
+                ]
+              },
+              "persistent_workers": false,
+              "assign_files_by_size": true,
+              "batch_size_per_device": 8
+            },
+            "train_dataloader_config": {
+              "timeout": 60,
+              "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+              "drop_last": true,
+              "collate_fn": {
+                "_target_": "src.data.components.collate.collate_fn_sequence",
+                "_partial_": true,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "attention_mask_field_name": "attention_mask"
+              },
+              "pin_memory": true,
+              "data_folder": "data/beauty/training",
+              "num_workers": 32,
+              "dataset_class": {
+                "_target_": "src.data.datasets.SequenceDataset",
+                "_partial_": true
+              },
+              "dataset_config": {
+                "_target_": "src.common.configs.data.DatasetConfig",
+                "data_reader": {
+                  "_target_": "src.data.components.readers.TFRecordReader",
+                  "_partial_": true,
+                  "shuffle_rows": true
+                },
+                "shuffle_files": true,
+                "preprocessing_functions": [
+                  {
+                    "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                    "_partial_": true,
+                    "features_to_consider": [
+                      "sequence_data"
+                    ]
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                    "_partial_": true
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                    "_partial_": true,
+                    "field_type_map": {
+                      "sequence_data": {
+                        "_args_": [
+                          "int32"
+                        ],
+                        "_target_": "torch.__dict__.get"
+                      }
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                    "_partial_": true,
+                    "num_hierarchies": 4,
+                    "features_to_apply": [
+                      "sequence_data"
+                    ],
+                    "semantic_id_bundle": {
+                      "_target_": "src.data.components.artifacts.load_model_output",
+                      "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                      "field_name": "semantic_id_path",
+                      "wandb_entity": "baymaxam",
+                      "wandb_project": "GRID"
+                    }
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+                    "_partial_": true,
+                    "sid_hierarchy": 4,
+                    "max_num_sequences": 32,
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "next_k": 4,
+                    "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                    "_partial_": true,
+                    "masking_token": 0,
+                    "padding_token": -1,
+                    "input_field_name": "input_ids",
+                    "target_field_name": "target_ids",
+                    "sequence_field_name": "sequence_data"
+                  },
+                  {
+                    "_target_": "src.data.components.preprocessing.normalize_sequence",
+                    "_partial_": true,
+                    "padding_token": -1,
+                    "sid_hierarchy": 4,
+                    "sequence_length": 180,
+                    "input_field_name": "input_ids",
+                    "attention_mask_field_name": "attention_mask"
+                  }
+                ]
+              },
+              "persistent_workers": true,
+              "assign_files_by_size": false,
+              "batch_size_per_device": 128
+            }
+          },
+          "dataset_class": {
+            "_target_": "src.data.datasets.SequenceDataset",
+            "_partial_": true
+          },
+          "val_dataloader": {
+            "timeout": 60,
+            "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+            "drop_last": false,
+            "collate_fn": {
+              "_target_": "src.data.components.collate.collate_fn_sequence",
+              "_partial_": true,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "attention_mask_field_name": "attention_mask"
+            },
+            "pin_memory": false,
+            "data_folder": "data/beauty/evaluation",
+            "num_workers": 16,
+            "dataset_class": {
+              "_target_": "src.data.datasets.SequenceDataset",
+              "_partial_": true
+            },
+            "dataset_config": {
+              "_target_": "src.common.configs.data.DatasetConfig",
+              "data_reader": {
+                "_target_": "src.data.components.readers.TFRecordReader",
+                "_partial_": true,
+                "shuffle_rows": false
+              },
+              "shuffle_files": false,
+              "preprocessing_functions": [
+                {
+                  "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                  "_partial_": true,
+                  "features_to_consider": [
+                    "sequence_data"
+                  ]
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                  "_partial_": true
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                  "_partial_": true,
+                  "field_type_map": {
+                    "sequence_data": {
+                      "_args_": [
+                        "int32"
+                      ],
+                      "_target_": "torch.__dict__.get"
+                    }
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                  "_partial_": true,
+                  "num_hierarchies": 4,
+                  "features_to_apply": [
+                    "sequence_data"
+                  ],
+                  "semantic_id_bundle": {
+                    "_target_": "src.data.components.artifacts.load_model_output",
+                    "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                    "field_name": "semantic_id_path",
+                    "wandb_entity": "baymaxam",
+                    "wandb_project": "GRID"
+                  }
+                },
+                {
+                  "next_k": 4,
+                  "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                  "_partial_": true,
+                  "masking_token": 0,
+                  "padding_token": -1,
+                  "input_field_name": "input_ids",
+                  "target_field_name": "target_ids",
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.normalize_sequence",
+                  "_partial_": true,
+                  "padding_token": -1,
+                  "sid_hierarchy": 4,
+                  "sequence_length": 180,
+                  "input_field_name": "input_ids",
+                  "attention_mask_field_name": "attention_mask"
+                }
+              ]
+            },
+            "persistent_workers": false,
+            "assign_files_by_size": true,
+            "batch_size_per_device": 64
+          },
+          "test_dataloader": {
+            "timeout": 60,
+            "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+            "drop_last": false,
+            "collate_fn": {
+              "_target_": "src.data.components.collate.collate_fn_sequence",
+              "_partial_": true,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "attention_mask_field_name": "attention_mask"
+            },
+            "pin_memory": false,
+            "data_folder": "data/beauty/testing",
+            "num_workers": 8,
+            "dataset_class": {
+              "_target_": "src.data.datasets.SequenceDataset",
+              "_partial_": true
+            },
+            "dataset_config": {
+              "_target_": "src.common.configs.data.DatasetConfig",
+              "data_reader": {
+                "_target_": "src.data.components.readers.TFRecordReader",
+                "_partial_": true,
+                "shuffle_rows": false
+              },
+              "shuffle_files": false,
+              "preprocessing_functions": [
+                {
+                  "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                  "_partial_": true,
+                  "features_to_consider": [
+                    "sequence_data"
+                  ]
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                  "_partial_": true
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                  "_partial_": true,
+                  "field_type_map": {
+                    "sequence_data": {
+                      "_args_": [
+                        "int32"
+                      ],
+                      "_target_": "torch.__dict__.get"
+                    }
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                  "_partial_": true,
+                  "num_hierarchies": 4,
+                  "features_to_apply": [
+                    "sequence_data"
+                  ],
+                  "semantic_id_bundle": {
+                    "_target_": "src.data.components.artifacts.load_model_output",
+                    "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                    "field_name": "semantic_id_path",
+                    "wandb_entity": "baymaxam",
+                    "wandb_project": "GRID"
+                  }
+                },
+                {
+                  "next_k": 4,
+                  "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                  "_partial_": true,
+                  "masking_token": 0,
+                  "padding_token": -1,
+                  "input_field_name": "input_ids",
+                  "target_field_name": "target_ids",
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.normalize_sequence",
+                  "_partial_": true,
+                  "padding_token": -1,
+                  "sid_hierarchy": 4,
+                  "sequence_length": 180,
+                  "input_field_name": "input_ids",
+                  "attention_mask_field_name": "attention_mask"
+                }
+              ]
+            },
+            "persistent_workers": false,
+            "assign_files_by_size": true,
+            "batch_size_per_device": 8
+          },
+          "train_dataloader": {
+            "timeout": 60,
+            "_target_": "src.common.configs.data.SequenceDataloaderConfig",
+            "drop_last": true,
+            "collate_fn": {
+              "_target_": "src.data.components.collate.collate_fn_sequence",
+              "_partial_": true,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "attention_mask_field_name": "attention_mask"
+            },
+            "pin_memory": true,
+            "data_folder": "data/beauty/training",
+            "num_workers": 32,
+            "dataset_class": {
+              "_target_": "src.data.datasets.SequenceDataset",
+              "_partial_": true
+            },
+            "dataset_config": {
+              "_target_": "src.common.configs.data.DatasetConfig",
+              "data_reader": {
+                "_target_": "src.data.components.readers.TFRecordReader",
+                "_partial_": true,
+                "shuffle_rows": true
+              },
+              "shuffle_files": true,
+              "preprocessing_functions": [
+                {
+                  "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                  "_partial_": true,
+                  "features_to_consider": [
+                    "sequence_data"
+                  ]
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                  "_partial_": true
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                  "_partial_": true,
+                  "field_type_map": {
+                    "sequence_data": {
+                      "_args_": [
+                        "int32"
+                      ],
+                      "_target_": "torch.__dict__.get"
+                    }
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                  "_partial_": true,
+                  "num_hierarchies": 4,
+                  "features_to_apply": [
+                    "sequence_data"
+                  ],
+                  "semantic_id_bundle": {
+                    "_target_": "src.data.components.artifacts.load_model_output",
+                    "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                    "field_name": "semantic_id_path",
+                    "wandb_entity": "baymaxam",
+                    "wandb_project": "GRID"
+                  }
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+                  "_partial_": true,
+                  "sid_hierarchy": 4,
+                  "max_num_sequences": 32,
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "next_k": 4,
+                  "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                  "_partial_": true,
+                  "masking_token": 0,
+                  "padding_token": -1,
+                  "input_field_name": "input_ids",
+                  "target_field_name": "target_ids",
+                  "sequence_field_name": "sequence_data"
+                },
+                {
+                  "_target_": "src.data.components.preprocessing.normalize_sequence",
+                  "_partial_": true,
+                  "padding_token": -1,
+                  "sid_hierarchy": 4,
+                  "sequence_length": 180,
+                  "input_field_name": "input_ids",
+                  "attention_mask_field_name": "attention_mask"
+                }
+              ]
+            },
+            "persistent_workers": true,
+            "assign_files_by_size": false,
+            "batch_size_per_device": 128
+          },
+          "eval_dataset_config": {
+            "_target_": "src.common.configs.data.DatasetConfig",
+            "data_reader": {
+              "_target_": "src.data.components.readers.TFRecordReader",
+              "_partial_": true,
+              "shuffle_rows": false
+            },
+            "shuffle_files": false,
+            "preprocessing_functions": [
+              {
+                "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                "_partial_": true,
+                "features_to_consider": [
+                  "sequence_data"
+                ]
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                "_partial_": true
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                "_partial_": true,
+                "field_type_map": {
+                  "sequence_data": {
+                    "_args_": [
+                      "int32"
+                    ],
+                    "_target_": "torch.__dict__.get"
+                  }
+                }
+              },
+              {
+                "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                "_partial_": true,
+                "num_hierarchies": 4,
+                "features_to_apply": [
+                  "sequence_data"
+                ],
+                "semantic_id_bundle": {
+                  "_target_": "src.data.components.artifacts.load_model_output",
+                  "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                  "field_name": "semantic_id_path",
+                  "wandb_entity": "baymaxam",
+                  "wandb_project": "GRID"
+                }
+              },
+              {
+                "next_k": 4,
+                "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                "_partial_": true,
+                "masking_token": 0,
+                "padding_token": -1,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "sequence_field_name": "sequence_data"
+              },
+              {
+                "_target_": "src.data.components.preprocessing.normalize_sequence",
+                "_partial_": true,
+                "padding_token": -1,
+                "sid_hierarchy": 4,
+                "sequence_length": 180,
+                "input_field_name": "input_ids",
+                "attention_mask_field_name": "attention_mask"
+              }
+            ]
+          },
+          "train_dataset_config": {
+            "_target_": "src.common.configs.data.DatasetConfig",
+            "data_reader": {
+              "_target_": "src.data.components.readers.TFRecordReader",
+              "_partial_": true,
+              "shuffle_rows": true
+            },
+            "shuffle_files": true,
+            "preprocessing_functions": [
+              {
+                "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+                "_partial_": true,
+                "features_to_consider": [
+                  "sequence_data"
+                ]
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+                "_partial_": true
+              },
+              {
+                "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+                "_partial_": true,
+                "field_type_map": {
+                  "sequence_data": {
+                    "_args_": [
+                      "int32"
+                    ],
+                    "_target_": "torch.__dict__.get"
+                  }
+                }
+              },
+              {
+                "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+                "_partial_": true,
+                "num_hierarchies": 4,
+                "features_to_apply": [
+                  "sequence_data"
+                ],
+                "semantic_id_bundle": {
+                  "_target_": "src.data.components.artifacts.load_model_output",
+                  "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                  "field_name": "semantic_id_path",
+                  "wandb_entity": "baymaxam",
+                  "wandb_project": "GRID"
+                }
+              },
+              {
+                "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+                "_partial_": true,
+                "sid_hierarchy": 4,
+                "max_num_sequences": 32,
+                "sequence_field_name": "sequence_data"
+              },
+              {
+                "next_k": 4,
+                "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+                "_partial_": true,
+                "masking_token": 0,
+                "padding_token": -1,
+                "input_field_name": "input_ids",
+                "target_field_name": "target_ids",
+                "sequence_field_name": "sequence_data"
+              },
+              {
+                "_target_": "src.data.components.preprocessing.normalize_sequence",
+                "_partial_": true,
+                "padding_token": -1,
+                "sid_hierarchy": 4,
+                "sequence_length": 180,
+                "input_field_name": "input_ids",
+                "attention_mask_field_name": "attention_mask"
+              }
+            ]
+          },
+          "eval_preprocessing_functions": [
+            {
+              "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+              "_partial_": true,
+              "features_to_consider": [
+                "sequence_data"
+              ]
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+              "_partial_": true
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+              "_partial_": true,
+              "field_type_map": {
+                "sequence_data": {
+                  "_args_": [
+                    "int32"
+                  ],
+                  "_target_": "torch.__dict__.get"
+                }
+              }
+            },
+            {
+              "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+              "_partial_": true,
+              "num_hierarchies": 4,
+              "features_to_apply": [
+                "sequence_data"
+              ],
+              "semantic_id_bundle": {
+                "_target_": "src.data.components.artifacts.load_model_output",
+                "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                "field_name": "semantic_id_path",
+                "wandb_entity": "baymaxam",
+                "wandb_project": "GRID"
+              }
+            },
+            {
+              "next_k": 4,
+              "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+              "_partial_": true,
+              "masking_token": 0,
+              "padding_token": -1,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "sequence_field_name": "sequence_data"
+            },
+            {
+              "_target_": "src.data.components.preprocessing.normalize_sequence",
+              "_partial_": true,
+              "padding_token": -1,
+              "sid_hierarchy": 4,
+              "sequence_length": 180,
+              "input_field_name": "input_ids",
+              "attention_mask_field_name": "attention_mask"
+            }
+          ],
+          "train_preprocessing_functions": [
+            {
+              "_target_": "src.data.components.preprocessing.filter_features_to_consider",
+              "_partial_": true,
+              "features_to_consider": [
+                "sequence_data"
+              ]
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_to_dense_numpy_array",
+              "_partial_": true
+            },
+            {
+              "_target_": "src.data.components.preprocessing.convert_fields_to_tensors",
+              "_partial_": true,
+              "field_type_map": {
+                "sequence_data": {
+                  "_args_": [
+                    "int32"
+                  ],
+                  "_target_": "torch.__dict__.get"
+                }
+              }
+            },
+            {
+              "_target_": "src.data.components.preprocessing.map_sparse_id_to_semantic_id",
+              "_partial_": true,
+              "num_hierarchies": 4,
+              "features_to_apply": [
+                "sequence_data"
+              ],
+              "semantic_id_bundle": {
+                "_target_": "src.data.components.artifacts.load_model_output",
+                "file_path": "wandb://baymaxam/GRID/4vyi4o6w?role=semantic_id&file=merged_predictions_tensor.pt",
+                "field_name": "semantic_id_path",
+                "wandb_entity": "baymaxam",
+                "wandb_project": "GRID"
+              }
+            },
+            {
+              "_target_": "src.data.components.preprocessing.expand_sid_causal_duplicate_sequences",
+              "_partial_": true,
+              "sid_hierarchy": 4,
+              "max_num_sequences": 32,
+              "sequence_field_name": "sequence_data"
+            },
+            {
+              "next_k": 4,
+              "_target_": "src.data.components.preprocessing.generate_next_k_labels",
+              "_partial_": true,
+              "masking_token": 0,
+              "padding_token": -1,
+              "input_field_name": "input_ids",
+              "target_field_name": "target_ids",
+              "sequence_field_name": "sequence_data"
+            },
+            {
+              "_target_": "src.data.components.preprocessing.normalize_sequence",
+              "_partial_": true,
+              "padding_token": -1,
+              "sid_hierarchy": 4,
+              "sequence_length": 180,
+              "input_field_name": "input_ids",
+              "attention_mask_field_name": "attention_mask"
+            }
+          ]
+        },
+        "run_test_after_training": false
+      }
+    }
+  ]
+}

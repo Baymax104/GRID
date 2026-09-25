@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+model_checkpoint:
+  monitor: val/ndcg@10
+  save_last: true

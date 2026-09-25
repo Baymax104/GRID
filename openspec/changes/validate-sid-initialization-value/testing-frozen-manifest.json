@@ -1,0 +1,151 @@
+{
+  "protocol": "beauty-sid-five-seed-v1",
+  "data_split": "testing",
+  "beam_width": 10,
+  "historical_testing_use": "baseline_reporting_only_confirmed_by_user",
+  "user_confirmation": "历史TIGER testing结果没有用于选择A、残差初始化或超参数，仅用于报告基线结果",
+  "checkpoints": [
+    {
+      "seed": 42,
+      "condition": "full_content",
+      "run_id": "5g3wpbg7",
+      "checkpoint": "wandb://baymaxam/GRID/5g3wpbg7?role=checkpoint&file=checkpoint_epoch=000_step=019000.ckpt",
+      "artifact_name": "tiger_catalog_grounded_token_content_init_beauty_train-checkpoint:v0",
+      "artifact_digest": "aaba5b47dc9a5e94c0d23b75cf697238",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19000
+    },
+    {
+      "seed": 42,
+      "condition": "deep_residual",
+      "run_id": "nq8he993",
+      "checkpoint": "wandb://baymaxam/GRID/nq8he993?role=checkpoint&file=checkpoint_epoch=000_step=019000.ckpt",
+      "artifact_name": "tiger_content_initialization_deep_residual_beauty_train-checkpoint:v0",
+      "artifact_digest": "a5fad97f3a5ae19ce8adb9d49de15457",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19000
+    },
+    {
+      "seed": 43,
+      "condition": "full_content",
+      "run_id": "0fuiq3vx",
+      "checkpoint": "wandb://baymaxam/GRID/0fuiq3vx?role=checkpoint&file=checkpoint_epoch=000_step=019000.ckpt",
+      "artifact_name": "tiger_content_initialization_full_content_beauty_train-checkpoint:v0",
+      "artifact_digest": "26f1fa6e785b40de39345452d7ffb251",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19000
+    },
+    {
+      "seed": 43,
+      "condition": "deep_residual",
+      "run_id": "wkpb2b4e",
+      "checkpoint": "wandb://baymaxam/GRID/wkpb2b4e?role=checkpoint&file=checkpoint_epoch=000_step=019000.ckpt",
+      "artifact_name": "tiger_content_initialization_deep_residual_beauty_train-checkpoint:v1",
+      "artifact_digest": "3ae37a70597f22e1cd9bdd7e71b621b9",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19000
+    },
+    {
+      "seed": 44,
+      "condition": "full_content",
+      "run_id": "o04nn9mf",
+      "checkpoint": "wandb://baymaxam/GRID/o04nn9mf?role=checkpoint&file=checkpoint_epoch=000_step=019500.ckpt",
+      "artifact_name": "tiger_content_initialization_full_content_beauty_train-checkpoint:v1",
+      "artifact_digest": "6de9ad571b89f78e9368eaec56ac4a30",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19500
+    },
+    {
+      "seed": 44,
+      "condition": "deep_residual",
+      "run_id": "79dk60vy",
+      "checkpoint": "wandb://baymaxam/GRID/79dk60vy?role=checkpoint&file=checkpoint_epoch=000_step=019500.ckpt",
+      "artifact_name": "tiger_content_initialization_deep_residual_beauty_train-checkpoint:v2",
+      "artifact_digest": "fca49d2737c6bae6144953e80f07783e",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19500
+    },
+    {
+      "seed": 45,
+      "condition": "full_content",
+      "run_id": "kckgwr6j",
+      "checkpoint": "wandb://baymaxam/GRID/kckgwr6j?role=checkpoint&file=checkpoint_epoch=000_step=020000.ckpt",
+      "artifact_name": "tiger_content_initialization_full_content_beauty_train-checkpoint:v4",
+      "artifact_digest": "0b0efe97e733de5ae998d3eb242677ae",
+      "selected_by": "val/ndcg@10",
+      "best_step": 20000
+    },
+    {
+      "seed": 45,
+      "condition": "deep_residual",
+      "run_id": "nlj0x573",
+      "checkpoint": "wandb://baymaxam/GRID/nlj0x573?role=checkpoint&file=checkpoint_epoch=000_step=020000.ckpt",
+      "artifact_name": "tiger_content_initialization_deep_residual_beauty_train-checkpoint:v3",
+      "artifact_digest": "4a5f87137c50856718162b318d4ecdcc",
+      "selected_by": "val/ndcg@10",
+      "best_step": 20000
+    },
+    {
+      "seed": 46,
+      "condition": "full_content",
+      "run_id": "v7q7y0jx",
+      "checkpoint": "wandb://baymaxam/GRID/v7q7y0jx?role=checkpoint&file=checkpoint_epoch=000_step=019000.ckpt",
+      "artifact_name": "tiger_content_initialization_full_content_beauty_train-checkpoint:v5",
+      "artifact_digest": "658aff9de49911557ac5a6443847ab02",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19000
+    },
+    {
+      "seed": 46,
+      "condition": "deep_residual",
+      "run_id": "ype8ur9j",
+      "checkpoint": "wandb://baymaxam/GRID/ype8ur9j?role=checkpoint&file=checkpoint_epoch=000_step=019500.ckpt",
+      "artifact_name": "tiger_content_initialization_deep_residual_beauty_train-checkpoint:v4",
+      "artifact_digest": "c10f5e98bc8bfac5fc9bd3bc25ca25e9",
+      "selected_by": "val/ndcg@10",
+      "best_step": 19500
+    }
+  ],
+  "files": [
+    {
+      "path": "tiger_sid_initialization_testing.sh",
+      "sha256": "dd7c02180a99d211c437c809682b5a5e572dd5716f90bb07d3edd9a2ad04c75c"
+    },
+    {
+      "path": "tiger_catalog_grounded_inference.sh",
+      "sha256": "713b1b715e471f42a86bf2e858915cc1e39ad50ba0ec636d1b9b279d37f47fc0"
+    },
+    {
+      "path": "src/recommendation/tiger_catalog_grounded/module.py",
+      "sha256": "6028088425c8dfb774281115a23b504b72bbec506556e7fa9c1a198a10565869"
+    },
+    {
+      "path": "src/recommendation/tiger_catalog_grounded/catalog.py",
+      "sha256": "99b964b4c73e86f2e91574399d7408dc638db3ef9b09e3a85df097815828b684"
+    },
+    {
+      "path": "configs/model/tiger_catalog_grounded_inference.yaml",
+      "sha256": "acf138f6bb16935a5562fbfc2bb7ce3a20a02f17ed290a2f1cf633f3b46ddda1"
+    },
+    {
+      "path": "configs/model/tiger_residual_initialization.yaml",
+      "sha256": "14239ca89c15fca6f4c0332979335a3f103ca332b06d7b4a676d0169690ad14f"
+    },
+    {
+      "path": "configs/model/tiger_residual_initialization_inference.yaml",
+      "sha256": "b1d0068b1fffb525d5009269d8db9f5505c14487e9428c1cf90ea223bdfbbc55"
+    },
+    {
+      "path": "configs/data/tiger_prefix_trace.yaml",
+      "sha256": "f8aac07c8dd2fdaff6e245c712ea9d0dd04efc955b972f174d2110d8a95246d6"
+    },
+    {
+      "path": "configs/callbacks/tiger_prefix_trace.yaml",
+      "sha256": "3575d844c34849494d882c1f491d14e566d8b7d802ed4c2689c3c82f17f1896f"
+    },
+    {
+      "path": "configs/experiment/tiger_catalog_grounded_inference.yaml",
+      "sha256": "ce9a79ec7e20974c968f691fc7e3de113a3b9ee3d46f1a34df7a96ece7951a33"
+    }
+  ]
+}

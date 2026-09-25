@@ -1,8 +1,0 @@
-# @package _global_
-defaults:
-- tail_sid_diagnosis@_here_
-- override /data@data: tiger_catalog_grounded_diagnosis
-- _self_
-
-data_split: ???
-task_name: tiger_catalog_grounded_diagnosis

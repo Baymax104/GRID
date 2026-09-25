@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-17",
+  "kind": "static_catalog_analysis_not_experiment",
+  "source": "tmp/cgbs_mechanism_training/checkpoint_cache/k6jvoo2v/checkpoint/checkpoint_epoch=000_step=019000.ckpt",
+  "catalog_fingerprint": "100f0b13ce2d08e8895f17db9fa1aff3951d03c8c7abdaf7faee4af268b7663e",
+  "n_items": 12101,
+  "feature_dimension": 128,
+  "features_sha256": "da449e375fcaec61130b336309353e929bc33142071505a7c6b495fd28ffd629",
+  "sids_sha256": "c52cf694fdad14192e79565725c6c3460e13090f6cb8dd144b19c1c51e5722b4",
+  "tensor_hash_format": "contiguous CPU numpy bytes; shapes and dtypes recorded separately",
+  "features_dtype": "torch.float32",
+  "sids_dtype": "torch.int64",
+  "torch_version": "2.9.1+cpu",
+  "fit": "100 alternating weighted group-mean updates, CPU float64, item-uniform",
+  "results": [
+    {
+      "level": 2,
+      "occupied_prefixes": 7091,
+      "singleton_prefix_fraction": 0.6719785643773798,
+      "code_mse": 0.7437069247551745,
+      "additive_mse": 0.27580118500442097,
+      "joint_mse": 0.08192703559649042,
+      "interaction_mse": 0.19387414940793055,
+      "interaction_fraction_of_code_mse": 0.26068622323471463,
+      "normal_equation_max_abs": 4.1945843413818e-16,
+      "identity_error": 0.0
+    },
+    {
+      "level": 3,
+      "occupied_prefixes": 11028,
+      "singleton_prefix_fraction": 0.93126586869786,
+      "code_mse": 0.8605720661557152,
+      "additive_mse": 0.06530553716411207,
+      "joint_mse": 0.007641505915315373,
+      "interaction_mse": 0.05766403124879669,
+      "interaction_fraction_of_code_mse": 0.0670066267737335,
+      "normal_equation_max_abs": 0.00030700293884945257,
+      "identity_error": 6.938893903907228e-18
+    }
+  ],
+  "level2_convergence_check": {
+    "mse_at_100_500_1000_2000": 0.27580118500442097,
+    "normal_equation_max_abs": 5.314949260431397e-16,
+    "connected_components": 1,
+    "active_bipartite_nodes": 512,
+    "interaction_degrees_per_coordinate": 6580
+  },
+  "scalar_gate_algebra_probe": {
+    "zero_initial_equals_base": true,
+    "synthetic_gradient": -0.4538538512655016,
+    "limitation": "synthetic squared-error objective, not recommendation CE or model validation"
+  }
+}

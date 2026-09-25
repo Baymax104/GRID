@@ -1,0 +1,179 @@
+# @package _global_
+root:
+  _target_: src.recommendation.liger.Liger
+  catalog:
+    _target_: src.data.components.liger.load_liger_catalog
+    semantic_id_path: ${semantic_id_path}
+    embedding_path: ${embedding_path}
+    training_data_dir: ${paths.data_dir}/training
+    wandb_entity: ${user}
+    wandb_project: ${project}
+  num_hierarchies: ${num_hierarchies}
+  codebook_size: ${codebook_size}
+  embedding_dim: 128
+  num_layers: 6
+  num_heads: 6
+  d_kv: 64
+  d_ff: 1024
+  dropout: 0.2
+  max_history_items: ${max_history_items}
+  projection_hidden_sizes: [768, 512, 256]
+  projection_dropout: 0.2
+  input_dropout: 0.5
+  temperature: 0.07
+  sid_loss_weight: 1.0
+  content_loss_weight: 1.0
+  generation_candidates: 20
+  top_k: 10
+  evaluation_mode: dense
+  prediction_mode: hybrid
+  catalog_chunk_size: 4096
+  candidate_trace: false
+  candidate_strategy: original
+  content_mixture_alpha: 0.0
+  training_model_config: ${model.training_model_config}
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: 0.0003
+    weight_decay: 0.035
+  scheduler:
+    _target_: src.common.scheduler.WarmupCosineSchedulerNonzeroMin
+    _partial_: true
+    warmup_steps: 10000
+    scheduler_steps: ${trainer.root.max_steps}
+    min_ratio: 0.0
+
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+      sid_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: sid_loss
+      content_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: content_loss
+    val:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+      sid_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: sid_loss
+      content_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: content_loss
+      ndcg@5:
+        metric:
+          _target_: src.recommendation.tiger.metrics.NDCG
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+      ndcg@10:
+        metric:
+          _target_: src.recommendation.tiger.metrics.NDCG
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+      recall@5:
+        metric:
+          _target_: src.recommendation.tiger.metrics.Recall
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+      recall@10:
+        metric:
+          _target_: src.recommendation.tiger.metrics.Recall
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+    test:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+      sid_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: sid_loss
+      content_loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: content_loss
+      ndcg@5:
+        metric:
+          _target_: src.recommendation.tiger.metrics.NDCG
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+      ndcg@10:
+        metric:
+          _target_: src.recommendation.tiger.metrics.NDCG
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+      recall@5:
+        metric:
+          _target_: src.recommendation.tiger.metrics.Recall
+          top_k: 5
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true
+      recall@10:
+        metric:
+          _target_: src.recommendation.tiger.metrics.Recall
+          top_k: 10
+          sync_on_compute: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.tiger.metrics.sid_retrieval_inputs
+            _partial_: true

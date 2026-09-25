@@ -47,6 +47,7 @@ class TigerEncoder(torch.nn.Module):
         self,
         semantic_ids: torch.Tensor,
         attention_mask: torch.Tensor | None = None,
+        embedding_transform=None,
     ) -> torch.Tensor:
         shifted_sids = add_hierarchy_offsets(
             semantic_ids=semantic_ids,
@@ -54,16 +55,21 @@ class TigerEncoder(torch.nn.Module):
             num_hierarchies=self.num_hierarchies,
             attention_mask=attention_mask,
         )
-        return self.sid_embedding_table(shifted_sids)
+        embeddings = self.sid_embedding_table(shifted_sids)
+        if embedding_transform is not None:
+            embeddings = embedding_transform(semantic_ids, embeddings, attention_mask)
+        return embeddings
 
     def forward(
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
+        embedding_transform=None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         sequence_embedding = self.embed_semantic_ids(
             semantic_ids=input_ids,
             attention_mask=attention_mask,
+            embedding_transform=embedding_transform,
         )
 
         if self.sep_token is not None:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from contextvars import ContextVar
 
 import torch
@@ -22,6 +24,7 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 
 DEFAULT_BUNDLE_FILE = "merged_predictions_tensor.pt"
 DEFAULT_ROLE_BY_FIELD = {
+    "quantizer_checkpoint_path": "checkpoint",
     "ckpt_path": "checkpoint",
     "embedding_path": "semantic_embedding",
     "model_output_path": "recommendation_output",
@@ -34,8 +37,6 @@ DEFAULT_ROLE_BY_FIELD = {
     "widened_prefix_trace_path": "prefix_trace",
     "baseline_prefix_trace_path": "prefix_trace",
     "intervention_prefix_trace_path": "prefix_trace",
-    "item_resolution_calibration_path": "item_resolution_calibration",
-    "item_resolution_trace_path": "item_resolution_trace",
 }
 
 
@@ -182,6 +183,49 @@ def load_semantic_id_tensor(
     return semantic_ids.long()
 
 
+def load_rkmeans_codebooks(
+    quantizer_checkpoint_path: str,
+    expected_sha256: str,
+    num_layers: int,
+    codebook_size: int,
+    wandb_entity: str | None = None,
+    wandb_project: str | None = None,
+) -> torch.Tensor:
+    """读取明确身份的已训练RKMeans码本，沿用公共解析及lineage记录。"""
+    if not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected_sha256):
+        raise ValueError("expected_sha256 must be a 64-character SHA256 digest.")
+    if num_layers < 1 or codebook_size < 2:
+        raise ValueError("Invalid RKMeans layer count or codebook size.")
+    path = resolve_reference(
+        quantizer_checkpoint_path,
+        field_name="quantizer_checkpoint_path",
+        default_entity=wandb_entity,
+        default_project=wandb_project,
+    )
+    with open_local_or_remote(path, mode="rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    if digest != expected_sha256.lower():
+        raise ValueError("RKMeans checkpoint SHA256 mismatch.")
+    with open_local_or_remote(path, mode="rb") as stream:
+        checkpoint = torch.load(stream, map_location="cpu", weights_only=False)
+    state = checkpoint.get("state_dict", {}) if isinstance(checkpoint, dict) else {}
+    names = {f"layers.{level}.centroids" for level in range(num_layers)}
+    actual = {name for name in state if re.fullmatch(r"layers\.\d+\.centroids", name)}
+    initialized = checkpoint.get("layers_initialized") if isinstance(checkpoint, dict) else None
+    if actual != names or not isinstance(initialized, (list, tuple)):
+        raise ValueError("RKMeans checkpoint layer structure mismatch.")
+    if len(initialized) != num_layers or not all(value is True for value in initialized):
+        raise ValueError("RKMeans layers must all be initialized.")
+    rows = [state[f"layers.{level}.centroids"] for level in range(num_layers)]
+    if any(
+        not isinstance(row, torch.Tensor) or row.ndim != 2 or row.shape[0] != codebook_size
+        or row.shape[1] < 1 or row.shape != rows[0].shape or not row.isfinite().all()
+        for row in rows
+    ):
+        raise ValueError("RKMeans centroids must have matching finite codebook-by-feature shapes.")
+    return torch.stack(rows).detach().float().contiguous()
+
+
 def load_prefix_trace_artifact(
     file_path: str,
     *,
@@ -202,25 +246,9 @@ def load_prefix_trace_artifact(
     return load_prefix_trace(resolved_path)
 
 
-def load_item_resolution_calibration(file_path, wandb_entity=None, wandb_project=None):
-    """通过共享解析器读取训练集标定，并保留 Artifact lineage。"""
-    if file_path is None:
-        return None
-    from src.data.components.item_resolution import validate_resolution_calibration
-
-    resolved = resolve_reference(file_path, "item_resolution_calibration_path", default_entity=wandb_entity,
-                                 default_project=wandb_project, default_file="item_resolution_calibration.pt")
-    bundle = torch.load(open_local_or_remote(resolved, mode="rb"), weights_only=False, map_location="cpu")
-    validate_resolution_calibration(bundle)
-    return {**bundle["metadata"], "thresholds": bundle["trace"]["entropy"].float().mean(0),
-            "calibration_reference": file_path, "sample_count": len(bundle["keys"])}
-
-
 def _default_file_for_role(role: str) -> str:
     if role in {"checkpoint", "checkpoint_last"}:
         return "*.ckpt"
-    if role in {"item_resolution_trace", "item_resolution_calibration"}:
-        return f"{role}.pt"
     if role == "prefix_trace":
         return PREFIX_TRACE_FILENAME
     return DEFAULT_BUNDLE_FILE

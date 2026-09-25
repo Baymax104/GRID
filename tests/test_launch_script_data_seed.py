@@ -1,8 +1,10 @@
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+from hydra.core.override_parser.overrides_parser import OverridesParser
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_NAMES = [
@@ -108,6 +110,43 @@ def _usable_bash():
 BASH = _usable_bash()
 
 
+@pytest.mark.skipif(BASH is None, reason="bash is not available")
+@pytest.mark.parametrize("script_name", ["rkmeans_train.sh", "rvq_train.sh"])
+@pytest.mark.parametrize("equals_form", [False, True])
+@pytest.mark.parametrize(
+    "embedding",
+    [
+        "wandb://baymaxam/GRID/3jtt9mpa?role=semantic_embedding&file=merged_predictions_tensor.pt",
+        'data/embedding = "quoted".pt',
+        "/data/embedding with spaces.pt",
+    ],
+)
+def test_quantizer_embedding_survives_shell_and_hydra(script_name, equals_form, embedding, tmp_path):
+    script = _instrument_script(script_name, tmp_path)
+    option = [f"--embedding-path={embedding}"] if equals_form else ["--embedding-path", embedding]
+    command = [
+        "bash",
+        script.as_posix(),
+        "--data-dir",
+        "data/beauty",
+        "--notes",
+        "URI regression",
+        *option,
+        'embedding_path="override=last.pt"',
+    ]
+    result = subprocess.run(
+        [BASH],
+        input=shlex.join(command) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    parsed = OverridesParser.create().parse_overrides(result.stdout.splitlines())
+    values = [item.value() for item in parsed if item.key_or_group == "embedding_path"]
+    assert values == [embedding, "override=last.pt"]
+
+
 def _instrument_script(script_name: str, tmp_path: Path) -> Path:
     source = (PROJECT_ROOT / script_name).read_text(encoding="utf-8")
     print_args = "printf '%s\\n' \"${ARGS[@]}\"\n"
@@ -146,9 +185,7 @@ def test_launch_scripts_require_data_dir(script_name, tmp_path):
         (["--data-dir", "data/test dataset"], ["--seed", "23"], "23"),
     ],
 )
-def test_launch_scripts_forward_data_dir_and_seed(
-    script_name, data_arguments, seed_arguments, expected_seed, tmp_path
-):
+def test_launch_scripts_forward_data_dir_and_seed(script_name, data_arguments, seed_arguments, expected_seed, tmp_path):
     script = _instrument_script(script_name, tmp_path)
     trailing_override = "seed=99"
     result = subprocess.run(

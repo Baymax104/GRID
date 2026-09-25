@@ -197,7 +197,11 @@ def select_output_artifact(run, role: str, alias: str | None, target_file: str):
 
 def artifact_matches_role(artifact, role: str) -> bool:
     metadata = getattr(artifact, "metadata", {}) or {}
-    return metadata.get("role") == role or getattr(artifact, "type", None) == role
+    # 显式 role 区分同一 type 下的 best/last 等产物；旧产物才回退到 type。
+    declared_role = metadata.get("role")
+    if declared_role:
+        return declared_role == role
+    return getattr(artifact, "type", None) == role
 
 
 def artifact_contains_file(artifact, target_file: str) -> bool:

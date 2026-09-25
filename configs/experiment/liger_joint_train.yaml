@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+- liger_train
+- override /model@model: liger_joint
+- override /trainer@trainer: liger_joint
+- _self_
+group: liger_joint_mixture_v1
+task_name: liger_${dataset_name}_joint_train
+baseline_protocol: liger-joint-mixture-v1

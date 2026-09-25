@@ -1,9 +1,0 @@
-# @package _global_
-defaults:
-- tiger_item_resolution_inference@_here_
-- override /callbacks@callbacks: tiger_item_resolution_calibration
-- _self_
-
-resolution_arm: hybrid
-inference_policy: calibrate
-data_split: training

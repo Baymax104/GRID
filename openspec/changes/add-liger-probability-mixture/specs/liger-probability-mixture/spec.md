@@ -1,0 +1,17 @@
+## ADDED Requirements
+### Requirement: 条件概率混合生成
+系统 SHALL 支持conditional_only与probability_mixture，分别使用合法分支生成条件概率与生成/内容条件概率的算术混合，不修改默认策略。
+#### Scenario: 有效父前缀
+- **WHEN** beam扩展合法SID前缀
+- **THEN** 内容条件概率来自精确商品分数logsumexp，局部概率在合法子分支上和为1，非法SID及EOS/PAD被遮蔽
+#### Scenario: 无合法子分支
+- **WHEN** 生成器传入无效或死beam
+- **THEN** 所有延续为负无穷而非NaN
+#### Scenario: 混合端点
+- **WHEN** alpha为0或1
+- **THEN** 分别精确等于生成条件概率或内容条件概率；alpha非法或与策略不符时报错
+### Requirement: 兼容性与审计
+系统 SHALL 保留旧checkpoint严格加载和旧策略预测，记录新策略、归一化与alpha。
+#### Scenario: 固定checkpoint的两臂
+- **WHEN** 用户启动匹配两臂
+- **THEN** 标签仅参与诊断，cold并集及最终排序保持一致，输出可由既有配对汇总读取

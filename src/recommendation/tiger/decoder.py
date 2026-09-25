@@ -486,6 +486,7 @@ class TigerDecoder(torch.nn.Module):
         future_ids: torch.Tensor,
         encoder_output: torch.Tensor,
         encoder_attention_mask: torch.Tensor,
+        embedding_transform=None,
     ) -> torch.Tensor:
         """Run teacher-forcing decoder forward with BOS plus future SID inputs.
 
@@ -506,6 +507,9 @@ class TigerDecoder(torch.nn.Module):
             num_hierarchies=self.num_hierarchies,
         )
         sequence_embedding = self.sid_embedding_table(shifted_sids)
+
+        if embedding_transform is not None:
+            sequence_embedding = embedding_transform(future_ids, sequence_embedding)
 
         sequence_embedding = torch.cat(
             [

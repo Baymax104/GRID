@@ -57,7 +57,10 @@ class TFRecordReader(BaseDataReader):
 
         normalized_path = unquote(parsed.path)
 
-        if parsed.netloc and parsed.netloc not in {"", "localhost"}:
+        if len(parsed.netloc) == 2 and parsed.netloc[0].isalpha() and parsed.netloc[1] == ":":
+            # fsspec 可产生 file://E:/...；盘符不是 UNC 主机名。
+            normalized_path = f"{parsed.netloc}{normalized_path}"
+        elif parsed.netloc and parsed.netloc not in {"", "localhost"}:
             normalized_path = f"//{parsed.netloc}{normalized_path}"
 
         # Windows file URI: /C:/path -> C:/path

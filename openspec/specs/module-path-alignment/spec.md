@@ -50,3 +50,11 @@ TBD - created by archiving change align-module-paths-and-rename-common. Update P
 - **WHEN** 默认训练或推理入口加载配置并实例化对象
 - **THEN** 不得因为旧路径残留导致导入失败或 Hydra 目标解析失败
 
+### Requirement: Recommendation directories SHALL correspond to active method modules
+`src/recommendation/` 下的顶层方法目录 SHALL 对应当前可执行方法；已结题研究方法的实现 SHALL 不以独立目录、adapter 或兼容壳继续存在。
+
+#### Scenario: Inspect recommendation layout after pruning
+- **WHEN** 清理完成后枚举 recommendation 方法目录
+- **THEN** 方法目录只包含 `tiger` 与 `liger`
+- **AND** 共享运行逻辑继续通过既有 `src.common`、`src.data` 和 `src.utils` seam 提供
+

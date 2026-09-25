@@ -1,0 +1,58 @@
+[
+  {
+    "path": "src/recommendation/tiger_catalog_grounded/module.py",
+    "sha256": "0049116b267fd0d0c970db059ac4dead7cfa9b855ebc614ae2844ef6f07b2790"
+  },
+  {
+    "path": "src/recommendation/tiger_catalog_grounded/catalog.py",
+    "sha256": "99b964b4c73e86f2e91574399d7408dc638db3ef9b09e3a85df097815828b684"
+  },
+  {
+    "path": "src/recommendation/tiger/tiger.py",
+    "sha256": "c0637a071f861855319836367da1a281e693ed8e35aa5e314012510c574343a0"
+  },
+  {
+    "path": "src/recommendation/tiger/encoder.py",
+    "sha256": "c6d42214bfef6dcfedf0a511941ed01dd87aa3e2e918d26aa03197eeaed4642f"
+  },
+  {
+    "path": "src/recommendation/tiger/decoder.py",
+    "sha256": "9b465296d0e950cebecf303cdda3358b8d738dcb13b529f43bb6d37df0d094c8"
+  },
+  {
+    "path": "src/data/components/artifacts.py",
+    "sha256": "7c25c3da1b42496efa3222ef8641ef9fb53897328a7f8e032ea6d9696d4aca07"
+  },
+  {
+    "path": "configs/model/tiger_catalog_grounded.yaml",
+    "sha256": "7da2f7ecff9ec20b3e76323f4bd5342cfd7453ec9e8c7b59a189df3ff9cd98e5"
+  },
+  {
+    "path": "configs/model/tiger_residual_initialization.yaml",
+    "sha256": "14239ca89c15fca6f4c0332979335a3f103ca332b06d7b4a676d0169690ad14f"
+  },
+  {
+    "path": "configs/trainer/tiger_catalog_grounded.yaml",
+    "sha256": "aae6ae5372f6cbb6c7e48a6d5f03a8ac3b2090a809c5da6d801723190cb1b22e"
+  },
+  {
+    "path": "configs/trainer/tiger_train.yaml",
+    "sha256": "9b51f8b2869f4d9de8fef22a3acd592acaa073152133951cdfb503e0dbb3f542"
+  },
+  {
+    "path": "configs/model/tiger_train.yaml",
+    "sha256": "91e647100cf142db93c0f473ac95c411f5dead5f154f3cea594893037d8ccff1"
+  },
+  {
+    "path": "configs/experiment/tiger_catalog_grounded_train.yaml",
+    "sha256": "eed414ff4fea3741f2e1a5852b61c45877622ee0963acc1d4c84ac1678541963"
+  },
+  {
+    "path": "pyproject.toml",
+    "sha256": "652faf7fe50192bdb2cfe073add3d4869de751f57d7730e4ad70e21b14f3ec6a"
+  },
+  {
+    "path": "uv.lock",
+    "sha256": "0b99ec2707781715928b5d2819ad2102850140655b500e8b39ecadd681ad75bb"
+  }
+]

@@ -1,0 +1,20 @@
+## ADDED Requirements
+### Requirement: 可选内容引导候选生成
+系统 SHALL 提供original、valid_only、content_guided三种策略，默认original；valid_only与content_guided共享合法SID约束、beam预算及最终内容排序。
+#### Scenario: 原始策略
+- **WHEN** 未启用干预
+- **THEN** 生成调用和预测行为保持不变且兼容旧checkpoint
+#### Scenario: 匹配控制与引导
+- **WHEN** 分别选择valid_only或content_guided
+- **THEN** 同一原始token log概率分别附加零引导或前缀最大内容势差，非法继续项为负无穷，标签不得用于生成
+#### Scenario: 势差累计
+- **WHEN** 一个合法完整SID生成完成
+- **THEN** 引导累计等于lambda乘商品内容分数减根势，权重零与合法性控制数值一致
+### Requirement: 配对净收益审计
+系统 SHALL 保存策略/权重元数据并支持对同用户的trace进行配对收益与损害汇总。
+#### Scenario: 输入不匹配
+- **WHEN** 用户、标签、目录指纹或dense排名不一致
+- **THEN** 拒绝合并结果
+#### Scenario: 匹配trace
+- **WHEN** 对同一评估集的原始、合法性和引导结果比较
+- **THEN** 汇总整体指标差异、原独有命中找回与保留、以及配对统计区间，不把准备完成称为效果成立

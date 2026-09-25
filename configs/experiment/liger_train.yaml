@@ -1,0 +1,40 @@
+# @package _global_
+defaults:
+- /data@data: liger_train
+- /model@model: liger
+- /callbacks@callbacks: liger_train
+- /logger@logger: tiger_train
+- /trainer@trainer: liger_train
+
+data_dir: ???
+semantic_id_path: ???
+embedding_path: ???
+dataset_name: ???
+devices: ???
+group: liger
+num_hierarchies: 4
+codebook_size: 256
+max_history_items: 20
+sequence_length: 80
+run_mode: train
+task_name: liger_${dataset_name}_train
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+seed: 42
+ckpt_path: null
+run_test_after_training: false
+baseline_protocol: liger-grid-adapted-v1
+upstream_commit: b6ccc37af5ee623ddc1d1ead3490c31aaeaf4524
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
+  profile_dir: ${hydra:run.dir}/profile_output
+  metadata_dir: ${paths.output_dir}/metadata
+extras:
+  ignore_warnings: false
+  print_config_warnings: true
+  print_config: false

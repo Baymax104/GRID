@@ -60,10 +60,11 @@ class FileDataset:
         return worker_id, num_workers, global_dataloader_worker_id
 
     def get_list_of_worker_files(self, shuffle: bool = False, seed: int = 0):
-        worker_id, num_workers, global_dataloader_worker_id = self._get_worker_context()
+        worker_id, num_workers, _ = self._get_worker_context()
         files = self.list_of_file_paths.copy()
         if shuffle:
-            seed += global_dataloader_worker_id
+            # 同一 rank、同一轮的 worker 必须共享排列，切片才能互斥且完整。
+            seed += self.global_rank
             random.Random(seed).shuffle(files)
         worker_files = files[worker_id::num_workers]
         return worker_files

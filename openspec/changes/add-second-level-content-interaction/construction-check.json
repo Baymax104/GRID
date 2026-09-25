@@ -1,0 +1,62 @@
+{
+  "scope": "fixed catalog component construction only; unit initial table used for scale; no model/Trainer/GPU run",
+  "rows": [
+    {
+      "mode": "interaction",
+      "fit": {
+        "iterations": 29,
+        "error": 4.977544613855982e-11,
+        "components": 1,
+        "projection_iterations": null,
+        "projection_error": null,
+        "moved_fraction": 0.0,
+        "occupied_pairs": 7091,
+        "construction_torch": "2.9.1+cpu",
+        "construction_numpy": "2.4.6",
+        "nonzero_item_fraction": 1.0
+      },
+      "seconds_cpu_4_threads": 1.4696832000045106,
+      "parameter_count": 1,
+      "buffer_bytes": 3689384,
+      "values_finite": true
+    },
+    {
+      "mode": "additive",
+      "fit": {
+        "iterations": 29,
+        "error": 4.977544613855982e-11,
+        "components": 1,
+        "projection_iterations": null,
+        "projection_error": null,
+        "moved_fraction": 0.0,
+        "occupied_pairs": 7091,
+        "construction_torch": "2.9.1+cpu",
+        "construction_numpy": "2.4.6",
+        "nonzero_item_fraction": 1.0
+      },
+      "seconds_cpu_4_threads": 1.4344168000097852,
+      "parameter_count": 1,
+      "buffer_bytes": 3689384,
+      "values_finite": true
+    },
+    {
+      "mode": "shuffled",
+      "fit": {
+        "iterations": 29,
+        "error": 4.977544613855982e-11,
+        "components": 1,
+        "projection_iterations": 28,
+        "projection_error": 7.828162600466047e-11,
+        "moved_fraction": 0.963192779579749,
+        "occupied_pairs": 7091,
+        "construction_torch": "2.9.1+cpu",
+        "construction_numpy": "2.4.6",
+        "nonzero_item_fraction": 0.9999173879623413
+      },
+      "seconds_cpu_4_threads": 2.806154099991545,
+      "parameter_count": 1,
+      "buffer_bytes": 3689384,
+      "values_finite": true
+    }
+  ]
+}

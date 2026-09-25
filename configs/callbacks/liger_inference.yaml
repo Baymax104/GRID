@@ -1,0 +1,4 @@
+# @package _global_
+defaults:
+- tiger_inference@_here_
+- _self_
