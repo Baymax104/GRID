@@ -12,6 +12,7 @@ from typing import Any
 import torch
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import Callback
+from omegaconf import OmegaConf
 
 from src.common.writers.structured_analysis import StructuredAnalysisOutput
 from src.utils.wandb import require_wandb_logger_run
@@ -37,7 +38,9 @@ class StructuredAnalysisWriter(Callback):
         self.artifact_name = artifact_name
         self.artifact_type = artifact_type
         self.aliases = aliases or ["latest"]
-        self.metadata = metadata or {}
+        self.metadata = (
+            OmegaConf.to_container(metadata, resolve=True) if OmegaConf.is_config(metadata) else metadata or {}
+        )
 
     def on_test_batch_end(
         self,
@@ -140,7 +143,8 @@ class StructuredAnalysisWriter(Callback):
         artifact = wandb.Artifact(
             name=self.artifact_name,
             type=self.artifact_type,
-            metadata={**self.metadata, **payload_metadata},
+            metadata={**self.metadata, **payload_metadata, "local_output_path": str(output_dir.resolve())},
         )
-        artifact.add_dir(str(output_dir))
+        for path in sorted(output_dir.iterdir()):
+            artifact.add_reference(path.resolve().as_uri(), name=path.name)
         run.log_artifact(artifact, aliases=self.aliases)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import re
 from contextvars import ContextVar
 
@@ -23,10 +24,44 @@ logger = RankedLogger(__name__, rank_zero_only=True)
 
 
 DEFAULT_BUNDLE_FILE = "merged_predictions_tensor.pt"
+
+
+def load_m3_checkpoint(reference, sha256, analysis, **kwargs):
+    """无前向的列表分析不读取 checkpoint，其余诊断必须核对身份。"""
+    return None if analysis == "hits" else load_audited_checkpoint(reference, sha256, **kwargs)
+
+
+def load_m3_prediction_bundles(paths, analysis, **kwargs):
+    """统一解析诊断使用的 keyed bundle，保留 Artifact 消费记录。"""
+    if analysis == "prefix":
+        return None
+    names = list(paths) if analysis == "hits" else ["full"]
+    return {name: load_model_output(paths[name], field_name=f"prediction_paths.{name}", **kwargs) for name in names}
+
+
+def load_audited_checkpoint(reference: str, sha256: str, wandb_entity=None, wandb_project=None) -> dict:
+    """通过统一引用入口读取并校验明确的 checkpoint 文件身份。"""
+    if not isinstance(sha256, str) or re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
+        raise ValueError("Checkpoint requires an audited lowercase SHA256.")
+    path = resolve_checkpoint_path(reference, default_entity=wandb_entity, default_project=wandb_project)
+    if not path:
+        raise ValueError("Checkpoint reference is required.")
+    with open_local_or_remote(path, "rb") as stream:
+        raw = stream.read()
+    if hashlib.sha256(raw).hexdigest() != sha256:
+        raise ValueError("Checkpoint SHA256 mismatch.")
+    checkpoint = torch.load(io.BytesIO(raw), map_location="cpu", weights_only=False)
+    if not isinstance(checkpoint, dict):
+        raise TypeError("Checkpoint must be a mapping.")
+    return checkpoint
+
+
 DEFAULT_ROLE_BY_FIELD = {
     "quantizer_checkpoint_path": "checkpoint",
     "ckpt_path": "checkpoint",
+    "pretrained_checkpoint_path": "checkpoint",
     "embedding_path": "semantic_embedding",
+    "cf_embedding_path": "collaborative_embedding",
     "model_output_path": "recommendation_output",
     "recommendation_output_path": "recommendation_output",
     "widened_recommendation_output_path": "recommendation_output",
@@ -128,6 +163,8 @@ def get_resolved_artifact_registry() -> ResolvedArtifactRegistry:
     return registry
 
 
+
+
 def load_model_output(
     file_path: str,
     *,
@@ -218,8 +255,12 @@ def load_rkmeans_codebooks(
         raise ValueError("RKMeans layers must all be initialized.")
     rows = [state[f"layers.{level}.centroids"] for level in range(num_layers)]
     if any(
-        not isinstance(row, torch.Tensor) or row.ndim != 2 or row.shape[0] != codebook_size
-        or row.shape[1] < 1 or row.shape != rows[0].shape or not row.isfinite().all()
+        not isinstance(row, torch.Tensor)
+        or row.ndim != 2
+        or row.shape[0] != codebook_size
+        or row.shape[1] < 1
+        or row.shape != rows[0].shape
+        or not row.isfinite().all()
         for row in rows
     ):
         raise ValueError("RKMeans centroids must have matching finite codebook-by-feature shapes.")

@@ -34,10 +34,10 @@ class _Artifact:
         self.name = name
         self.type = type
         self.metadata = metadata
-        self.files = []
+        self.references = []
 
-    def add_file(self, path, name=None):
-        self.files.append((path, name))
+    def add_reference(self, uri, name=None):
+        self.references.append((uri, name))
 
 
 class _Run:
@@ -160,7 +160,7 @@ def test_wandb_artifact_writer_flushes_merges_and_publishes_bundle(monkeypatch, 
     assert artifact.metadata["task_name"] == "rqvae_inference"
     assert artifact.metadata["local_output_path"] == str(bundle_path)
     assert artifact.metadata["bundle_file"] == "merged_predictions_tensor.pt"
-    assert artifact.files == [(str(bundle_path), "merged_predictions_tensor.pt")]
+    assert artifact.references == [(bundle_path.resolve().as_uri(), "merged_predictions_tensor.pt")]
     assert fake_wandb.init_calls == []
     assert active_run.finished is False
 
@@ -266,8 +266,25 @@ def test_wandb_checkpoint_writer_publishes_model_checkpoint_best_path(monkeypatc
     assert artifact.metadata["monitor"] == "val/recall@10"
     assert artifact.metadata["mode"] == "max"
     assert artifact.metadata["best_model_score"] == pytest.approx(0.5)
+    assert artifact.references == [(source.resolve().as_uri(), "best.ckpt")]
     assert fake_wandb.init_calls == []
     assert active_run.finished is False
+
+
+def test_checkpoint_reference_manifest_keeps_file_local(tmp_path):
+    source = tmp_path / "best.ckpt"
+    source.write_bytes(b"checkpoint")
+    active_run = _Run()
+    trainer = SimpleNamespace(logger=WandbLogger(active_run), loggers=[WandbLogger(active_run)])
+    writer = WandbCheckpointWriter(artifact_name="checkpoint", task_name="rqvae_train")
+
+    writer._publish_file(trainer, str(source), metadata={"role": "checkpoint"})
+
+    artifact = active_run.logged[0][0]
+    entry = artifact.manifest.entries["best.ckpt"]
+    assert entry.ref == source.resolve().as_uri()
+    assert entry.size == source.stat().st_size
+    assert source.read_bytes() == b"checkpoint"
 
 
 def test_wandb_checkpoint_writer_fails_when_logger_run_is_missing(monkeypatch, tmp_path):

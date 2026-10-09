@@ -105,9 +105,9 @@ class WandbCheckpointWriter(Callback):
 
         run = require_wandb_logger_run(trainer, purpose="W&B checkpoint artifact publishing")
         artifact = wandb.Artifact(name=self.artifact_name, type=self.artifact_type, metadata=metadata)
-        artifact.add_file(str(path), name=path.name)
+        artifact.add_reference(path.resolve().as_uri(), name=path.name)
         run.log_artifact(artifact, aliases=self.aliases)
-        logger.info(f"Published W&B checkpoint artifact {self.artifact_name} from {source_path}.")
+        logger.info(f"Published W&B checkpoint reference {self.artifact_name} to {path.resolve()}.")
 
 
 def _stringify_metric(value) -> str | float | int | None:

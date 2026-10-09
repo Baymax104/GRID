@@ -139,10 +139,10 @@ def test_auxiliary_writer_publishes_prefix_trace_with_logger_owned_run(tmp_path,
     class FakeArtifact:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
-            self.files = []
+            self.references = []
 
-        def add_file(self, file_path, name):
-            self.files.append((file_path, name))
+        def add_reference(self, uri, name):
+            self.references.append((uri, name))
 
     run = SimpleNamespace(log_artifact=lambda artifact, aliases: artifacts.append((artifact, aliases)))
     monkeypatch.setitem(sys.modules, "wandb", SimpleNamespace(Artifact=FakeArtifact))
@@ -176,5 +176,5 @@ def test_auxiliary_writer_publishes_prefix_trace_with_logger_owned_run(tmp_path,
     assert artifact.kwargs["type"] == "prefix_trace"
     assert artifact.kwargs["metadata"]["role"] == "prefix_trace"
     assert artifact.kwargs["metadata"]["schema_version"] == PREFIX_TRACE_SCHEMA_VERSION
-    assert artifact.files[0][1] == "prefix_trace.pt"
+    assert artifact.references == [(path.resolve().as_uri(), "prefix_trace.pt")]
     assert aliases == ["latest"]

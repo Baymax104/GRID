@@ -125,6 +125,6 @@ class WandbArtifactWriter(BaseBufferedWriter):
 
         run = require_wandb_logger_run(trainer, purpose="W&B artifact publishing")
         artifact = wandb.Artifact(name=self.artifact_name, type=self.artifact_type, metadata=metadata)
-        artifact.add_file(str(path), name=path.name)
+        artifact.add_reference(path.resolve().as_uri(), name=path.name)
         run.log_artifact(artifact, aliases=self.aliases)
-        logger.info(f"Published W&B artifact {self.artifact_name} from {file_path}.")
+        logger.info(f"Published W&B artifact reference {self.artifact_name} to {path.resolve()}.")

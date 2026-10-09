@@ -156,5 +156,5 @@ class AuxiliaryTensorWriter(BaseBufferedWriter):
             "local_output_path": str(path),
         }
         artifact = wandb.Artifact(name=self.artifact_name, type=self.artifact_type, metadata=metadata)
-        artifact.add_file(str(path), name=path.name)
+        artifact.add_reference(path.resolve().as_uri(), name=path.name)
         run.log_artifact(artifact, aliases=self.aliases)

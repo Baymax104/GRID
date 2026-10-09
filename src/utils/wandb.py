@@ -175,8 +175,13 @@ def select_output_artifact(run, role: str, alias: str | None, target_file: str):
     for artifact in artifacts:
         if not artifact_matches_role(artifact, role):
             continue
-        if alias and alias not in set(getattr(artifact, "aliases", []) or []):
-            continue
+        if alias:
+            # W&B 的 vN 是不可变版本，不一定出现在用户 alias 列表中。
+            if alias.startswith("v") and alias[1:].isdigit():
+                if artifact_version_name(artifact) != alias:
+                    continue
+            elif alias not in set(getattr(artifact, "aliases", []) or []):
+                continue
         if target_file and not artifact_contains_file(artifact, target_file):
             continue
         matches.append(artifact)

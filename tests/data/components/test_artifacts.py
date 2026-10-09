@@ -29,6 +29,32 @@ def test_artifact_role_falls_back_to_type_for_legacy_outputs():
     assert wandb_utils.artifact_matches_role(artifact, "checkpoint")
 
 
+@pytest.mark.parametrize("reference", ["v0", "latest"])
+def test_select_output_artifact_accepts_version_and_named_alias(reference):
+    artifact = SimpleNamespace(
+        name="catalog:v0",
+        type="semantic_id",
+        metadata={},
+        aliases=["latest"],
+        files=lambda: [SimpleNamespace(name="merged_predictions_tensor.pt")],
+    )
+    run = SimpleNamespace(logged_artifacts=lambda: [artifact])
+    assert wandb_utils.select_output_artifact(run, "semantic_id", reference, "merged_predictions_tensor.pt") is artifact
+
+
+def test_select_output_artifact_does_not_fall_back_for_wrong_version():
+    artifact = SimpleNamespace(
+        name="catalog:v1",
+        type="semantic_id",
+        metadata={},
+        aliases=["latest", "v0"],
+        files=lambda: [SimpleNamespace(name="merged_predictions_tensor.pt")],
+    )
+    run = SimpleNamespace(logged_artifacts=lambda: [artifact])
+    with pytest.raises(ValueError, match="No W&B output artifact matched"):
+        wandb_utils.select_output_artifact(run, "semantic_id", "v0", "merged_predictions_tensor.pt")
+
+
 def test_parse_short_wandb_uri():
     parsed = parse_wandb_uri("wandb://abc123?role=semantic_id&alias=v3&file=merged_predictions_tensor.pt")
 

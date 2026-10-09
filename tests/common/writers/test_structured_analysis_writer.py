@@ -1,10 +1,10 @@
 import csv
 import json
 import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from omegaconf import OmegaConf
 
 from src.common.writers import StructuredAnalysisOutput, StructuredAnalysisWriter
 
@@ -49,6 +49,14 @@ def test_structured_analysis_writer_writes_required_files_and_manifest_atomicall
         assert list(csv.DictReader(stream)) == [{"group": "Tail", "risk": "0.5"}]
 
 
+def test_structured_analysis_writer_resolves_nested_hydra_metadata_before_manifest(tmp_path):
+    metadata = OmegaConf.create({"issue": "BMX-145", "lineage": {"issue": "${issue}", "roles": ["checkpoint"]}})
+    output_dir = tmp_path / "evidence"
+    _run(StructuredAnalysisWriter(str(output_dir), metadata=metadata), _payload())
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["metadata"]["lineage"] == {"issue": "BMX-145", "roles": ["checkpoint"]}
+
+
 def test_structured_analysis_writer_does_not_expose_partial_output_on_serialization_failure(tmp_path):
     output_dir = tmp_path / "evidence"
     payload = StructuredAnalysisOutput(
@@ -68,11 +76,11 @@ def test_structured_analysis_writer_publishes_directory_with_logger_owned_run(mo
     class Artifact:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
-            self.directories = []
+            self.references = []
             artifacts.append(self)
 
-        def add_dir(self, path):
-            self.directories.append(Path(path))
+        def add_reference(self, uri, name):
+            self.references.append((uri, name))
 
     run = SimpleNamespace(log_artifact=lambda artifact, aliases: setattr(artifact, "aliases", aliases))
     monkeypatch.setitem(sys.modules, "wandb", SimpleNamespace(Artifact=Artifact))
@@ -90,9 +98,13 @@ def test_structured_analysis_writer_publishes_directory_with_logger_owned_run(mo
     _run(writer, _payload())
 
     assert len(artifacts) == 1
-    assert artifacts[0].directories == [tmp_path / "evidence"]
+    assert artifacts[0].references == [
+        ((tmp_path / "evidence" / name).resolve().as_uri(), name)
+        for name in sorted(path.name for path in (tmp_path / "evidence").iterdir())
+    ]
     assert artifacts[0].aliases == ["latest"]
     assert artifacts[0].kwargs["metadata"]["schema_version"] == "v1"
+    assert artifacts[0].kwargs["metadata"]["local_output_path"] == str((tmp_path / "evidence").resolve())
 
 
 def test_structured_analysis_writer_propagates_publication_failure(monkeypatch, tmp_path):
@@ -100,7 +112,7 @@ def test_structured_analysis_writer_propagates_publication_failure(monkeypatch, 
         def __init__(self, **kwargs):
             pass
 
-        def add_dir(self, path):
+        def add_reference(self, uri, name):
             pass
 
     def fail_publish(artifact, aliases):

@@ -141,6 +141,9 @@ def _validate_logging_modes(logging_modes: dict[str, str]) -> dict[str, str]:
 
 
 def _write_summary_metrics(trainer: Trainer, metrics: dict[str, Any]) -> None:
+    # 指标已在所有 rank 上完成聚合；仅主进程访问实际 logger，其他进程可能持有占位对象。
+    if not getattr(trainer, "is_global_zero", True):
+        return
     summary_metrics = _to_summary_scalars(metrics)
     if not summary_metrics:
         return

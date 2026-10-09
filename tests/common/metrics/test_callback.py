@@ -161,6 +161,34 @@ def test_metric_callback_rejects_unsupported_logging_mode():
         MetricCallback(engine=MetricEngine(), logging_modes={"test": "table"})
 
 
+def test_summary_nonzero_rank_computes_metrics_without_accessing_logger(monkeypatch):
+    engine = MetricEngine(stages={"test": {"loss": {"metric": MeanMetric(), "spec": "loss"}}})
+    callback = MetricCallback(engine=engine, logging_modes={"test": "summary"})
+    computed = []
+    original_compute = engine.compute_prefixed
+
+    def compute(*args, **kwargs):
+        result = original_compute(*args, **kwargs)
+        computed.append(result)
+        return result
+
+    class NonzeroTrainer:
+        is_global_zero = False
+
+        @property
+        def loggers(self):
+            raise AssertionError("Nonzero rank must not access logger experiments")
+
+    monkeypatch.setattr(engine, "compute_prefixed", compute)
+    engine.update("test", {"loss": torch.tensor(2.0)})
+    callback.on_test_epoch_end(NonzeroTrainer(), LoggingModule())
+
+    assert len(computed) == 1
+    assert computed[0]["test/loss"].item() == 2.0
+    engine.update("test", {"loss": torch.tensor(10.0)})
+    assert engine.compute("test")["loss"].item() == 10.0
+
+
 def test_metric_callback_summary_mode_warns_for_unsupported_logger(monkeypatch):
     warnings = []
     engine = MetricEngine(
