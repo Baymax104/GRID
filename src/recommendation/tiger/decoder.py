@@ -47,6 +47,11 @@ class TigerDecoder(torch.nn.Module):
         self.num_hierarchies = num_hierarchies
         self.top_k_for_generation = top_k_for_generation
         self.semantic_ids = semantic_ids[:, :num_hierarchies].long()
+        # Derived data stays outside state_dict so existing checkpoints load strictly.
+        self._prefix_index_source = None
+        self._prefix_index_signature = None
+        self._prefix_index_keys: dict[int, torch.Tensor] = {}
+        self._prefix_index_safe = False
         self.should_check_prefix = should_check_prefix
         self.prefix_allocation = prefix_allocation or PrefixAllocationConfig()
         self.prefix_allocation.validate(self.top_k_for_generation)
@@ -72,8 +77,67 @@ class TigerDecoder(torch.nn.Module):
 
 
     def _check_valid_prefix(self, prefix: torch.Tensor, batch_size: int = 100000) -> torch.Tensor:
-        """Check if prefixes exist in the model-side semantic ID tensor."""
-        self.semantic_ids = self.semantic_ids.to(prefix.device)
+        """Query exact catalog membership without a catalog-by-candidate broadcast."""
+        if prefix.ndim != 2 or prefix.shape[1] > self.semantic_ids.shape[1]:
+            raise ValueError("prefix must be a matrix with at most the catalog's number of hierarchies.")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be positive.")
+        if prefix.shape[0] == 0 or self.semantic_ids.shape[0] == 0:
+            return torch.zeros(prefix.shape[0], dtype=torch.bool, device=prefix.device)
+        if self.semantic_ids.device != prefix.device:
+            # Keep a normal catalog version counter even during inference_mode evaluation.
+            with torch.inference_mode(False):
+                self.semantic_ids = self.semantic_ids.to(prefix.device)
+        depth = prefix.shape[1]
+        if depth == 0:
+            return torch.ones(prefix.shape[0], dtype=torch.bool, device=prefix.device)
+        integer_types = (torch.int64, torch.int32, torch.int16, torch.int8, torch.uint8, torch.bool)
+        if (
+            prefix.dtype not in integer_types
+            or self.codebook_size < 1
+            or self.codebook_size > torch.iinfo(torch.int64).max
+            or self.codebook_size ** depth - 1 > torch.iinfo(torch.int64).max
+        ):
+            return self._check_valid_prefix_by_comparison(prefix, batch_size)
+
+        try:
+            version = self.semantic_ids._version
+        except RuntimeError:
+            # Inference tensors do not track mutations: never reuse their cached keys.
+            version = None
+        signature = (version, self.codebook_size)
+        if (
+            self._prefix_index_source is not self.semantic_ids
+            or self._prefix_index_signature != signature
+            or version is None
+        ):
+            self._prefix_index_keys = {}
+            self._prefix_index_source = self.semantic_ids
+            self._prefix_index_signature = signature
+            self._prefix_index_safe = self.semantic_ids.dtype in integer_types and bool(
+                ((self.semantic_ids.long() >= 0) & (self.semantic_ids.long() < self.codebook_size)).all()
+            )
+        if not self._prefix_index_safe:
+            return self._check_valid_prefix_by_comparison(prefix, batch_size)
+
+        if depth not in self._prefix_index_keys:
+            codes = torch.zeros(self.semantic_ids.shape[0], dtype=torch.int64, device=prefix.device)
+            for column in self.semantic_ids[:, :depth].unbind(1):
+                codes = codes * self.codebook_size + column.long()
+            self._prefix_index_keys[depth] = torch.unique(codes, sorted=True)
+        keys = self._prefix_index_keys[depth]
+        tokens = prefix.long()
+        in_range = ((tokens >= 0) & (tokens < self.codebook_size)).all(1)
+        # Clamp invalid tokens before encoding to avoid overflow and radix collisions.
+        tokens = tokens.clamp(0, self.codebook_size - 1)
+        codes = torch.zeros(prefix.shape[0], dtype=torch.int64, device=prefix.device)
+        for column in tokens.unbind(1):
+            codes = codes * self.codebook_size + column
+        positions = torch.searchsorted(keys, codes)
+        return in_range & (positions < keys.numel()) & (keys[positions.clamp_max(keys.numel() - 1)] == codes)
+
+    def _check_valid_prefix_by_comparison(self, prefix: torch.Tensor, batch_size: int) -> torch.Tensor:
+        """Preserve token-wise semantics for inputs outside the safe integer encoding."""
         current_hierarchy = prefix.shape[1]
         num_prefixes = prefix.shape[0]
         results = []
