@@ -1,0 +1,32 @@
+# @package _global_
+defaults:
+- /data@data: letter_inference
+- /model@model: letter
+- /callbacks@callbacks: letter_inference
+- /logger@logger: letter
+- /trainer@trainer: letter_inference
+dataset_name: ???
+devices: [0, 1]
+seed: 42
+group: letter
+run_mode: inference
+task_name: letter_inference_${dataset_name}
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+ckpt_path: ???
+run_test_after_training: false
+codebook_size: 256
+upstream_commit: 8d0154e28de37dbb6e24871c508ad8ddb1921cda
+baseline_protocol: letter-official-grid-v1
+sid_export_protocol: letter-sinkhorn-prefix-assignment-v1
+data_dir: ???
+semantic_id_path: ???
+base_vocab_size: 32100
+max_history_items: 20
+evaluation_protocol: full-catalog-no-history-filter-v1
+
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  output_dir: ${hydra:runtime.output_dir}

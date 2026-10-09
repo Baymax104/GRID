@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+- /data@data: letter_tokenizer
+- /model@model: letter_tokenizer
+- /callbacks@callbacks: letter_tokenizer_train
+- /logger@logger: letter
+- /trainer@trainer: letter_tokenizer
+dataset_name: ???
+devices: [0]
+seed: 42
+group: letter
+run_mode: train
+task_name: letter_tokenizer_train_${dataset_name}
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+ckpt_path: null
+run_test_after_training: false
+codebook_size: 256
+upstream_commit: 8d0154e28de37dbb6e24871c508ad8ddb1921cda
+baseline_protocol: letter-official-grid-v1
+embedding_path: ???
+cf_embedding_path: ???
+cf_source: ???
+input_dim: 768
+
+paths:
+  root_dir: .
+  data_dir: .
+  output_dir: ${hydra:runtime.output_dir}

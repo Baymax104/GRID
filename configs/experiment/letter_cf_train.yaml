@@ -1,0 +1,26 @@
+# @package _global_
+defaults:
+- /data@data: letter_cf
+- /model@model: letter_cf
+- /callbacks@callbacks: letter_train
+- /logger@logger: letter
+- /trainer@trainer: letter_cf
+dataset_name: ???
+devices: [0]
+seed: 42
+group: letter
+run_mode: train
+task_name: letter_cf_train_${dataset_name}
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+ckpt_path: null
+run_test_after_training: false
+baseline_protocol: letter-official-grid-v1
+cf_protocol: letter-cf-sasrec32-grid-v1
+data_dir: ???
+embedding_path: ???
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  output_dir: ${hydra:runtime.output_dir}

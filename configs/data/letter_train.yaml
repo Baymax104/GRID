@@ -1,0 +1,68 @@
+# @package _global_
+catalog:
+  _target_: src.data.components.letter.load_letter_catalog
+  semantic_id_path: ${semantic_id_path}
+  codebook_size: ${codebook_size}
+  base_vocab_size: ${base_vocab_size}
+  wandb_entity: ${user}
+  wandb_project: ${project}
+dataset_class:
+  _target_: src.data.components.letter.LetterSequenceDataset
+  _partial_: true
+collate:
+  _target_: src.data.components.letter.letter_collate
+  _partial_: true
+train_dataset_config:
+  _target_: src.common.configs.data.DatasetConfig
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: true
+  shuffle_files: true
+  preprocessing_functions:
+  - _target_: src.data.components.letter.LetterPreprocessor
+    catalog: ${data.catalog}
+    max_history_items: ${max_history_items}
+    training: true
+eval_dataset_config:
+  _target_: src.common.configs.data.DatasetConfig
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: false
+  shuffle_files: false
+  preprocessing_functions:
+  - _target_: src.data.components.letter.LetterPreprocessor
+    catalog: ${data.catalog}
+    max_history_items: ${max_history_items}
+    training: false
+train_dataloader:
+  _target_: src.common.configs.data.SequenceDataloaderConfig
+  dataset_class: ${data.dataset_class}
+  data_folder: ${paths.data_dir}/training
+  batch_size_per_device: 128
+  num_workers: 4
+  timeout: 60
+  assign_files_by_size: false
+  drop_last: true
+  persistent_workers: false
+  pin_memory: true
+  collate_fn: ${data.collate}
+  dataset_config: ${data.train_dataset_config}
+val_dataloader:
+  _target_: src.common.configs.data.SequenceDataloaderConfig
+  dataset_class: ${data.dataset_class}
+  data_folder: ${paths.data_dir}/evaluation
+  batch_size_per_device: 32
+  num_workers: 4
+  timeout: 60
+  assign_files_by_size: true
+  drop_last: false
+  persistent_workers: false
+  pin_memory: true
+  collate_fn: ${data.collate}
+  dataset_config: ${data.eval_dataset_config}
+datamodule:
+  _target_: src.data.datamodule.FileDataModule
+  train_dataloader_config: ${data.train_dataloader}
+  val_dataloader_config: ${data.val_dataloader}

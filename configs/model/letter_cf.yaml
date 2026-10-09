@@ -1,0 +1,51 @@
+# @package _global_
+root:
+  _target_: src.recommendation.letter.cf_teacher.LetterCFTeacher
+  catalog: ${data.catalog}
+  max_history_items: 50
+  num_blocks: 2
+  dropout: 0.5
+  training_model_config: ${model.training_model_config}
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  optimizer:
+    _target_: torch.optim.Adam
+    _partial_: true
+    _convert_: all
+    lr: 0.001
+    betas: [0.9, 0.98]
+    eps: 1.0e-8
+    weight_decay: 0.0
+  scheduler: null
+metric_callback:
+  validation_log_kwargs:
+    on_step: false
+    on_epoch: true
+    sync_dist: false
+    logger: true
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  _recursive_: false
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+    val:
+      ndcg@10:
+        metric:
+          _target_: src.recommendation.letter.metrics.LetterRankingMetric
+          top_k: 10
+          ndcg: true
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.letter.metrics.letter_metric_inputs
+            _partial_: true
+      user_count:
+        metric:
+          _target_: torchmetrics.SumMetric
+        spec:
+          key: user_count

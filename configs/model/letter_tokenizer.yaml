@@ -1,0 +1,43 @@
+# @package _global_
+root:
+  _target_: src.quantization.letter.module.LetterTokenizerModule
+  embeddings: ${data.embeddings}
+  input_dim: ${input_dim}
+  latent_dim: 32
+  hidden_sizes: [2048, 1024, 512, 256, 128, 64]
+  codebook_size: ${codebook_size}
+  num_layers: 4
+  num_groups: 10
+  alpha: 0.01
+  beta: 0.0001
+  mu: 0.25
+  quant_loss_weight: 1.0
+  sk_epsilons: [0.0, 0.0, 0.0, 0.003]
+  sk_iterations: 50
+  dropout: 0.0
+  batch_norm: false
+  seed: ${seed}
+  training_model_config: ${model.training_model_config}
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: 0.001
+    weight_decay: 0.0001
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  _recursive_: false
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+    val:
+      collision_rate:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: collision_rate

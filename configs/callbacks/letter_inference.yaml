@@ -1,0 +1,25 @@
+# @package _global_
+local_writer:
+  _target_: src.common.writers.local_pickle_writer.LocalPickleWriter
+  output_dir: ${paths.output_dir}/predictions
+  flush_frequency: 100000
+wandb_artifact_writer:
+  _target_: src.common.writers.wandb_artifact_writer.WandbArtifactWriter
+  output_dir: ${paths.output_dir}/wandb_artifact
+  artifact_name: ${task_name}-recommendation-output
+  artifact_type: recommendation_output
+  role: recommendation_output
+  task_name: ${task_name}
+  flush_frequency: 100000
+  metadata:
+    checkpoint_reference: ${ckpt_path}
+    semantic_id_path: ${semantic_id_path}
+    prediction_type: item_ids
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false
+prediction_metrics:
+  _target_: src.recommendation.letter.metrics.LetterPredictionMetricsCallback
+  engine: ${model.metrics}
+  logging_modes:
+    test: summary

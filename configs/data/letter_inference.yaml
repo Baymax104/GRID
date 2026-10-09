@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+- letter_train@_here_
+- _self_
+predict_dataloader:
+  _target_: src.common.configs.data.SequenceDataloaderConfig
+  dataset_class: ${data.dataset_class}
+  data_folder: ${paths.data_dir}/testing
+  batch_size_per_device: 32
+  num_workers: 4
+  timeout: 60
+  assign_files_by_size: true
+  drop_last: false
+  persistent_workers: false
+  pin_memory: true
+  collate_fn: ${data.collate}
+  dataset_config: ${data.eval_dataset_config}
+datamodule:
+  _target_: src.data.datamodule.FileDataModule
+  train_dataloader_config: null
+  val_dataloader_config: null
+  predict_dataloader_config: ${data.predict_dataloader}

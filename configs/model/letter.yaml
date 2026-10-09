@@ -1,0 +1,92 @@
+# @package _global_
+root:
+  _target_: src.recommendation.letter.module.LetterRecommender
+  catalog: ${data.catalog}
+  max_history_items: ${max_history_items}
+  d_model: 128
+  d_ff: 1024
+  d_kv: 64
+  num_heads: 6
+  num_layers: 4
+  dropout: 0.1
+  temperature: 1.0
+  generation_candidates: 20
+  top_k: 10
+  training_model_config: ${model.training_model_config}
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: 0.0005
+    weight_decay: 0.01
+  scheduler:
+    _target_: src.common.scheduler.WarmupCosineSchedulerNonzeroMin
+    _partial_: true
+    warmup_steps: 500
+    scheduler_steps: 50000
+    min_ratio: 0.0
+metric_callback:
+  validation_log_kwargs:
+    on_step: false
+    on_epoch: true
+    sync_dist: false
+    logger: true
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  _recursive_: false
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+    val: &ranking
+      ndcg@5:
+        metric:
+          _target_: src.recommendation.letter.metrics.LetterRankingMetric
+          top_k: 5
+          ndcg: true
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.letter.metrics.letter_metric_inputs
+            _partial_: true
+      ndcg@10:
+        metric:
+          _target_: src.recommendation.letter.metrics.LetterRankingMetric
+          top_k: 10
+          ndcg: true
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.letter.metrics.letter_metric_inputs
+            _partial_: true
+      recall@5:
+        metric:
+          _target_: src.recommendation.letter.metrics.LetterRankingMetric
+          top_k: 5
+          ndcg: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.letter.metrics.letter_metric_inputs
+            _partial_: true
+      recall@10:
+        metric:
+          _target_: src.recommendation.letter.metrics.LetterRankingMetric
+          top_k: 10
+          ndcg: false
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.letter.metrics.letter_metric_inputs
+            _partial_: true
+      user_count:
+        metric:
+          _target_: torchmetrics.SumMetric
+          compute_with_cache: false
+        spec:
+          key: user_count
+    test: *ranking

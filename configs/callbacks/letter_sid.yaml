@@ -1,0 +1,22 @@
+# @package _global_
+local_writer:
+  _target_: src.common.writers.local_pickle_writer.LocalPickleWriter
+  output_dir: ${paths.output_dir}/predictions
+  flush_frequency: 100000
+wandb_artifact_writer:
+  _target_: src.common.writers.wandb_artifact_writer.WandbArtifactWriter
+  output_dir: ${paths.output_dir}/wandb_artifact
+  artifact_name: ${task_name}-semantic-id
+  artifact_type: semantic_id
+  role: semantic_id
+  task_name: ${task_name}
+  flush_frequency: 100000
+  metadata:
+    checkpoint_reference: ${ckpt_path}
+    embedding_path: ${embedding_path}
+    cf_embedding_path: ${cf_embedding_path}
+    tokenizer: LETTER
+    sid_export_protocol: ${sid_export_protocol}
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false

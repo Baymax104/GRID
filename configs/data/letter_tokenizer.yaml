@@ -1,0 +1,12 @@
+# @package _global_
+embeddings:
+  _target_: src.data.components.letter.load_letter_embeddings
+  embedding_path: ${embedding_path}
+  cf_embedding_path: ${cf_embedding_path}
+  wandb_entity: ${user}
+  wandb_project: ${project}
+datamodule:
+  _target_: src.data.datamodule.letter_tokenizer.LetterTokenizerDataModule
+  embeddings: ${data.embeddings}
+  batch_size: 1024
+  num_workers: 0
