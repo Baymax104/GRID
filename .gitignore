@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+src/.source_origin.json
 *.py[cod]
 *$py.class
 
@@ -198,3 +199,11 @@ cython_debug/
 /logs
 /.codegraph
 /mutagen.yml.lock
+
+# 运行证据留在本地；版本库仅保存说明文档与归档索引。
+/docs/**
+!/docs/**/
+!/docs/**/*.md
+# 退役入口完整性回归依赖这份小型源码归档与校验清单。
+!/docs/archive/copmrec-conversion-entrypoints-20261003/manifest.json
+!/docs/archive/copmrec-conversion-entrypoints-20261003/retired-files.zip
