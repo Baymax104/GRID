@@ -1,0 +1,2 @@
+# 正式运行默认留档；dry-run 与非零 rank 不写入或发布。
+enabled: true

@@ -6,6 +6,7 @@
 defaults:
   - _self_
   - paths: default
+  - source_snapshot: default
   - extras: default
   - hydra: default
   - experiment: null

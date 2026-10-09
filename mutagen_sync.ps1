@@ -38,6 +38,13 @@ function Invoke-Mutagen {
 
 Push-Location $ProjectRoot
 try {
+    if ($Action -in @("start", "resume", "flush")) {
+        # 本地工作树是 Git 来源的唯一权威，记录通过 src session 单向同步。
+        & uv run --no-sync python -c "from src.utils.source_snapshot import write_source_origin; write_source_origin('.')"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to capture local source origin; synchronization was not started."
+        }
+    }
     switch ($Action) {
         "start" {
             Invoke-Mutagen @("project", "start", "--paused", "--no-global-configuration")

@@ -11,6 +11,7 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 
 import src.utils.logging as logging_utils
 from src.common.metrics import MetricCallback
+from src.common.writers.source_snapshot import publish_source_snapshot
 from src.utils.file import (
     get_last_modified_file,
     has_no_extension,
@@ -19,10 +20,13 @@ from src.utils.file import (
 from src.utils.logging import DryRunLogger, finalize_loggers
 from src.utils.pylogger import RankedLogger
 from src.utils.rich import StepBasedRichProgressBar
+from src.utils.source_snapshot import prepare_source_snapshot
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 
 DRY_RUN_DISABLED_CALLBACK_TARGETS = {
+    "src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback",
+    "src.common.writers.epoch_structured_analysis_writer.EpochStructuredAnalysisWriter",
     "src.common.writers.liger_trace_writer.LigerTraceWriter",
     "src.common.writers.StructuredAnalysisWriter",
     "src.common.writers.structured_analysis_writer.StructuredAnalysisWriter",
@@ -126,6 +130,8 @@ def apply_dry_run_overrides(cfg: DictConfig) -> DictConfig:
         cfg.trainer.root.log_every_n_steps = 1
         cfg.trainer.root.max_epochs = 1
         cfg.trainer.root.limit_predict_batches = 1
+        if cfg.get("run_mode") == "analysis":
+            cfg.trainer.root.limit_test_batches = 1
 
         if cfg.get("run_mode") == "train":
             cfg.trainer.root.max_steps = 1
@@ -212,7 +218,7 @@ def initialize_pipeline_modules(cfg: DictConfig) -> PipelineModules:
         PipelineModules: A dataclass containing the instantiated objects.
     """
     # set seed for random number generators in pytorch, numpy and python.random
-    if cfg.get("seed"):
+    if cfg.get("seed") is not None:
         L.seed_everything(cfg.seed, workers=True)
 
     cfg = update_cfg_with_most_recent_checkpoint_path(cfg)
@@ -276,7 +282,13 @@ def pipeline_launcher(cfg: DictConfig):
 
     pipeline_modules: PipelineModules | None = None
     try:
+        snapshot = prepare_source_snapshot(cfg)
+        if snapshot is not None:
+            with open_dict(cfg):
+                cfg.source_snapshot_record = snapshot
         pipeline_modules: PipelineModules = initialize_pipeline_modules(cfg)
+        if snapshot is not None:
+            publish_source_snapshot(pipeline_modules.loggers, snapshot)
         log_hyperparameters(pipeline_modules.loggers, pipeline_modules.cfg)
         yield pipeline_modules
     except Exception as ex:
