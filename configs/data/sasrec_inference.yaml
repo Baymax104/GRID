@@ -1,0 +1,41 @@
+# @package _global_
+catalog:
+  _target_: src.data.components.sasrec.load_sasrec_catalog
+  item_catalog_path: ${item_catalog_path}
+  wandb_entity: ${user}
+  wandb_project: ${project}
+dataset_class:
+  _target_: src.data.datasets.SequenceDataset
+  _partial_: true
+preprocessing_functions:
+- _target_: src.data.components.sasrec.SASRecPreprocessor
+  catalog: ${data.catalog}
+  max_history_items: ${model.root.max_history_items}
+  training: false
+collate:
+  _target_: src.data.components.collate.collate_fn_sasrec
+  _partial_: true
+predict_dataset_config:
+  _target_: src.common.configs.data.DatasetConfig
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: false
+  shuffle_files: false
+  preprocessing_functions: ${data.preprocessing_functions}
+predict_dataloader:
+  _target_: src.common.configs.data.SequenceDataloaderConfig
+  dataset_class: ${data.dataset_class}
+  data_folder: ${paths.data_dir}/testing
+  batch_size_per_device: 32
+  num_workers: 4
+  timeout: 60
+  assign_files_by_size: true
+  drop_last: false
+  persistent_workers: false
+  collate_fn: ${data.collate}
+  dataset_config: ${data.predict_dataset_config}
+  pin_memory: true
+datamodule:
+  _target_: src.data.datamodule.FileDataModule
+  predict_dataloader_config: ${data.predict_dataloader}

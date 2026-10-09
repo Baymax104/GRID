@@ -5,6 +5,22 @@ import torch
 
 
 @dataclass
+class SASRecModelInput:
+    """商品级左 padding 历史及可选用户输出 key。"""
+
+    input_ids: torch.Tensor
+    output_keys: torch.Tensor | None = None
+
+
+@dataclass
+class SASRecLabelData:
+    """训练逐位置正负标签；评价为 scalar 下一商品且无负样本。"""
+
+    target_ids: torch.Tensor
+    negative_ids: torch.Tensor | None = None
+
+
+@dataclass
 class TigerLabelData:
     """TIGER training/evaluation labels."""
 

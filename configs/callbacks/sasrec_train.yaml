@@ -1,0 +1,6 @@
+# @package _global_
+defaults:
+- tiger_train@_here_
+- _self_
+model_checkpoint:
+  save_last: true

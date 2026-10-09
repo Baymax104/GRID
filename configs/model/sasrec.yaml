@@ -1,0 +1,92 @@
+# @package _global_
+root:
+  _target_: src.recommendation.sasrec.SASRec
+  catalog: ${data.catalog}
+  max_history_items: 50
+  hidden_size: 50
+  num_blocks: 2
+  num_heads: 1
+  dropout: 0.5
+  l2_emb: 0.0
+  top_k: 10
+  catalog_chunk_size: 4096
+  training_model_config: ${model.training_model_config}
+
+training_model_config:
+  _target_: src.common.configs.model.TrainingModelConfig
+  optimizer:
+    _target_: torch.optim.Adam
+    _partial_: true
+    _convert_: all
+    lr: 0.001
+    betas: [0.9, 0.98]
+    eps: 1.0e-8
+    weight_decay: 0.0
+  scheduler: null
+
+metric_callback:
+  validation_log_kwargs:
+    on_step: false
+    on_epoch: true
+    sync_dist: false
+    logger: true
+  test_log_kwargs:
+    on_step: false
+    on_epoch: true
+    sync_dist: false
+    logger: true
+
+metrics:
+  _target_: src.common.metrics.MetricEngine
+  _recursive_: false
+  stages:
+    train:
+      loss:
+        metric:
+          _target_: torchmetrics.MeanMetric
+        spec:
+          key: loss
+    val: &ranking_metrics
+      ndcg@5:
+        metric:
+          _target_: src.recommendation.tiger.metrics.NDCG
+          top_k: 5
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.sasrec.metrics.item_retrieval_inputs
+            _partial_: true
+      ndcg@10:
+        metric:
+          _target_: src.recommendation.tiger.metrics.NDCG
+          top_k: 10
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.sasrec.metrics.item_retrieval_inputs
+            _partial_: true
+      recall@5:
+        metric:
+          _target_: src.recommendation.tiger.metrics.Recall
+          top_k: 5
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.sasrec.metrics.item_retrieval_inputs
+            _partial_: true
+      recall@10:
+        metric:
+          _target_: src.recommendation.tiger.metrics.Recall
+          top_k: 10
+          compute_with_cache: false
+        spec:
+          adapter:
+            _target_: src.recommendation.sasrec.metrics.item_retrieval_inputs
+            _partial_: true
+      user_count:
+        metric:
+          _target_: torchmetrics.SumMetric
+          compute_with_cache: false
+        spec:
+          key: user_count
+    test: *ranking_metrics

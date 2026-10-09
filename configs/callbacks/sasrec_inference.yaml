@@ -1,0 +1,24 @@
+# @package _global_
+wandb_artifact_writer:
+  _target_: src.common.writers.wandb_artifact_writer.WandbArtifactWriter
+  output_dir: ${paths.output_dir}/wandb_artifact
+  flush_frequency: 100000
+  artifact_name: ${task_name}-recommendation-output
+  artifact_type: recommendation_output
+  role: recommendation_output
+  task_name: ${task_name}
+  aliases: [latest]
+  metadata:
+    prediction_type: item_ids
+    item_catalog_path: ${item_catalog_path}
+    checkpoint_reference: ${checkpoint_reference}
+    baseline_protocol: ${baseline_protocol}
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: false
+  clear_after_recording: true
+prediction_metrics:
+  _target_: src.common.callbacks.sasrec_prediction_metrics.SASRecPredictionMetricsCallback
+  engine: ${model.metrics}
+  logging_modes:
+    test: summary

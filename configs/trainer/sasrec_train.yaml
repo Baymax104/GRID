@@ -1,0 +1,13 @@
+# @package _global_
+root:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.output_dir}
+  max_steps: 50000
+  accelerator: gpu
+  devices: ${devices}
+  precision: 32-true
+  strategy: auto
+  accumulate_grad_batches: 1
+  log_every_n_steps: 50
+  val_check_interval: 1000
+  num_sanity_val_steps: 0

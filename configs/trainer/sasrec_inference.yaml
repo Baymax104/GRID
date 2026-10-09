@@ -1,0 +1,9 @@
+# @package _global_
+root:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.output_dir}
+  accelerator: gpu
+  devices: ${devices}
+  precision: 32-true
+  strategy: auto
+  logger: true

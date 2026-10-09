@@ -1,0 +1,77 @@
+# @package _global_
+catalog:
+  _target_: src.data.components.sasrec.load_sasrec_catalog
+  item_catalog_path: ${item_catalog_path}
+  wandb_entity: ${user}
+  wandb_project: ${project}
+
+dataset_class:
+  _target_: src.data.datasets.SequenceDataset
+  _partial_: true
+
+train_preprocessing_functions:
+- _target_: src.data.components.sasrec.SASRecPreprocessor
+  catalog: ${data.catalog}
+  max_history_items: ${model.root.max_history_items}
+  training: true
+
+eval_preprocessing_functions:
+- _target_: src.data.components.sasrec.SASRecPreprocessor
+  catalog: ${data.catalog}
+  max_history_items: ${model.root.max_history_items}
+  training: false
+
+collate:
+  _target_: src.data.components.collate.collate_fn_sasrec
+  _partial_: true
+
+train_dataset_config:
+  _target_: src.common.configs.data.DatasetConfig
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: true
+  shuffle_files: true
+  preprocessing_functions: ${data.train_preprocessing_functions}
+
+eval_dataset_config:
+  _target_: src.common.configs.data.DatasetConfig
+  data_reader:
+    _target_: src.data.components.readers.TFRecordReader
+    _partial_: true
+    shuffle_rows: false
+  shuffle_files: false
+  preprocessing_functions: ${data.eval_preprocessing_functions}
+
+train_dataloader:
+  _target_: src.common.configs.data.SequenceDataloaderConfig
+  dataset_class: ${data.dataset_class}
+  data_folder: ${paths.data_dir}/training
+  batch_size_per_device: 128
+  num_workers: 4
+  timeout: 60
+  assign_files_by_size: false
+  drop_last: true
+  persistent_workers: true
+  collate_fn: ${data.collate}
+  dataset_config: ${data.train_dataset_config}
+  pin_memory: true
+
+val_dataloader:
+  _target_: src.common.configs.data.SequenceDataloaderConfig
+  dataset_class: ${data.dataset_class}
+  data_folder: ${paths.data_dir}/evaluation
+  batch_size_per_device: 32
+  num_workers: 4
+  timeout: 60
+  assign_files_by_size: true
+  drop_last: false
+  persistent_workers: false
+  collate_fn: ${data.collate}
+  dataset_config: ${data.eval_dataset_config}
+  pin_memory: true
+
+datamodule:
+  _target_: src.data.datamodule.FileDataModule
+  train_dataloader_config: ${data.train_dataloader}
+  val_dataloader_config: ${data.val_dataloader}

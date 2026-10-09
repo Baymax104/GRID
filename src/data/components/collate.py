@@ -3,10 +3,28 @@ import torch
 from src.data.components.data_models import (
     DiagnosisBatch,
     ItemBatch,
+    SASRecLabelData,
+    SASRecModelInput,
     TigerLabelData,
     TigerModelInput,
 )
 from src.data.utils import combine_list_of_tensor_dicts
+
+
+def collate_fn_sasrec(rows: list[dict[str, torch.Tensor]]) -> tuple[SASRecModelInput, SASRecLabelData]:
+    """装配 SASRec 已预处理行；禁止训练/评价或 key 字段混用。"""
+    if not rows:
+        raise ValueError("SASRec collate requires at least one row.")
+    fields = set(rows[0])
+    if not {"input_ids", "target_ids"} <= fields or any(set(row) != fields for row in rows):
+        raise ValueError("SASRec rows require consistent input/target/negative/key fields.")
+    batch = {field: torch.stack([row[field] for row in rows]) for field in fields}
+    keys = batch.get("user_id")
+    if keys is not None:
+        if keys.numel() != len(rows):
+            raise ValueError("SASRec requires one scalar user key per row.")
+        keys = keys.reshape(len(rows))
+    return SASRecModelInput(batch["input_ids"], keys), SASRecLabelData(batch["target_ids"], batch.get("negative_ids"))
 
 
 def collate_fn_sequence(

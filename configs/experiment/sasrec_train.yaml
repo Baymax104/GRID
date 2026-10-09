@@ -1,0 +1,28 @@
+# @package _global_
+defaults:
+- /data@data: sasrec_train
+- /model@model: sasrec
+- /callbacks@callbacks: sasrec_train
+- /logger@logger: sasrec
+- /trainer@trainer: sasrec_train
+data_dir: ???
+item_catalog_path: ???
+dataset_name: ???
+devices: [0]
+seed: 42
+group: sasrec
+run_mode: train
+task_name: sasrec_${dataset_name}_train
+project: GRID
+user: baymaxam
+id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
+ckpt_path: null
+run_test_after_training: false
+baseline_protocol: sasrec-official-grid-v1
+upstream_commit: e3738967fddab206d6eeb4fda433e7a7034dd8b1
+evaluation_protocol: full-catalog-no-history-filter-v1
+training_protocol: official-pointwise-bce-grid-50k-v1
+paths:
+  root_dir: .
+  data_dir: ${data_dir}
+  output_dir: ${hydra:runtime.output_dir}
