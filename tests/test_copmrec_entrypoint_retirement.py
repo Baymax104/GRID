@@ -1,8 +1,5 @@
 """核验旧入口退出及基础流程保留，不执行实验。"""
 
-import hashlib
-import json
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -12,25 +9,48 @@ from hydra.errors import MissingConfigException
 import src.utils.hydra_resolvers  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "docs/archive/copmrec-conversion-entrypoints-20261003"
-MANIFEST = json.loads((ARCHIVE / "manifest.json").read_text(encoding="utf-8"))
+RETIRED_EXPERIMENTS = (
+    "copmrec_decoder_train",
+    "copmrec_decoder_audit",
+    "copmrec_ranker_train",
+    "copmrec_ranker_inference",
+    "copmrec_scratch_train",
+    "copmrec_scratch_train_ddp2",
+    "copmrec_scratch_audit",
+    "liger_joint_ranking_cache",
+    "liger_joint_ranking_inference",
+)
+RETIRED_SCRIPTS = (
+    "copmrec_decoder_common.sh",
+    "copmrec_decoder_train.sh",
+    "copmrec_decoder_audit.sh",
+    "copmrec_ranker_common.sh",
+    "copmrec_ranker_train.sh",
+    "copmrec_ranker_inference.sh",
+    "copmrec_scratch_train.sh",
+    "copmrec_scratch_audit.sh",
+    "liger_joint_ranking_cache.sh",
+    "liger_joint_ranking_inference.sh",
+)
+RETIRED_CONTRACT_TESTS = (
+    "test_copmrec_decoder_config_script.py",
+    "test_copmrec_ranker_config_script.py",
+    "test_copmrec_scratch_config_script.py",
+    "test_copmrec_ranking_config_script.py",
+)
 
 
-def test_retired_files_are_archived_exactly_and_not_active():
-    archive_path = ARCHIVE / MANIFEST["archive_file"]
-    assert hashlib.sha256(archive_path.read_bytes()).hexdigest() == MANIFEST["archive_sha256"]
-    assert len(MANIFEST["files"]) == 23
-    with zipfile.ZipFile(archive_path) as archive:
-        assert archive.testzip() is None
-        assert set(archive.namelist()) == {entry["path"] for entry in MANIFEST["files"]}
-        for entry in MANIFEST["files"]:
-            payload = archive.read(entry["path"])
-            assert len(payload) == entry["size"]
-            assert hashlib.sha256(payload).hexdigest() == entry["sha256"]
-            assert not (ROOT / entry["path"]).exists()
+def test_retired_entrypoint_files_are_not_active():
+    retired_paths = (
+        *RETIRED_SCRIPTS,
+        *(f"configs/experiment/{name}.yaml" for name in RETIRED_EXPERIMENTS),
+        *(f"tests/{name}" for name in RETIRED_CONTRACT_TESTS),
+    )
+    active_paths = [path for path in retired_paths if (ROOT / path).exists()]
+    assert active_paths == []
 
 
-@pytest.mark.parametrize("experiment", MANIFEST["retired_experiments"])
+@pytest.mark.parametrize("experiment", RETIRED_EXPERIMENTS)
 def test_retired_experiment_cannot_compose(experiment):
     with initialize_config_dir(config_dir=str(ROOT / "configs"), version_base="1.3"):
         with pytest.raises(MissingConfigException, match=experiment):

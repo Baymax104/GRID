@@ -200,10 +200,18 @@ cython_debug/
 /.codegraph
 /mutagen.yml.lock
 
-# 运行证据留在本地；版本库仅保存说明文档与归档索引。
+# 运行证据留在本地；仅保存直接说明、归档索引和明确引用的说明附件。
 /docs/**
 !/docs/**/
-!/docs/**/*.md
-# 退役入口完整性回归依赖这份小型源码归档与校验清单。
-!/docs/archive/copmrec-conversion-entrypoints-20261003/manifest.json
-!/docs/archive/copmrec-conversion-entrypoints-20261003/retired-files.zip
+!/docs/*.md
+!/docs/archive/*/*.md
+!/docs/evidence/*/README.md
+# 有正文引用的指标、诊断和命令说明；其他快照及临时 issue 内容保持本地。
+!/docs/evidence/copmrec-m3-completion-20261008/figures/README.md
+!/docs/evidence/copmrec-m3-completion-20261008/figures/paper-six-arm-metrics.md
+!/docs/evidence/copmrec-m3-completion-20261008/prefix-completion.md
+!/docs/evidence/copmrec-m3-launch-20261008/preflight-summary.md
+!/docs/evidence/copmrec-v1-ablation-eval-20261009/tables/six-arm-metrics.md
+!/docs/evidence/copmrec-v4-autonomous-20261005/score-bias-proposal.md
+!/docs/evidence/letter-tokenizer-inputs-bmx60-65-20261004/commands.md
+!/docs/evidence/letter-tokenizer-training-bmx60-65-20261006/commands.md
