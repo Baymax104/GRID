@@ -54,8 +54,12 @@ def test_real_launcher_compose(bash, mode, equals):
     if mode == "train":
         assert cfg.model.root.evaluation_mode == "dense"
         assert cfg.callbacks.model_checkpoint.monitor == "val/ndcg@10"
-        assert cfg.trainer.root.max_steps == 200000
-        assert cfg.model.training_model_config.scheduler.scheduler_steps == 200000
+        assert cfg.trainer.root.max_steps == 50000
+        assert cfg.trainer.root.strategy == "ddp"
+        assert cfg.trainer.root.accumulate_grad_batches == 1
+        assert cfg.data.train_dataloader.batch_size_per_device == 128
+        assert cfg.model.training_model_config.scheduler.warmup_steps == 2500
+        assert cfg.model.training_model_config.scheduler.scheduler_steps == 50000
     else:
         assert cfg.model.training_model_config is None
         assert cfg.ckpt_path.endswith("file=a=b.ckpt")
@@ -88,6 +92,32 @@ def test_no_default_dry_run_and_torchrun(bash):
     ]
     assert launch(bash, "train", [], "export MASTER_PORT=0; ").returncode == 2
     assert launch(bash, "train", [], "export NPROC_PER_NODE=0; ").returncode == 2
+
+
+@pytest.mark.parametrize("equals", [False, True])
+def test_master_port_cli_overrides_environment(bash, equals):
+    option = ["--master-port=29542"] if equals else ["--master-port", "29542"]
+    output = launch(
+        bash,
+        "train",
+        option,
+        "export NPROC_PER_NODE=2; export MASTER_PORT=29541; ",
+    )
+    assert output.returncode == 0, output.stderr
+    assert output.stdout.splitlines()[:6] == [
+        "run",
+        "torchrun",
+        "--nproc_per_node=2",
+        "--master_port=29542",
+        "-m",
+        "src.main",
+    ]
+
+
+def test_master_port_environment_override(bash):
+    output = launch(bash, "train", [], "export NPROC_PER_NODE=2; export MASTER_PORT=29541; ")
+    assert output.returncode == 0, output.stderr
+    assert "--master_port=29541" in output.stdout.splitlines()
 
 
 def test_shell_syntax(bash):

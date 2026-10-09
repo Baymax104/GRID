@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "retired_on": "2026-10-03",
+  "captured_at_utc": "2026-10-03T11:02:31.052503+00:00",
+  "authority": "user_requested_retire_frozen_conversion_attempt_entrypoints_preserve_reference",
+  "archive_file": "retired-files.zip",
+  "retired_experiments": [
+    "copmrec_decoder_train",
+    "copmrec_decoder_audit",
+    "copmrec_ranker_train",
+    "copmrec_ranker_inference",
+    "copmrec_scratch_train",
+    "copmrec_scratch_train_ddp2",
+    "copmrec_scratch_audit",
+    "liger_joint_ranking_cache",
+    "liger_joint_ranking_inference"
+  ],
+  "files": [
+    {
+      "path": "copmrec_decoder_common.sh",
+      "size": 2027,
+      "sha256": "42114adcd7d7435f4c59e361786b735275f90d3c7f3c8af535c4e1f38bf11fe8",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_decoder_train.sh",
+      "size": 107,
+      "sha256": "76eae2b047252c1d5923e43b10d72204e6900a981b56fbd9c9f93957152bfbe4",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_decoder_audit.sh",
+      "size": 107,
+      "sha256": "601fa74a20cb72458de3dac6ade8d6825161259325ae673eb9e07990bc2dc46a",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_ranker_common.sh",
+      "size": 1916,
+      "sha256": "a103ec144b5e2370b2ee024030c5a27d23296d190cf93914cddb92c87c507d67",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_ranker_train.sh",
+      "size": 105,
+      "sha256": "aad3846d17241e5757596df33450f4fb0d1c2b7aa52beeb5b5e2631c4fa06580",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_ranker_inference.sh",
+      "size": 109,
+      "sha256": "9603ee0ce7b7220a5b0959b781dc8d53d9d59834faf45584c48a71e4565e3c19",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_scratch_train.sh",
+      "size": 175,
+      "sha256": "c64c1abf89acbc1513a6ca0dc911d2a86bcb8a9fe7e44862cb07563c3e1320d5",
+      "kind": "root_script"
+    },
+    {
+      "path": "copmrec_scratch_audit.sh",
+      "size": 179,
+      "sha256": "5f5d3e852f023087f811cad3d0dd03232ee63ec4becf7137acf289dab87d770e",
+      "kind": "root_script"
+    },
+    {
+      "path": "liger_joint_ranking_cache.sh",
+      "size": 169,
+      "sha256": "3168b42d202bce82df62a229440d9774bf23bfa668b452bfc6fcf32e1be0bde9",
+      "kind": "root_script"
+    },
+    {
+      "path": "liger_joint_ranking_inference.sh",
+      "size": 167,
+      "sha256": "667b2347b00b016e7d78bf8518e463b7da38c157255ebb0e21cb0d54ebbdfd0c",
+      "kind": "root_script"
+    },
+    {
+      "path": "configs/experiment/copmrec_decoder_train.yaml",
+      "size": 826,
+      "sha256": "34f86b592dad44cd3ad501e7e1daa1ae576823f35a086f47d38348dc71a99d1b",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/copmrec_decoder_audit.yaml",
+      "size": 323,
+      "sha256": "d2c07e31e0f176b935042348bae54b95f6f44a4d2e5f9b4955a8fd8b70397c6c",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/copmrec_ranker_train.yaml",
+      "size": 987,
+      "sha256": "4ad77e031d432d0407aaecc0eb941bb3415217557276e34ebd7d9f38319b5f38",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/copmrec_ranker_inference.yaml",
+      "size": 255,
+      "sha256": "b6146c4283c4f3e97f6e71b872747bb3532b9e4ed336754b0963c056c3dfa78a",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/copmrec_scratch_train.yaml",
+      "size": 384,
+      "sha256": "f0f9fabcb051df826b3e7a79dc9f90b4b66ebb2e24d90493e26c1e0901dab64c",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/copmrec_scratch_train_ddp2.yaml",
+      "size": 210,
+      "sha256": "9a65d4b89acbabf8d34c0c5ad94beac5816e50b14c38987bea7a097bc6a9cf9f",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/copmrec_scratch_audit.yaml",
+      "size": 289,
+      "sha256": "47b5cabdaeb464bce1f0454a5b2a2b95d16da559ae7e3935b801d29c0f1478e2",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/liger_joint_ranking_cache.yaml",
+      "size": 575,
+      "sha256": "06608bcf9d656ea5714f3a147e980b279a8367e7cdd74176448b1183242ab227",
+      "kind": "experiment"
+    },
+    {
+      "path": "configs/experiment/liger_joint_ranking_inference.yaml",
+      "size": 575,
+      "sha256": "f871238fe5298666b9e5b32e9a2d13a83ba8db791c8969aaa702e4b01f216aed",
+      "kind": "experiment"
+    },
+    {
+      "path": "tests/test_copmrec_decoder_config_script.py",
+      "size": 5169,
+      "sha256": "60f64401ee85414c5739cb3d84f7bbddf38c8b10d9403e7948b4bc62053a4aaf",
+      "kind": "retired_launcher_test"
+    },
+    {
+      "path": "tests/test_copmrec_ranker_config_script.py",
+      "size": 3252,
+      "sha256": "b75bb76a30e5e92ad184d9f2fac1da4a5bc644466c1e2d1bac1081e95b642e85",
+      "kind": "retired_launcher_test"
+    },
+    {
+      "path": "tests/test_copmrec_scratch_config_script.py",
+      "size": 3854,
+      "sha256": "48486f37168a5573342ff853a3d32bf4205049db282337c0034be645e8a4dd5b",
+      "kind": "retired_launcher_test"
+    },
+    {
+      "path": "tests/test_copmrec_ranking_config_script.py",
+      "size": 3167,
+      "sha256": "dc3c5f1b7690602bf235983a984b9599b16ec61b04b82ca7e0ea4a6380259b97",
+      "kind": "retired_launcher_test"
+    }
+  ],
+  "preserved_files": [
+    {
+      "path": "liger_common.sh",
+      "size": 3839,
+      "sha256": "f553a9ec1a0cfb0635ee0d5d037eb5997c44a5c3192fc862542e1b9beb70fb4e"
+    },
+    {
+      "path": "liger_train.sh",
+      "size": 87,
+      "sha256": "2ae0c7c40707d5730454d9c832ebd73b8b6ceefb646dadf7b45f887de718514d"
+    },
+    {
+      "path": "liger_inference.sh",
+      "size": 91,
+      "sha256": "67def67e58e4fcdfd9f499cc90897dae02dcc0c73272d1771e8bda27d3fbfa29"
+    },
+    {
+      "path": "liger_joint_train.sh",
+      "size": 147,
+      "sha256": "7c1bd7380155a110bc1f499f155ac4b05af17d534cee2230b56665c7b7bdcb84"
+    },
+    {
+      "path": "liger_joint_inference.sh",
+      "size": 155,
+      "sha256": "e5cc191423f885613c6eb8a54c5847e168a203c9bdc4a30cf215c616b6ecaec5"
+    },
+    {
+      "path": "configs/experiment/liger_train.yaml",
+      "size": 969,
+      "sha256": "4edbb15cf1c8e55e4ef29952f9c6a858905fa81835ecf3ec6ed514f045122de6"
+    },
+    {
+      "path": "configs/experiment/liger_inference.yaml",
+      "size": 1029,
+      "sha256": "f8cbf910f6af43671d13d4a905fa8cd87c833a0467f9bce305f2e97bb4e2f2a5"
+    },
+    {
+      "path": "configs/experiment/liger_joint_train.yaml",
+      "size": 248,
+      "sha256": "049915666770bd6d4fc7950b219d88dfa1c9f321e29fb0aafe531e6ae3e92de9"
+    },
+    {
+      "path": "configs/experiment/liger_joint_inference.yaml",
+      "size": 341,
+      "sha256": "82fcac0bc316af5cb229ff9f34f45977545c7bf917b0410532928cf8b97516b2"
+    },
+    {
+      "path": "configs/model/liger.yaml",
+      "size": 5164,
+      "sha256": "ad2f5f2d688f560a6c2a9e4f5728ead859f6aeaf7de59721d2e8582ac5b05f01"
+    },
+    {
+      "path": "configs/model/liger_joint.yaml",
+      "size": 878,
+      "sha256": "f0f7b3a0c1092fbe0bd596fa53dd9ba373bff00e0420f000cd870e358be41773"
+    },
+    {
+      "path": "src/recommendation/liger/module.py",
+      "size": 24022,
+      "sha256": "c7556477e6eb43eca56f6a7af0f2358bf1f77a3f7cf0354658b3676d01143c1a"
+    },
+    {
+      "path": "src/recommendation/liger/joint_mixture.py",
+      "size": 7360,
+      "sha256": "237314445fdfcfaa115a03d466512a0bda5e3cd1374539e2259a48897fca3443"
+    },
+    {
+      "path": "src/recommendation/liger/decoder_ranking.py",
+      "size": 33135,
+      "sha256": "6e54062d8e9e5c9e59e67a728a3b127000ede368478ebb85e9862003befc00bf"
+    },
+    {
+      "path": "src/recommendation/liger/scratch_ranking.py",
+      "size": 17110,
+      "sha256": "e5406021c4f15710f8b35035e201dfde3239314687ead216fdbda5f85200e045"
+    },
+    {
+      "path": "src/recommendation/liger/pairwise_ranker.py",
+      "size": 6134,
+      "sha256": "2c639d9027e39c337edadb6b58f26f9464ec3cbdbee56263ca56b8b6fcd5b1c6"
+    },
+    {
+      "path": "src/recommendation/liger/mixture_ranking.py",
+      "size": 6929,
+      "sha256": "378c1a1d35e9261636398096cfc9edc7a7abc4e2461936f48b0ccd9e3c2955e9"
+    }
+  ],
+  "archive_sha256": "bf247de7ca0d18678edb8095dd2ef15d19a362d3c471555394e123e1d47297b7"
+}

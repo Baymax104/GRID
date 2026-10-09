@@ -1,0 +1,35 @@
+# @package _global_
+root:
+  _target_: src.recommendation.copmrec.diagnosis.CoPMRecDiagnosis
+  backbone: ${diagnosis_backbone.root}
+  analysis: ${diagnosis_analysis}
+  frequencies:
+    _target_: src.data.utils.load_training_item_frequency_tensor
+    semantic_id_path: ${semantic_id_path}
+    training_data_dir: ${paths.data_dir}/training
+    wandb_entity: ${user}
+    wandb_project: ${project}
+  checkpoint:
+    _target_: src.data.components.artifacts.load_m3_checkpoint
+    reference: ${ckpt_path}
+    sha256: ${checkpoint_sha256}
+    analysis: ${diagnosis_analysis}
+    wandb_entity: ${user}
+    wandb_project: ${project}
+  prediction_bundles:
+    _target_: src.data.components.artifacts.load_m3_prediction_bundles
+    paths: ${prediction_paths}
+    analysis: ${diagnosis_analysis}
+    wandb_entity: ${user}
+    wandb_project: ${project}
+  source_reference: ${checkpoint_reference}
+  source_sha256: ${checkpoint_sha256}
+  input_references:
+    semantic_id: ${semantic_id_path}
+    content: ${embedding_path}
+    predictions: ${prediction_paths}
+    data_dir: ${paths.data_dir}
+  bootstrap_repetitions: 2000
+  num_hierarchies: ${num_hierarchies}
+training_model_config: null
+metrics: null

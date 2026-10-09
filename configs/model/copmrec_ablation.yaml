@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+- copmrec@_here_
+- _self_
+root:
+  _target_: src.recommendation.copmrec.ablation.CoPMRecAblation
+  variant: ${ablation_variant}

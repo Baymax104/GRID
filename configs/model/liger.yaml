@@ -29,6 +29,7 @@ root:
   prediction_mode: hybrid
   catalog_chunk_size: 4096
   candidate_trace: false
+  path_trace: false
   candidate_strategy: original
   content_mixture_alpha: 0.0
   training_model_config: ${model.training_model_config}
@@ -42,7 +43,7 @@ training_model_config:
   scheduler:
     _target_: src.common.scheduler.WarmupCosineSchedulerNonzeroMin
     _partial_: true
-    warmup_steps: 10000
+    warmup_steps: 2500
     scheduler_steps: ${trainer.root.max_steps}
     min_ratio: 0.0
 

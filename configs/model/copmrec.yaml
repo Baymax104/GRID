@@ -1,0 +1,46 @@
+# @package _global_
+defaults:
+- liger@_here_
+- _self_
+root:
+  _target_: src.recommendation.copmrec.CoPMRec
+  prediction_mode: dense
+  candidate_strategy: probability_mixture
+  content_mixture_alpha: 0.5
+  initialization_seed: ${seed}
+  final_ranking_mode: content
+  residual_scale: 1.0
+  residual_lr_multiplier: 6.666666666666667
+training_model_config:
+  scheduler:
+    scheduler_steps: 50000
+metrics:
+  stages:
+    train:
+      mixture_loss:
+        metric: {_target_: torchmetrics.MeanMetric}
+        spec: {key: mixture_loss}
+      mixture_alpha:
+        metric: {_target_: torchmetrics.MeanMetric}
+        spec: {key: mixture_alpha}
+    val:
+      mixture_loss:
+        metric: {_target_: torchmetrics.MeanMetric}
+        spec: {key: mixture_loss}
+      ndcg@5:
+        metric: {sync_on_compute: true}
+      ndcg@10:
+        metric: {sync_on_compute: true}
+      recall@5:
+        metric: {sync_on_compute: true}
+      recall@10:
+        metric: {sync_on_compute: true}
+    test:
+      ndcg@5:
+        metric: {sync_on_compute: true}
+      ndcg@10:
+        metric: {sync_on_compute: true}
+      recall@5:
+        metric: {sync_on_compute: true}
+      recall@10:
+        metric: {sync_on_compute: true}

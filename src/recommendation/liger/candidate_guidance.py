@@ -79,7 +79,7 @@ class ProbabilityMixtureProcessor(ContentPrefixProcessor):
     """合法分支生成概率与精确内容质量的条件概率混合。"""
 
     def __init__(self, semantic_ids, content_logits, codebook_size, alpha, gate=None, aggregation="mass"):
-        if aggregation not in {"mass", "max"}:
+        if aggregation not in {"mass", "max", "root_max_mass"}:
             raise ValueError("Unknown prefix aggregation.")
         if not math.isfinite(alpha) or not 0 <= alpha <= 1:
             raise ValueError("Mixture alpha must be finite and in [0, 1].")
@@ -92,11 +92,13 @@ class ProbabilityMixtureProcessor(ContentPrefixProcessor):
         codes = torch.zeros(len(semantic_ids), device=semantic_ids.device, dtype=torch.long)
         for depth in range(self.h):
             codes = codes * self.k + semantic_ids[:, depth]
+            if aggregation == "root_max_mass" and depth == 0:
+                # 首层保留最佳后代；后续层在各自合法兄弟节点间归一化mass。
+                continue
             inverse = torch.searchsorted(self.codes[depth], codes)[None].expand(self.batch, -1)
             maxima = self.potentials[depth]
             sums = torch.zeros_like(maxima).scatter_add_(1, inverse, (content_logits - maxima.gather(1, inverse)).exp())
-            if aggregation == "mass":
-                self.potentials[depth] = maxima + sums.log()
+            self.potentials[depth] = maxima + sums.log()
         if aggregation == "mass":
             self.root = content_logits.logsumexp(-1)
 

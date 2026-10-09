@@ -3,7 +3,7 @@ defaults:
 - tiger_train@_here_
 - _self_
 train_dataloader:
-  batch_size_per_device: 256
+  batch_size_per_device: 128
   num_workers: 4
 val_dataloader:
   batch_size_per_device: 32

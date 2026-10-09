@@ -47,7 +47,7 @@ def test_recommendation_packages_only_expose_current_methods():
         for path in (ROOT / "src" / "recommendation").glob("*/__init__.py")
     }
 
-    assert packages == {"liger", "tiger"}
+    assert packages == {"copmrec", "letter", "liger", "sasrec", "tiger"}
 
 
 def test_active_surface_has_no_retired_imports_or_hydra_targets():

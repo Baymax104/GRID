@@ -1,0 +1,91 @@
+# @package _global_
+defaults:
+- liger_inference
+- override /model@model: copmrec
+- _self_
+copmrec_version: v2
+group: paper_main_copmrec_${dataset_name}
+task_name: copmrec_v2_${dataset_name}_seed${seed}_inference
+baseline_protocol: copmrec-unified-scratch-50k-v1
+checkpoint_sha256: ???
+checkpoint_reference: ${ckpt_path}
+unified_scratch_contract: null
+history_eligibility_contract:
+  protocol: copmrec-final-history-exclusion-off-v1
+  history_exclusion: false
+  history_representation: unchanged
+  score_rule: unchanged_full_catalog_logits
+  rank_ties: stable_catalog_row
+  cold_items_eligible: true
+  single_process: true
+source_snapshot:
+  enabled: true
+model:
+  training_model_config: null
+callbacks:
+  wandb_artifact_writer:
+    _convert_: all
+    metadata:
+      unified_scratch_contract: ${unified_scratch_contract}
+      history_eligibility_contract: ${history_eligibility_contract}
+      checkpoint_identity:
+        reference: ${checkpoint_reference}
+        sha256: ${checkpoint_sha256}
+        version: v2
+        initialization_seed: ${seed}
+      dense_ce_support: ${dense_ce_support}
+      native_view_ce: ${native_view_ce}
+      formal_release: ${formal_release}
+      evidence_phase: ${evidence_phase}
+      method_version: ${method_version}
+      training_objective: ${training_objective}
+      training_history_exclusion: ${training_history_exclusion}
+      validation_history_exclusion: ${validation_history_exclusion}
+      inference_history_exclusion: ${inference_history_exclusion}
+dense_ce_support:
+  protocol: copmrec-all-catalog-dense-ce-v1
+  training_support: all_catalog
+  cold_items_in_denominator: true
+  training_targets_must_be_seen: true
+  validation_support: all_catalog
+logger:
+  wandb:
+    notes: CoPMRec v2；固定自身own-best，完整目录dense，无历史排除，单卡Testing。
+    tags:
+    - copmrec-formal-v2
+    - formal-${evaluation_split}
+    - copmrec
+    - formal
+    - v2
+    - joint-only
+    - final-history-exclusion-off
+native_view_ce: null
+evidence_phase: formal
+formal_release_id: copmrec-v2
+evaluation_split: testing
+evaluation_data_folder: testing
+data:
+  predict_dataloader:
+    data_folder: ${paths.data_dir}/${evaluation_data_folder}
+method: copmrec
+implementation_version: v2
+formal_release:
+  protocol: copmrec-formal-joint-only-v2-v1
+  implementation_version: v2
+  evidence_phase: formal
+  initialization_seed: ${seed}
+  development_checkpoints_eligible: false
+  native_view_ce: false
+  training_history_exclusion: false
+  validation_history_exclusion: false
+  inference_history_exclusion: false
+method_version: v2
+training_objective:
+  sid_ce: 1.0
+  joint_catalog_ce: 1.0
+  mixture_nll: 1.0
+  native_view_ce: 0.0
+  native_view_computed: false
+training_history_exclusion: false
+validation_history_exclusion: false
+inference_history_exclusion: false

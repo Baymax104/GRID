@@ -18,6 +18,7 @@ from transformers import T5Config, T5ForConditionalGeneration
 from src.common.configs.model import TrainingModelConfig
 from src.data.components.data_models import ModelOutput, TigerModelInput
 from src.recommendation.liger.candidate_guidance import ProbabilityMixtureProcessor
+from src.recommendation.liger.path_trace import PathTraceProcessor
 
 
 class LigerT5(T5ForConditionalGeneration):
@@ -84,6 +85,7 @@ class Liger(LightningModule):
         prediction_mode: str = "hybrid",
         catalog_chunk_size: int = 4096,
         candidate_trace: bool = False,
+        path_trace: bool = False,
         candidate_strategy: str = "original",
         content_mixture_alpha: float = 0.0,
         training_model_config: TrainingModelConfig | None = None,
@@ -92,6 +94,9 @@ class Liger(LightningModule):
         if candidate_strategy not in {"original", "probability_mixture"}:
             raise ValueError("Unknown candidate strategy.")
         self.candidate_strategy = candidate_strategy
+        if path_trace and (not candidate_trace or candidate_strategy != "probability_mixture" or prediction_mode != "hybrid"):
+            raise ValueError("Path trace requires candidate_trace, probability_mixture and hybrid prediction.")
+        self.path_trace = path_trace
         if not math.isfinite(content_mixture_alpha) or not 0 <= content_mixture_alpha <= 1:
             raise ValueError("Invalid content mixture alpha.")
         if candidate_strategy != "probability_mixture" and content_mixture_alpha != 0:
@@ -191,6 +196,10 @@ class Liger(LightningModule):
             raise ValueError("Input or target SID is absent from catalog.")
         return torch.where(valid, self.sorted_rows[positions], -1)
 
+    def item_content_residual(self, rows):
+        """派生模型可共享商品残差；默认不增加运算或改变随机序列。"""
+        return None
+
     def encode(self, input_ids, attention_mask):
         if input_ids.ndim != 2 or attention_mask.shape != input_ids.shape:
             raise ValueError("Invalid history batch shape.")
@@ -212,6 +221,11 @@ class Liger(LightningModule):
         # 与官方一致：先复制各 SID token 的内容，再执行含 dropout 的投影。
         repeated = contents.repeat_interleave(h, dim=1)
         projected = self.content_projection(repeated)
+        residual = self.item_content_residual(rows)
+        if residual is not None:
+            history_residual = projected.new_zeros(batch, length // h, projected.shape[-1])
+            history_residual[valid_items] = residual
+            projected = projected + history_residual.repeat_interleave(h, dim=1)
         item_pos = torch.arange(length, device=input_ids.device) // h
         sem_pos = torch.arange(length, device=input_ids.device) % h
         token_ids = (grouped.long() + self.offsets).reshape(batch, length).masked_fill(~mask, 0)
@@ -227,6 +241,9 @@ class Liger(LightningModule):
         projected = torch.cat(
             [self.content_projection(part) for part in self.content_bank.split(self.catalog_chunk_size)]
         )
+        residual = self.item_content_residual(torch.arange(len(self.semantic_ids), device=query.device))
+        if residual is not None:
+            projected = projected + residual
         return F.normalize(query, dim=-1) @ F.normalize(projected, dim=-1).T / self.temperature
 
     def losses(self, model_input, target_ids, *, training=False):
@@ -260,6 +277,11 @@ class Liger(LightningModule):
             )
         raise ValueError("Original candidates do not use a logits processor.")
 
+    path_trace_schema = "liger_paths_v1"
+
+    def path_trace_processor(self, processor, targets):
+        return PathTraceProcessor(processor, targets)
+
     @torch.no_grad()
     def _generate_candidate_rows(self, encoded, mask, *, processor=None, generation_candidates=None):
         generation_candidates = self.generation_candidates if generation_candidates is None else generation_candidates
@@ -282,17 +304,27 @@ class Liger(LightningModule):
             generated = F.pad(generated, (0, self.num_hierarchies - generated.shape[1]), value=0)
         local = generated[:, : self.num_hierarchies] - self.offsets
         rows = self.lookup_rows(local, strict=False)
+        if isinstance(processor, PathTraceProcessor):
+            return rows.reshape(mask.shape[0], generation_candidates), processor.finish(local)
         return rows.reshape(mask.shape[0], generation_candidates)
 
     @torch.no_grad()
-    def generate_candidates(self, encoded, mask, content_logits=None):
+    def generate_candidates(self, encoded, mask, content_logits=None, *, path_targets=None):
         processor = None
         if self.candidate_strategy != "original":
             if content_logits is None:
                 raise ValueError("Constrained candidates require shared content logits.")
             processor = self.candidate_processor(content_logits)
+        if path_targets is not None:
+            processor = self.path_trace_processor(processor, path_targets)
         rows = self._generate_candidate_rows(encoded, mask, processor=processor)
         return rows
+
+    def candidate_ranking_scores(self, encoded, mask, content_logits, user, rows):
+        return content_logits[user, rows]
+
+    def candidate_ranking_trace(self, content_logits, user, rows, ranking_scores, target):
+        return {}
 
     @torch.no_grad()
     def retrieve(self, model_input, mode=None, target_ids=None):
@@ -307,15 +339,19 @@ class Liger(LightningModule):
         scores = query.new_full((batch, self.top_k), float("-inf"))
         logits = self.dense_logits(query) if mode != "generative" or self.candidate_strategy != "original" else None
         generated = None
+        path = None
         if mode != "dense":
             if self.candidate_strategy == "original":
                 generated = self.generate_candidates(encoded, mask)
+            elif self.path_trace and target_ids is not None:
+                generated, path = self.generate_candidates(encoded, mask, logits, path_targets=target_ids)
             else:
                 generated = self.generate_candidates(encoded, mask, logits)
         cold = (~self.seen_mask).nonzero().flatten()
         trace_rows = []
         targets = self.lookup_rows(target_ids) if target_ids is not None else None
         for b in range(batch):
+            ranking_scores = None
             if mode == "dense":
                 rows = torch.argsort(logits[b], descending=True, stable=True)[: self.top_k]
             else:
@@ -323,7 +359,8 @@ class Liger(LightningModule):
                 candidates = candidates[candidates >= 0]
                 if mode == "hybrid":
                     candidates = torch.cat([candidates, cold]).unique(sorted=True)
-                    order = torch.argsort(logits[b, candidates], descending=True, stable=True)
+                    ranking_scores = self.candidate_ranking_scores(encoded, mask, logits, b, candidates)
+                    order = torch.argsort(ranking_scores, descending=True, stable=True)
                     rows = candidates[order[: self.top_k]]
                     if targets is not None:
                         target = targets[b]
@@ -345,6 +382,7 @@ class Liger(LightningModule):
                                 "dense_topk_rows": F.pad(
                                     dense_order[: self.top_k], (0, max(0, self.top_k - len(dense_order))), value=-1
                                 ),
+                                **self.candidate_ranking_trace(logits, b, candidates, ranking_scores, target),
                             }
                         )
                 else:
@@ -352,7 +390,9 @@ class Liger(LightningModule):
                     ordered = list(dict.fromkeys(candidates.tolist()))[: self.top_k]
                     rows = torch.tensor(ordered, device=query.device, dtype=torch.long)
             result[b, : len(rows)] = self.semantic_ids[rows]
-            if logits is not None:
+            if ranking_scores is not None:
+                scores[b, : len(rows)] = ranking_scores[order[: self.top_k]]
+            elif logits is not None:
                 scores[b, : len(rows)] = logits[b, rows]
             else:
                 scores[b, : len(rows)] = 0
@@ -362,6 +402,8 @@ class Liger(LightningModule):
                 for name in trace_rows[0]
             }
             trace["hybrid_topk_sids"] = result
+            if path is not None:
+                return result, scores, trace, path
             return result, scores, trace
         return result, scores
 
@@ -389,7 +431,7 @@ class Liger(LightningModule):
                 raise ValueError("Candidate trace requires labels.")
             labels = batch[1].target_ids
             retrieved = self.retrieve(model_input, target_ids=labels)
-            sids, _, trace = retrieved
+            sids, _, trace = retrieved[:3]
             auxiliary["liger_candidates"] = dict(
                 schema_version="liger_candidates_v1",
                 labels=labels,
@@ -409,6 +451,19 @@ class Liger(LightningModule):
                     ),
                 ),
             )
+            if self.path_trace:
+                auxiliary["liger_paths"] = dict(
+                    schema_version=self.path_trace_schema,
+                    labels=labels,
+                    trace=retrieved[3],
+                    metadata=dict(
+                        auxiliary["liger_candidates"]["metadata"],
+                        num_hierarchies=self.num_hierarchies,
+                        codebook_size=self.codebook_size,
+                        probability_scope="reachable_parent_legal_children",
+                        branch_rank_ties="strictly_greater_plus_one",
+                    ),
+                )
         else:
             sids, _ = self.retrieve(model_input)
         return ModelOutput(keys=model_input.output_keys, predictions=sids, auxiliary=auxiliary)

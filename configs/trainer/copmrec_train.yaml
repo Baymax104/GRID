@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+- liger_train@_here_
+- _self_
+root:
+  max_steps: 50000
+  val_check_interval: 500
+  precision: 32-true
+  strategy:
+    _target_: lightning.pytorch.strategies.DDPStrategy
+    find_unused_parameters: false
+    broadcast_buffers: false
+  use_distributed_sampler: false

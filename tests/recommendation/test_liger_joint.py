@@ -4,12 +4,12 @@ import pytest
 import torch
 from test_liger import batch, model
 
+from src.recommendation.copmrec.mixture import JointMixtureCoPMRec
 from src.recommendation.liger.candidate_guidance import ProbabilityMixtureProcessor
-from src.recommendation.liger.joint_mixture import JointMixtureLiger
 
 
 def joint(**kwargs):
-    with patch("test_liger.Liger", JointMixtureLiger):
+    with patch("test_liger.Liger", JointMixtureCoPMRec):
         return model(**kwargs)
 
 
@@ -92,38 +92,20 @@ def test_checkpoint_beam_ablation_and_labels():
     )
     y.target_ids = y.target_ids.flip(0)
     torch.testing.assert_close(a.predictions, m.predict_step((x, y)).predictions)
-    ablation = joint(content_only=True).eval()
-    ablation.load_state_dict(m.state_dict())
-    reference = model(candidate_strategy="probability_mixture", content_mixture_alpha=1).eval()
-    reference.load_state_dict({k: v for k, v in m.state_dict().items() if not k.startswith("dynamic_gate.")})
-    torch.testing.assert_close(ablation.retrieve(x)[0], reference.retrieve(x)[0])
-    with pytest.raises(ValueError, match="inference-only"):
-        ablation.losses(x, y.target_ids, training=True)
     with pytest.raises(ValueError, match="matching joint"):
         restored.on_load_checkpoint({"liger_catalog_sha256": m.catalog_sha256})
 
 
-def test_fixed_inference_alpha_is_checkpoint_compatible_and_inference_only():
-    trained = joint(candidate_trace=True).eval()
-    with torch.no_grad():
-        trained.dynamic_gate.bias.fill_(1.1)
-    checkpoint = {}
-    trained.on_save_checkpoint(checkpoint)
-    fixed = joint(candidate_trace=True, inference_mixture_alpha=0.5).eval()
-    fixed.on_load_checkpoint(checkpoint)
-    fixed.load_state_dict(trained.state_dict(), strict=True)
-    reference = model(candidate_strategy="probability_mixture", content_mixture_alpha=0.5).eval()
-    reference.load_state_dict({k: v for k, v in trained.state_dict().items() if not k.startswith("dynamic_gate.")})
-    x, y = batch()
-    torch.testing.assert_close(fixed.retrieve(x)[0], reference.retrieve(x)[0])
-    output = fixed.predict_step((x, y))
-    metadata = output.auxiliary["liger_candidates"]["metadata"]
-    assert metadata["content_mixture_alpha"] == 0.5
-    assert metadata["mixture_alpha_source"] == "fixed_inference"
-    with pytest.raises(ValueError, match="inference-only"):
-        fixed.losses(x, y.target_ids, training=True)
-    for value in [-0.1, 1.1, float("nan")]:
-        with pytest.raises(ValueError, match="finite"):
-            joint(inference_mixture_alpha=value)
-    with pytest.raises(ValueError, match="another inference ablation"):
-        joint(content_only=True, inference_mixture_alpha=0.5)
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"content_only": True},
+        {"mechanism_control": "legal_generation"},
+        {"mechanism_control": "max_mixture"},
+        {"inference_mixture_alpha": 0.5},
+        {"fixed_mixture_alpha": 0.5},
+    ],
+)
+def test_iteration_controls_are_rejected(options):
+    with pytest.raises(ValueError, match="retired"):
+        joint(**options)

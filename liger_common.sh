@@ -32,7 +32,7 @@ liger_launch() {
         shift
         continue
         ;;
-      --data-dir|--semantic-id-path|--embedding-path|--checkpoint|--dataset|--devices|--notes|--group|--seed)
+      --data-dir|--semantic-id-path|--embedding-path|--checkpoint|--dataset|--devices|--notes|--group|--seed|--master-port)
         flag="$1"
         [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || {
           echo "Error: $flag requires a non-empty value." >&2
@@ -41,7 +41,7 @@ liger_launch() {
         value="$2"
         shift 2
         ;;
-      --data-dir=*|--semantic-id-path=*|--embedding-path=*|--checkpoint=*|--dataset=*|--devices=*|--notes=*|--group=*|--seed=*)
+      --data-dir=*|--semantic-id-path=*|--embedding-path=*|--checkpoint=*|--dataset=*|--devices=*|--notes=*|--group=*|--seed=*|--master-port=*)
         flag="${1%%=*}"
         value="${1#*=}"
         shift
@@ -71,6 +71,7 @@ liger_launch() {
       --notes) notes="$value" ;;
       --group) group="$value" ;;
       --seed) seed="$value" ;;
+      --master-port) master_port="$value" ;;
     esac
   done
 

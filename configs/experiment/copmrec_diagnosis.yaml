@@ -1,0 +1,42 @@
+# @package _global_
+defaults:
+- liger_inference
+- /model@diagnosis_backbone: copmrec
+- override /data@data: copmrec_diagnosis
+- override /model@model: copmrec_diagnosis
+- override /callbacks@callbacks: copmrec_diagnosis
+- _self_
+run_mode: analysis
+diagnosis_analysis: ???
+diagnosis_variant: full
+m3_protocol: copmrec-v2-ablation-20261009-v1
+evidence_phase: mechanism
+group: paper_mechanism_copmrec_${dataset_name}
+task_name: copmrec_v2_${dataset_name}_seed${seed}_${diagnosis_analysis}_${diagnosis_variant}_diagnosis
+ckpt_path: null
+checkpoint_reference: ${ckpt_path}
+checkpoint_sha256: null
+prediction_paths: {}
+diagnosis_backbone:
+  root:
+    _target_: src.recommendation.copmrec.diagnosis.source_model
+    source_variant: ${diagnosis_variant}
+logger:
+  wandb:
+    notes: M3 固定来源单卡 Trainer.test；仅登记实证；不更新参数。
+    tags:
+    - copmrec-v2
+    - mechanism
+    - ${diagnosis_analysis}
+    - ${diagnosis_variant}
+source_snapshot:
+  enabled: true
+method_version: v2
+copmrec_version: v2
+evaluation_protocol: copmrec-v2-ablation-20261009-v1
+exclude_history: false
+model:
+  root:
+    exclude_history: ${exclude_history}
+    evaluation_protocol: ${evaluation_protocol}
+    method_version: ${method_version}

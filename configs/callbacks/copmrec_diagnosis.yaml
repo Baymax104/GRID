@@ -1,0 +1,15 @@
+# @package _global_
+structured_analysis:
+  _target_: src.common.writers.epoch_structured_analysis_writer.EpochStructuredAnalysisWriter
+  output_dir: ${paths.output_dir}/analysis
+  publish_wandb: true
+  artifact_name: ${task_name}-analysis
+  artifact_type: analysis
+  metadata:
+    protocol: ${m3_protocol}
+    analysis: ${diagnosis_analysis}
+    source_variant: ${diagnosis_variant}
+wandb_artifact_lineage:
+  _target_: src.common.callbacks.wandb_artifact_lineage.WandbArtifactLineageCallback
+  fail_on_missing_run: true
+  clear_after_recording: true

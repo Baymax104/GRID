@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+- liger_inference@_here_
+- _self_
+test_dataloader: ${data.predict_dataloader}
+datamodule:
+  predict_dataloader_config: null
+  test_dataloader_config: ${data.test_dataloader}

@@ -1,0 +1,44 @@
+# @package _global_
+defaults:
+- copmrec_train
+- override /model@model: copmrec_ablation
+- _self_
+ablation_variant: ???
+group: paper_ablation_copmrec_${dataset_name}
+task_name: copmrec_v2_${dataset_name}_seed${seed}_${ablation_variant}_train
+evidence_phase: ablation
+m3_protocol: copmrec-v2-ablation-20261009-v1
+formal_release:
+  evidence_phase: ablation
+  variant: ${ablation_variant}
+  m3_protocol: ${m3_protocol}
+logger:
+  wandb:
+    notes: M3 固定单元实证；独立 scratch；登记观测值。
+    tags:
+    - copmrec-v2
+    - ablation
+    - train
+    - ${ablation_variant}
+callbacks:
+  wandb_checkpoint_writer:
+    metadata:
+      m3_protocol: ${m3_protocol}
+      ablation_variant: ${ablation_variant}
+training_objective:
+  sid_ce: 1.0
+  joint_catalog_ce: ${model.ablation_weights.${ablation_variant}.joint_catalog_ce}
+  mixture_nll: ${model.ablation_weights.${ablation_variant}.mixture_nll}
+  native_view_ce: 0.0
+  native_view_computed: false
+model:
+  ablation_weights:
+    no_mixture:
+      joint_catalog_ce: 1.0
+      mixture_nll: 0.0
+    no_residual:
+      joint_catalog_ce: 1.0
+      mixture_nll: 1.0
+    no_joint_ce:
+      joint_catalog_ce: 0.0
+      mixture_nll: 1.0
