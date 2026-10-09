@@ -10,8 +10,17 @@ SEED="42"
 CKPT_PATH=""
 SEMANTIC_ID_PATH=""
 GROUP=""
+WANDB_GROUP=""
+NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
+
+quote_hydra_string() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"' "$value"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -77,6 +86,30 @@ while [[ $# -gt 0 ]]; do
         exit 2
       fi
       GROUP="$2"
+      shift 2
+      ;;
+    --wandb-group=*)
+      WANDB_GROUP="${1#--wandb-group=}"
+      shift
+      ;;
+    --wandb-group)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --wandb-group requires a value." >&2
+        exit 2
+      fi
+      WANDB_GROUP="$2"
+      shift 2
+      ;;
+    --notes=*)
+      NOTES="${1#--notes=}"
+      shift
+      ;;
+    --notes)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --notes requires a value." >&2
+        exit 2
+      fi
+      NOTES="$2"
       shift 2
       ;;
     --ckpt-path=*)
@@ -146,12 +179,20 @@ esac
 ARGS=(
   experiment=tiger_inference
   group="$GROUP"
-  ckpt_path="$CKPT_PATH"
-  semantic_id_path="$SEMANTIC_ID_PATH"
+  "ckpt_path=$(quote_hydra_string "$CKPT_PATH")"
+  "semantic_id_path=$(quote_hydra_string "$SEMANTIC_ID_PATH")"
   devices="$DEVICES"
   data_dir="$DATA_DIR"
   seed="$SEED"
 )
+
+if [[ -n "$WANDB_GROUP" ]]; then
+  ARGS+=("group=$WANDB_GROUP")
+fi
+
+if [[ -n "$NOTES" ]]; then
+  ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
+fi
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

@@ -9,6 +9,7 @@ SEED="42"
 
 SEMANTIC_ID_PATH=""
 GROUP=""
+WANDB_GROUP=""
 NOTES=""
 DRY_RUN=false
 EXTRA_ARGS=()
@@ -98,6 +99,18 @@ while [[ $# -gt 0 ]]; do
       GROUP="$2"
       shift 2
       ;;
+    --wandb-group=*)
+      WANDB_GROUP="${1#--wandb-group=}"
+      shift
+      ;;
+    --wandb-group)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "Error: --wandb-group requires a value." >&2
+        exit 2
+      fi
+      WANDB_GROUP="$2"
+      shift 2
+      ;;
     --semantic-id-path=*)
       SEMANTIC_ID_PATH="${1#--semantic-id-path=}"
       shift
@@ -137,6 +150,17 @@ if [[ -z "$SEMANTIC_ID_PATH" ]]; then
   exit 2
 fi
 
+if [[ ! "$NPROC_PER_NODE" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Error: invalid process count." >&2
+  exit 2
+fi
+
+if [[ ! "$MASTER_PORT" =~ ^[0-9]{1,5}$ ]] ||
+  (( 10#$MASTER_PORT <= 0 || 10#$MASTER_PORT > 65535 )); then
+  echo "Error: invalid master port." >&2
+  exit 2
+fi
+
 case "$GROUP" in
   rkmeans|rvq|rqvae)
     ;;
@@ -154,12 +178,16 @@ ARGS=(
   experiment=tiger_train
   group="$GROUP"
   devices="$DEVICES"
-  semantic_id_path="$SEMANTIC_ID_PATH"
+  "semantic_id_path=$(quote_hydra_string "$SEMANTIC_ID_PATH")"
   data_dir="$DATA_DIR"
   seed="$SEED"
 )
 
 ARGS+=("logger.wandb.notes=$(quote_hydra_string "$NOTES")")
+
+if [[ -n "$WANDB_GROUP" ]]; then
+  ARGS+=("group=$WANDB_GROUP")
+fi
 
 if [[ "$DRY_RUN" == true ]]; then
   ARGS+=(--dry-run)

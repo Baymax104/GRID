@@ -4,7 +4,7 @@ model_checkpoint:
   _target_: lightning.pytorch.callbacks.ModelCheckpoint
   dirpath: ${paths.output_dir}/checkpoints
   filename: checkpoint_{epoch:03d}_{step:06d}
-  monitor: val/recall@10
+  monitor: val/ndcg@10
   verbose: true
   save_last: null
   save_top_k: 1

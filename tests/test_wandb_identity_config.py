@@ -192,8 +192,9 @@ def test_tiger_inference_uses_testing_last_item_holdout_preprocessing():
     assert normalize_step.input_field_name == "input_ids"
     assert normalize_step.sid_hierarchy == cfg.model.root.num_hierarchies
     assert cfg.data.collate.input_field_name == "input_ids"
-    assert cfg.data.collate.target_field_name is None
+    assert cfg.data.collate.target_field_name == "target_ids"
     assert cfg.data.collate.output_key_field_name == "user_id"
+    assert cfg.callbacks.tiger_prediction_metrics.top_ks == [5, 10]
 
 
 def test_diagnosis_artifact_inputs_use_experiment_user():

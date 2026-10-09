@@ -20,7 +20,7 @@ project: GRID
 user: baymaxam
 group: ???
 id: ${now_tz:%Y-%m-%d}/${now_tz:%H-%M-%S}
-run_test_after_training: true
+run_test_after_training: false
 ckpt_path: null
 seed: 42
 
