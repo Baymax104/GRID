@@ -1,0 +1,5 @@
+- [x] 核对M2语义及正式Full own-best身份。
+- [x] 新增仅推理子类、薄配置与统一入口脚本。
+- [x] 验证参数和raw评分一致、禁止训练、Hydra compose与shell语法。
+- [x] node1独立tmux启动一次单卡Testing。
+- [x] 验证来源、最终输出和独立配对统计，登记Linear及研究状态。

@@ -1,0 +1,5 @@
+- [x] 实现无排除五臂推理与 M1 协议配置，保留默认及 checkpoint 身份。
+- [x] CPU 行为/恢复/错误来源测试、Hydra compose、脚本 quoting/dry-run/override、strict OpenSpec 验证。
+- [x] 登记统一模板 issue 与精确命令，更新本次有界运行授权；Mutagen flush 和字节核验。
+- [x] node1 五个独立 tmux 单卡 Testing 完成，来源/输出/指标独立核验。
+- [x] M1 零 forward 重新分析并独立复算，登记中性实证结果及 Linear/研究状态。
